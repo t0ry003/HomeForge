@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+db.sqlite3
+.env
+
+node_modules/
+.next/
+.npm/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+.DS_Store
+
+.vscode/

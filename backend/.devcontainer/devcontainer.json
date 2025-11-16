@@ -1,0 +1,14 @@
+{
+  "name": "Backend (Django)",
+  "dockerComposeFile": "../../docker-compose.yml",
+  "service": "backend",
+  "workspaceFolder": "/app",
+  
+  // ADAUGĂ ACEASTĂ LINIE:
+  "postStartCommand": "python manage.py runserver 0.0.0.0:8000",
+
+  "extensions": [
+    "ms-python.python",
+    "ms-python.django"
+  ]
+}
