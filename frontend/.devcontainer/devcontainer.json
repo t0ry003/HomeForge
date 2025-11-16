@@ -8,11 +8,5 @@
   "postCreateCommand": "npm install", 
 
   // after every start
-  "postStartCommand": "npm run dev",
-
-  "extensions": [
-    "dbaeumer.vscode-eslint",
-    "esbenp.prettier-vscode",
-    "bradlc.vscode-tailwindcss"
-  ]
+  "postStartCommand": "npm run dev"
 }
