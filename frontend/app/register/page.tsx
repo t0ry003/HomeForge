@@ -35,6 +35,17 @@ export default function RegisterPage() {
     e.preventDefault()
     setIsLoading(true)
 
+    // Password complexity check
+    // Must include a Capital letter and have at least 4 characters
+    const passwordRegex = /^(?=.*[A-Z]).{4,}$/;
+    if (!passwordRegex.test(formData.password)) {
+      toast.error("Invalid Password", {
+        description: "Password must be at least 4 characters long and contain at least one uppercase letter.",
+      })
+      setIsLoading(false)
+      return
+    }
+
     try {
       await registerUser(formData)
       toast.success("Account created!", {
@@ -62,7 +73,7 @@ export default function RegisterPage() {
       
       <div className="w-full max-w-md animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-500">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tighter text-primary">OpenDash</h1>
+          <h1 className="text-3xl font-bold tracking-tighter text-primary">HomeForge</h1>
           <p className="text-muted-foreground">Create your account</p>
         </div>
 
@@ -99,7 +110,7 @@ export default function RegisterPage() {
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
-              <Button className="w-full" type="submit" disabled={isLoading}>
+              <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20" type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create account
               </Button>

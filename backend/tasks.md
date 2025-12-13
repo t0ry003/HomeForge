@@ -1,0 +1,25 @@
+# Tasks
+
+- [x] Setup Django Project
+- [x] Setup Docker Environment
+- [x] Create API App
+- [x] Implement User Authentication (JWT)
+- [x] Implement Profile Model
+- [x] **User Management Enhancements**
+    - [x] Enforce password complexity (Min 4 chars, 1 Uppercase).
+    - [x] Allow updating email, password, name, and username via API.
+    - [x] Implement avatar file cleanup (delete old on upload).
+    - [x] Randomize avatar filenames using UUID.
+    - [x] Add `accent_color` field to Profile model.
+    - [x] Auto-grant Admin rights to the first registered user.
+    - [x] Implement role-based permissions (`IsOwner`, `IsAdmin`).
+- [x] **Device Topology Feature**
+    - [x] Create `Room` and `Device` models.
+    - [x] Implement `TopologyView` with mock data generation.
+    - [x] Implement random status simulation logic.
+    - [x] Document API endpoint in `API_USAGE.md`.
+- [x] **Rebranding**
+    - [x] Rename default DB name to `HomeForge_db`.
+- [x] **Documentation**
+    - [x] Create `API_USAGE.md` for frontend developers.
+    - [x] Create `backend_readme.md` for backend tracking.

@@ -29,17 +29,18 @@ export default function TopologyCanvas({ devices }: TopologyCanvasProps) {
         onEdgesChange={onEdgesChange}
         nodeTypes={nodeTypes}
         fitView
-        minZoom={0.1}
-        maxZoom={4}
+        translateExtent={[[-500, -500], [1500, 1500]]} // Limit canvas size
+        minZoom={0.5}
+        maxZoom={2}
         proOptions={{ hideAttribution: true }}
         nodesDraggable={false} // Enforce layout
         zoomOnScroll={true}
         panOnDrag={true}
         zoomOnPinch={true}
       >
-        <Background color="#27272a" gap={24} size={1} variant="dots" />
+        <Background color="var(--border)" gap={24} size={1} variant="dots" />
         <Controls 
-          className="!bg-zinc-900/80 !border-zinc-800 !shadow-xl !rounded-lg overflow-hidden [&>button]:!bg-transparent [&>button]:!border-0 [&>button]:!fill-zinc-400 [&>button:hover]:!bg-zinc-800 [&>button:hover]:!fill-zinc-100" 
+          className="!bg-card/80 !border-border !shadow-xl !rounded-lg overflow-hidden [&>button]:!bg-transparent [&>button]:!border-0 [&>button]:!fill-muted-foreground [&>button:hover]:!bg-muted [&>button:hover]:!fill-foreground" 
         />
       </ReactFlow>
     </div>

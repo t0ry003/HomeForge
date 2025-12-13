@@ -2,7 +2,14 @@ import { useEffect } from 'react';
 import ELK from 'elkjs/lib/elk.bundled';
 import { Edge, Node, Position, useNodesState, useEdgesState } from '@xyflow/react';
 
-const elk = new ELK();
+let elkInstance: ELK | null = null;
+
+const getElk = () => {
+  if (!elkInstance) {
+    elkInstance = new ELK();
+  }
+  return elkInstance;
+};
 
 export interface DeviceData {
   id: string;
@@ -53,7 +60,7 @@ export const useTopologyLayout = (devices: DeviceData[]) => {
     };
 
     // 3. Run Layout Algorithm
-    elk.layout(graph as any).then((layoutedGraph) => {
+    getElk().layout(graph as any).then((layoutedGraph) => {
       if (!layoutedGraph.children) return;
 
       // 4. Map back to React Flow format

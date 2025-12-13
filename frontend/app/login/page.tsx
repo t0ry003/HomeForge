@@ -19,9 +19,11 @@ import {
 } from "@/components/ui/card"
 import { ModeToggle } from "@/components/mode-toggle"
 import { login } from "@/lib/apiClient"
+import { useUser } from "@/components/user-provider"
 
 export default function LoginPage() {
   const router = useRouter()
+  const { refreshUser } = useUser()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     username: "",
@@ -34,6 +36,7 @@ export default function LoginPage() {
 
     try {
       await login({ username: formData.username, password: formData.password })
+      await refreshUser() // Refresh user context to apply accent color
       toast.success("Welcome back!", {
         description: "You have successfully logged in.",
       })
@@ -55,7 +58,7 @@ export default function LoginPage() {
       
       <div className="w-full max-w-md animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-500">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold tracking-tighter text-primary">OpenDash</h1>
+          <h1 className="text-3xl font-bold tracking-tighter text-primary">HomeForge</h1>
           <p className="text-muted-foreground">Your smart home companion</p>
         </div>
 
@@ -95,7 +98,7 @@ export default function LoginPage() {
               </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
-              <Button className="w-full" type="submit" disabled={isLoading}>
+              <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20" type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Sign In
               </Button>

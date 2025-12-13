@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { toast } from "sonner"
-import { Loader2, Upload, User, Mail, Camera, Check, Shield } from "lucide-react"
+import { Loader2, Upload, User, Mail, Camera, Check, Shield, Lock, Key, Palette } from "lucide-react"
 import { motion } from "framer-motion"
 
 import { Button } from "@/components/ui/button"
@@ -17,44 +17,44 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { fetchProfile, updateProfile, getAvatarUrl } from "@/lib/apiClient"
+import { updateProfile, getAvatarUrl } from "@/lib/apiClient"
 import { Badge } from "@/components/ui/badge"
+import { useUser, ACCENT_COLORS } from "@/components/user-provider"
 
 export default function SettingsPage() {
+  const { user, setUser, isLoading: isUserLoading, logout, updateAccentColor, refreshUser } = useUser()
   const [isLoading, setIsLoading] = useState(false)
-  const [isReloading, setIsReloading] = useState(false)
-  const [user, setUser] = useState<any>(null)
+  
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
     email: "",
+    username: "",
+    password: "",
+    confirmPassword: "",
+    accent_color: "default",
   })
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    loadProfile()
-  }, [])
-
-  const loadProfile = async () => {
-    try {
-      const data = await fetchProfile()
-      setUser(data)
+    if (user) {
       setFormData({
-        first_name: data.first_name || "",
-        last_name: data.last_name || "",
-        email: data.email || "",
+        first_name: user.first_name || "",
+        last_name: user.last_name || "",
+        email: user.email || "",
+        username: user.username || "",
+        password: "",
+        confirmPassword: "",
+        accent_color: user.profile?.accent_color || "default",
       })
-      const avatarPath = data.profile?.avatar || data.avatar;
+      const avatarPath = user.profile?.avatar || user.avatar;
       if (avatarPath) {
         setAvatarPreview(getAvatarUrl(avatarPath))
       }
-    } catch (error) {
-      console.error("Error loading profile:", error)
-      toast.error("Failed to load profile")
     }
-  }
+  }, [user])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -76,28 +76,55 @@ export default function SettingsPage() {
     e.preventDefault()
     setIsLoading(true)
 
+    // Password validation
+    if (formData.password) {
+       if (formData.password !== formData.confirmPassword) {
+         toast.error("Passwords do not match")
+         setIsLoading(false)
+         return
+       }
+       const passwordRegex = /^(?=.*[A-Z]).{4,}$/;
+       if (!passwordRegex.test(formData.password)) {
+         toast.error("Invalid Password", {
+           description: "Password must be at least 4 characters long and contain at least one uppercase letter.",
+         })
+         setIsLoading(false)
+         return
+       }
+    }
+
     try {
       const updatedUser = await updateProfile({
         first_name: formData.first_name,
         last_name: formData.last_name,
-        role: user.role,
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        role: user.profile?.role || user.role,
+        accent_color: formData.accent_color,
         avatarFile: avatarFile || undefined,
       })
       
-      setUser(updatedUser)
-      
-      const newAvatarPath = updatedUser.profile?.avatar || updatedUser.avatar;
-      if (newAvatarPath) {
-        setAvatarPreview(getAvatarUrl(newAvatarPath))
-      }
+      // Check for critical changes
+      const isCriticalChange = 
+        (formData.username !== user.username) ||
+        (formData.email !== user.email) ||
+        (formData.password.length > 0);
 
-      toast.success("Profile updated successfully")
-      
-      // Show reloading state and reload page to ensure all components (Sidebar etc) update
-      setIsReloading(true)
-      setTimeout(() => {
-        window.location.reload()
-      }, 1500)
+      if (isCriticalChange) {
+        toast.success("Profile updated. Please log in again.")
+        setTimeout(() => {
+          logout()
+        }, 1500)
+      } else {
+        await refreshUser()
+        
+        // Clear password fields
+        setFormData(prev => ({ ...prev, password: "", confirmPassword: "" }))
+        
+        toast.success("Profile updated successfully")
+        setIsLoading(false)
+      }
       
     } catch (error: any) {
       toast.error("Update failed", {
@@ -107,16 +134,7 @@ export default function SettingsPage() {
     }
   }
 
-  if (isReloading) {
-    return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
-        <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-        <p className="text-lg font-medium text-muted-foreground">Updating profile...</p>
-      </div>
-    )
-  }
-
-  if (!user) {
+  if (isUserLoading || !user) {
     return (
       <div className="flex h-[calc(100vh-4rem)] w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -175,7 +193,6 @@ export default function SettingsPage() {
                       </AvatarFallback>
                     </Avatar>
                     
-                    {/* Overlay for hover/loading */}
                     <div className={`absolute inset-0 rounded-full flex items-center justify-center bg-black/40 transition-opacity duration-300 ${isLoading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                       {isLoading ? (
                         <Loader2 className="h-8 w-8 text-white animate-spin" />
@@ -201,8 +218,8 @@ export default function SettingsPage() {
                 
                 <div className="text-center">
                   <p className="text-sm font-medium">{user.username}</p>
-                  <Badge variant="secondary" className="mt-1">
-                    {user.role || "User"}
+                  <Badge variant="secondary" className="mt-1 uppercase">
+                    {user.profile?.role || user.role || "User"}
                   </Badge>
                 </div>
               </motion.div>
@@ -210,8 +227,10 @@ export default function SettingsPage() {
               {/* Form Fields */}
               <div className="grid gap-6">
                 <div className="grid grid-cols-2 gap-4">
-                  <motion.div variants={itemVariants} className="space-y-2">
-                    <Label htmlFor="first_name">First Name</Label>
+                  <motion.div variants={itemVariants} className="space-y-2 text-center">
+                    <Label htmlFor="first_name" className="flex items-center justify-center gap-2">
+                      <User className="h-4 w-4" /> First Name
+                    </Label>
                     <div className="relative">
                       <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input 
@@ -224,8 +243,10 @@ export default function SettingsPage() {
                     </div>
                   </motion.div>
                   
-                  <motion.div variants={itemVariants} className="space-y-2">
-                    <Label htmlFor="last_name">Last Name</Label>
+                  <motion.div variants={itemVariants} className="space-y-2 text-center">
+                    <Label htmlFor="last_name" className="flex items-center justify-center gap-2">
+                      <User className="h-4 w-4" /> Last Name
+                    </Label>
                     <div className="relative">
                       <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input 
@@ -239,24 +260,111 @@ export default function SettingsPage() {
                   </motion.div>
                 </div>
 
-                <motion.div variants={itemVariants} className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
+                <motion.div variants={itemVariants} className="space-y-2 text-center">
+                  <Label htmlFor="username" className="flex items-center justify-center gap-2">
+                    <User className="h-4 w-4" /> Username
+                  </Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      id="username" 
+                      className="pl-9"
+                      value={formData.username} 
+                      onChange={(e) => setFormData({...formData, username: e.target.value})} 
+                    />
+                  </div>
+                  <p className="text-[0.8rem] text-muted-foreground ml-1">
+                    Changing username will require re-login.
+                  </p>
+                </motion.div>
+
+                <motion.div variants={itemVariants} className="space-y-2 text-center">
+                  <Label htmlFor="email" className="flex items-center justify-center gap-2">
+                    <Mail className="h-4 w-4" /> Email Address
+                  </Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input 
                       id="email" 
-                      className="pl-9 bg-muted/50"
+                      className="pl-9"
                       value={formData.email} 
-                      disabled 
+                      onChange={(e) => setFormData({...formData, email: e.target.value})} 
                     />
-                    <div className="absolute right-3 top-2.5">
-                      <Shield className="h-4 w-4 text-green-500" />
-                    </div>
                   </div>
                   <p className="text-[0.8rem] text-muted-foreground ml-1">
-                    Verified email address cannot be changed.
+                    Changing email will require re-login.
                   </p>
                 </motion.div>
+
+                <motion.div variants={itemVariants} className="space-y-2 text-center">
+                  <Label className="flex items-center justify-center gap-2">
+                    <Palette className="h-4 w-4" /> Accent Color
+                  </Label>
+                  <div className="flex flex-wrap gap-3 pt-2 justify-center">
+                    {Object.entries(ACCENT_COLORS).map(([name, value]) => (
+                      <button
+                        key={name}
+                        type="button"
+                        onClick={() => {
+                          setFormData({ ...formData, accent_color: name })
+                          updateAccentColor(name) // Preview immediately
+                        }}
+                        className={`h-8 w-8 rounded-full border-2 transition-all ${
+                          formData.accent_color === name 
+                            ? "border-primary ring-2 ring-primary ring-offset-2" 
+                            : "border-transparent hover:scale-110"
+                        }`}
+                        style={{ backgroundColor: name === 'default' ? 'var(--foreground)' : value.replace('oklch(', 'oklch(').replace(')', ')') }}
+                        title={name.charAt(0).toUpperCase() + name.slice(1)}
+                      />
+                    ))}
+                  </div>
+                </motion.div>
+
+                <div className="space-y-4">
+                  <motion.div variants={itemVariants} className="space-y-2 text-center">
+                    <Label htmlFor="password" className="flex items-center justify-center gap-2">
+                      <Key className="h-4 w-4" /> New Password (Optional)
+                    </Label>
+                    <div className="relative">
+                      <Key className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        id="password" 
+                        type="password"
+                        className="pl-9"
+                        placeholder="Leave blank to keep current"
+                        value={formData.password} 
+                        onChange={(e) => setFormData({...formData, password: e.target.value})} 
+                      />
+                    </div>
+                    <p className="text-[0.8rem] text-muted-foreground ml-1">
+                      Must contain 1 uppercase letter and be at least 4 characters long.
+                    </p>
+                  </motion.div>
+
+                  {formData.password && (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      className="space-y-2 text-center"
+                    >
+                      <Label htmlFor="confirmPassword" className="flex items-center justify-center gap-2">
+                        <Key className="h-4 w-4" /> Confirm Password
+                      </Label>
+                      <div className="relative">
+                        <Key className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                          id="confirmPassword" 
+                          type="password"
+                          className="pl-9"
+                          placeholder="Confirm new password"
+                          value={formData.confirmPassword} 
+                          onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})} 
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
               </div>
             </CardContent>
             
@@ -264,7 +372,7 @@ export default function SettingsPage() {
               <motion.div variants={itemVariants} className="w-full max-w-xs">
                 <Button 
                   type="submit" 
-                  className="w-full" 
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg shadow-primary/20" 
                   size="lg"
                   disabled={isLoading}
                 >

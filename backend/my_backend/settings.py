@@ -95,7 +95,7 @@ WSGI_APPLICATION = 'my_backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('DB_NAME', 'smart_home_db'),
+        'NAME': os.environ.get('DB_NAME', 'HomeForge_db'),
         'USER': os.environ.get('DB_USER', 'myuser'),
         'PASSWORD': os.environ.get('DB_PASS', 'mypassword'),
         'HOST': os.environ.get('DB_HOST', 'db'), # 'db' is the service name from docker-compose
@@ -113,12 +113,18 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 4,
+        }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+    {
+        'NAME': 'api.validators.UppercaseValidator',
     },
 ]
 

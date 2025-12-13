@@ -46,6 +46,14 @@ export async function login({ username, password }) {
   return data;
 }
 
+export function logout() {
+  localStorage.removeItem('access');
+  localStorage.removeItem('refresh');
+  if (typeof window !== 'undefined') {
+    window.location.href = '/login';
+  }
+}
+
 export function getAuthHeaders() {
   const token = localStorage.getItem('access');
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -79,12 +87,16 @@ export async function fetchProfile() {
   return res.json(); // user object with profile.avatar and profile.role
 }
 
-export async function updateProfile({ first_name, last_name, role, avatarFile }) {
+export async function updateProfile({ first_name, last_name, username, email, password, role, accent_color, avatarFile }) {
   // Use FormData for file upload
   const form = new FormData();
   if (first_name !== undefined) form.append('first_name', first_name);
   if (last_name !== undefined) form.append('last_name', last_name);
+  if (username !== undefined) form.append('username', username);
+  if (email !== undefined) form.append('email', email);
+  if (password !== undefined && password.trim() !== '') form.append('password', password);
   if (role !== undefined) form.append('role', role);
+  if (accent_color !== undefined) form.append('accent_color', accent_color);
   if (avatarFile) {
     form.append('avatar', avatarFile);
     console.log('Uploading avatar:', avatarFile.name, avatarFile.size, avatarFile.type);
@@ -128,4 +140,15 @@ export async function refreshAccessToken() {
   const data = await res.json(); // { access: '...' }
   localStorage.setItem('access', data.access);
   return data.access;
+}
+
+export async function fetchTopology() {
+  const res = await fetchWithAuth(`${getApiBase()}/topology/`);
+  if (!res.ok) {
+    const error = new Error('Failed to fetch topology');
+    // @ts-ignore
+    error.status = res.status;
+    throw error;
+  }
+  return res.json();
 }
