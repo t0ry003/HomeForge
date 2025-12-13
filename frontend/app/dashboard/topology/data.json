@@ -1,0 +1,82 @@
+[
+  {
+    "id": "opendash-server",
+    "name": "OpenDash Server",
+    "device_type": "opendash",
+    "uplink_device": null,
+    "ip_address": "192.168.1.200",
+    "is_online": true
+  },
+  {
+    "id": "gateway-1",
+    "name": "UDM Pro",
+    "device_type": "gateway",
+    "uplink_device": "opendash-server",
+    "ip_address": "192.168.1.1",
+    "is_online": true
+  },
+  {
+    "id": "switch-core",
+    "name": "USW Pro 24 PoE",
+    "device_type": "switch",
+    "uplink_device": "gateway-1",
+    "ip_address": "192.168.1.2",
+    "is_online": true
+  },
+  {
+    "id": "ap-living-room",
+    "name": "U6 Pro Living Room",
+    "device_type": "ap",
+    "uplink_device": "switch-core",
+    "ip_address": "192.168.1.10",
+    "is_online": true
+  },
+  {
+    "id": "ap-office",
+    "name": "U6 Lite Office",
+    "device_type": "ap",
+    "uplink_device": "switch-core",
+    "ip_address": "192.168.1.11",
+    "is_online": true
+  },
+  {
+    "id": "nas-server",
+    "name": "Synology NAS",
+    "device_type": "server",
+    "uplink_device": "switch-core",
+    "ip_address": "192.168.1.5",
+    "is_online": true
+  },
+  {
+    "id": "iphone-user",
+    "name": "John's iPhone",
+    "device_type": "client",
+    "uplink_device": "ap-living-room",
+    "ip_address": "192.168.1.101",
+    "is_online": true
+  },
+  {
+    "id": "macbook-pro",
+    "name": "MacBook Pro",
+    "device_type": "client",
+    "uplink_device": "ap-office",
+    "ip_address": "192.168.1.102",
+    "is_online": true
+  },
+  {
+    "id": "iot-thermostat",
+    "name": "Nest Thermostat",
+    "device_type": "client",
+    "uplink_device": "ap-living-room",
+    "ip_address": "192.168.1.105",
+    "is_online": false
+  },
+  {
+    "id": "tv-living-room",
+    "name": "Samsung TV",
+    "device_type": "client",
+    "uplink_device": "switch-core",
+    "ip_address": "192.168.1.106",
+    "is_online": true
+  }
+]
