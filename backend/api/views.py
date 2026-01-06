@@ -1,11 +1,11 @@
-from rest_framework import generics, permissions, views, viewsets
+from rest_framework import generics, permissions, views
 from django.contrib.auth.models import User
 from rest_framework.permissions import AllowAny
-from .serializers import RegisterSerializer, UserSerializer, DeviceSerializer, RoomSerializer, DeviceTypeSerializer
+from .serializers import RegisterSerializer, UserSerializer, DeviceSerializer
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework import status
 from rest_framework.response import Response
-from .models import Device, Room, DeviceType
+from .models import Device, Room
 import random
 
 
@@ -131,39 +131,3 @@ class TopologyView(views.APIView):
                 new_status = Device.STATUS_OFFLINE if device.status == Device.STATUS_ONLINE else Device.STATUS_ONLINE
                 device.status = new_status
                 device.save()
-
-
-class RoomViewSet(viewsets.ModelViewSet):
-    """ViewSet for managing Rooms."""
-    serializer_class = RoomSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        return Room.objects.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-
-class DeviceTypeViewSet(viewsets.ModelViewSet):
-    """ViewSet for managing Device Types (schemas)."""
-    serializer_class = DeviceTypeSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        return DeviceType.objects.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-
-class DeviceViewSet(viewsets.ModelViewSet):
-    """ViewSet for managing Devices."""
-    serializer_class = DeviceSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        return Device.objects.filter(user=self.request.user).select_related('device_type', 'room')
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
