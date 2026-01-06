@@ -9,6 +9,9 @@ import {
   Cpu,
   Network,
   Hammer,
+  Home,
+  Package,
+  Zap,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -44,6 +47,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       url: "/dashboard",
       icon: LayoutDashboard,
       isActive: true,
+    },
+    {
+      title: "Rooms",
+      url: "/dashboard/rooms",
+      icon: Home,
+    },
+    {
+      title: "Device Types",
+      url: "/dashboard/device-types",
+      icon: Package,
+    },
+    {
+      title: "Devices",
+      url: "/dashboard/devices",
+      icon: Zap,
     },
     {
       title: "Device Builder",
