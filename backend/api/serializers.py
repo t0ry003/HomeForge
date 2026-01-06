@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from .models import Profile, Device, Room, DeviceType
+from .models import Profile, Device, Room
 
 
 class RoomSerializer(serializers.ModelSerializer):
@@ -10,19 +10,12 @@ class RoomSerializer(serializers.ModelSerializer):
         fields = ['id', 'name']
 
 
-class DeviceTypeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = DeviceType
-        fields = ['id', 'name', 'description', 'schema']
-
-
 class DeviceSerializer(serializers.ModelSerializer):
-    room_name = serializers.CharField(source='room.name', read_only=True, allow_null=True)
-    device_type_info = DeviceTypeSerializer(source='device_type', read_only=True)
+    room_name = serializers.CharField(source='room.name', read_only=True)
 
     class Meta:
         model = Device
-        fields = ['id', 'name', 'ip_address', 'status', 'device_type', 'device_type_info', 'custom_data', 'room', 'room_name']
+        fields = ['id', 'name', 'ip_address', 'status', 'device_type', 'room', 'room_name']
 
 
 class ProfileSerializer(serializers.ModelSerializer):

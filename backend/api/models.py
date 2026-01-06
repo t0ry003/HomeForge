@@ -73,20 +73,6 @@ class Room(models.Model):
         return f"{self.name} ({self.user.username})"
 
 
-class DeviceType(models.Model):
-    """Device type definition with schema for sensors and actions."""
-    name = models.CharField(max_length=100)
-    description = models.TextField(blank=True)
-    schema = models.JSONField(default=dict, help_text="JSON schema defining sensors and actions, e.g., {'sensors': ['temperature'], 'actions': ['set_temp']}")
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='device_types')
-
-    class Meta:
-        unique_together = ['name', 'user']
-
-    def __str__(self):
-        return f"{self.name}"
-
-
 class Device(models.Model):
     STATUS_ONLINE = 'online'
     STATUS_OFFLINE = 'offline'
@@ -98,8 +84,7 @@ class Device(models.Model):
     name = models.CharField(max_length=100)
     ip_address = models.GenericIPAddressField(protocol='IPv4')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_OFFLINE)
-    device_type = models.ForeignKey(DeviceType, on_delete=models.PROTECT, related_name='devices')
-    custom_data = models.JSONField(default=dict, blank=True, help_text="Current values for sensors defined in device type schema, e.g., {'temperature': 72}")
+    device_type = models.CharField(max_length=50, default='generic')
     room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True, related_name='devices')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='devices')
 
