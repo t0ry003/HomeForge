@@ -1,0 +1,41 @@
+{
+	"name": "HomeForge Dev",
+	"dockerComposeFile": [
+		"../docker-compose.yml",
+		"../docker-compose.dev.yml"
+	],
+	"service": "devcontainer",
+	"workspaceFolder": "/workspaces/HomeForge",
+	"runServices": [
+		"devcontainer",
+		"db"
+	],
+	"containerEnv": {
+		"POSTGRES_PORT": "54320" 
+	},
+	"features": {
+		"ghcr.io/devcontainers/features/node:1": {
+			"version": "lts"
+		},
+		"ghcr.io/devcontainers/features/docker-in-docker:2": {
+			"moby": false
+		}
+	},
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"ms-python.django",
+				"dbaeumer.vscode-eslint",
+				"esbenp.prettier-vscode",
+				"tamasfe.even-better-toml"
+			]
+		}
+	},
+	"forwardPorts": [
+		8000,
+		3000,
+		5432
+	],
+	"postCreateCommand": "ls -la /workspaces/HomeForge && pip install --user -r /workspaces/HomeForge/backend/requirements.txt && npm install --prefix /workspaces/HomeForge/frontend"
+}
