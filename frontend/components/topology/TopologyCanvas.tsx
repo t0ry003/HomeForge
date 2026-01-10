@@ -12,11 +12,16 @@ const nodeTypes: NodeTypes = {
 };
 
 interface TopologyCanvasProps {
-  devices: DeviceData[];
+  devices?: DeviceData[];
+  initialNodes?: any[];
+  initialEdges?: any[];
 }
 
-export default function TopologyCanvas({ devices }: TopologyCanvasProps) {
-  const { nodes, edges, onNodesChange, onEdgesChange } = useTopologyLayout(devices);
+export default function TopologyCanvas({ devices = [], initialNodes, initialEdges }: TopologyCanvasProps) {
+  const { nodes: layoutNodes, edges: layoutEdges, onNodesChange, onEdgesChange } = useTopologyLayout(devices);
+
+  const nodes = initialNodes || layoutNodes;
+  const edges = initialEdges || layoutEdges;
 
   if (!nodes) return null;
 

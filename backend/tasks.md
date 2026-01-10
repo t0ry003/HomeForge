@@ -23,3 +23,12 @@
 - [x] **Documentation**
     - [x] Create `API_USAGE.md` for frontend developers.
     - [x] Create `backend_readme.md` for backend tracking.
+- [x] **Phase 1: Admin & Infrastructure**
+    - [x] Room Management API (CRUD).
+    - [x] User Management API (Admin List/Edit).
+    - [x] Device Type Management API (Model + Approval Workflow).
+- [x] **Phase 2: User Capabilities**
+    - [x] Device Type Proposal API (POST /device-types/propose/).
+    - [x] Device Registration API (POST /devices/).
+    - [x] Device Model Update (FK to CustomDeviceType).
+    - [x] Topology API Update (Nodes & Edges format).

@@ -72,6 +72,16 @@ This repository contains the backend API for the **HomeForge** smart home applic
     - **Mock Data**: Automatically generates 10 devices and a "Living Room" for new users if no devices exist.
     - **Live Simulation**: Randomly toggles the online/offline status of ~30% of devices on every request to simulate a real-time network environment.
 
+### 4. Admin & Infrastructure (Phase 1)
+- **Room Management**: 
+    - Full CRUD capability for Rooms.
+    - Restricted to Owners/Admins for modification.
+- **User Administration**:
+    - Admins can list all users and edit their profiles (including Role assignment).
+- **Device Type Management**:
+    - Centralized list of allowed Device Types.
+    - Approval workflow: Users can request types (defaults to `approved=False`), Admins approve them.
+
 ---
 
 ## 🚀 Getting Started
@@ -142,3 +152,29 @@ Defined in `docker-compose.yml`:
 - **UX**: Added avatar cleanup logic and UUID naming.
 - **Features**: Added Device and Room models, implemented Topology API with mock simulation.
 - **Infrastructure**: Added persistent Docker volumes to prevent data loss.
+
+### 5. User Capabilities (Phase 2)
+- **Device Type Proposal**:
+    - Users can propose new device types via `POST /api/device-types/propose/`.
+    - These are automatically marked as `approved=False`.
+- **Device Registration**:
+    - `POST /api/devices/`: Register actual hardware.
+    - Limits selection to **Approved** device types only.
+- **Topology Map**:
+    - `GET /api/topology/` output updated to support **Nodes & Edges** format for React Flow visualization.
+
+### 6. Background Tasks
+- **Device Status Monitoring**:
+    - A custom management command is available to check device connectivity.
+    - Run manually or via Cron:
+    ```bash
+    python3 manage.py monitor_devices
+    ```
+    - **Logic**:
+        - **Mock Devices** (IP starts with 192.168.1.1XX): Simulates random status (Online/Offline/Error).
+        - **Real IPs**: Attempts a system `ping`.
+        - Updates `status` field in database.
+    - **Status Enum**:
+        - `online`: Device reachable.
+        - `offline`: Connectivity lost.
+        - `error`: System error during check.

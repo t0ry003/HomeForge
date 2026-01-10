@@ -76,17 +76,29 @@ class Room(models.Model):
 class Device(models.Model):
     STATUS_ONLINE = 'online'
     STATUS_OFFLINE = 'offline'
+    STATUS_ERROR = 'error'
     STATUS_CHOICES = [
         (STATUS_ONLINE, 'Online'),
         (STATUS_OFFLINE, 'Offline'),
+        (STATUS_ERROR, 'Error'),
     ]
 
     name = models.CharField(max_length=100)
     ip_address = models.GenericIPAddressField(protocol='IPv4')
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_OFFLINE)
-    device_type = models.CharField(max_length=50, default='generic')
+    device_type = models.ForeignKey('CustomDeviceType', on_delete=models.CASCADE, related_name='devices')
     room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True, related_name='devices')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='devices')
 
     def __str__(self):
         return f"{self.name} - {self.ip_address}"
+
+
+class CustomDeviceType(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    definition = models.JSONField(default=dict, blank=True)
+    approved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({'Approved' if self.approved else 'Pending'})"

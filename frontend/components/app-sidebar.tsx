@@ -9,6 +9,7 @@ import {
   Cpu,
   Network,
   Hammer,
+  Shield,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -61,6 +62,22 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: Settings,
     },
   ]
+
+  const role = contextUser?.profile?.role || contextUser?.role;
+  if (role === 'admin' || role === 'owner') {
+    navMain.push({
+      title: "Admin Panel",
+      url: "/dashboard/admin",
+      icon: Shield,
+      // @ts-ignore
+      items: [
+        { title: "General", url: "/dashboard/admin" },
+        { title: "Rooms", url: "/dashboard/admin/rooms" },
+        { title: "Users", url: "/dashboard/admin/users" },
+        { title: "Device Types", url: "/dashboard/admin/device-types" },
+      ]
+    });
+  }
 
   return (
     <Sidebar variant="inset" className="border-r-0 bg-transparent" {...props}>

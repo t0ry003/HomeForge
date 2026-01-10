@@ -1,7 +1,23 @@
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from .models import Profile, Device, Room
+from .models import Profile, Device, Room, CustomDeviceType
+
+
+class CustomDeviceTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomDeviceType
+        fields = ['id', 'name', 'definition', 'approved', 'created_at']
+        read_only_fields = ['id', 'created_at']
+        extra_kwargs = {
+            'name': {
+                'error_messages': {
+                    'unique': 'A device type with this name already exists.'
+                }
+            }
+        }
+
 
 
 class RoomSerializer(serializers.ModelSerializer):
@@ -12,10 +28,18 @@ class RoomSerializer(serializers.ModelSerializer):
 
 class DeviceSerializer(serializers.ModelSerializer):
     room_name = serializers.CharField(source='room.name', read_only=True)
+    room_id = serializers.PrimaryKeyRelatedField(read_only=True, source='room')
+    device_type_name = serializers.CharField(source='device_type.name', read_only=True)
 
     class Meta:
         model = Device
-        fields = ['id', 'name', 'ip_address', 'status', 'device_type', 'room', 'room_name']
+        fields = ['id', 'name', 'ip_address', 'status', 'device_type', 'device_type_name', 'room', 'room_name', 'room_id']
+
+    def validate_device_type(self, value):
+        if not value.approved:
+             raise serializers.ValidationError("Device type must be approved.")
+        return value
+
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -45,10 +69,22 @@ class UserSerializer(serializers.ModelSerializer):
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])
     role = serializers.ChoiceField(choices=Profile.ROLE_CHOICES, default=Profile.ROLE_USER, required=False)
+    
+    email = serializers.EmailField(
+        required=True,
+        validators=[UniqueValidator(queryset=User.objects.all(), message="This email is already registered.")]
+    )
 
     class Meta:
         model = User
         fields = ['username', 'email', 'password', 'first_name', 'last_name', 'role']
+        extra_kwargs = {
+            'username': {
+                'error_messages': {
+                    'unique': 'This username is already taken.'
+                }
+            }
+        }
 
     def create(self, validated_data):
         # Check if this is the first user

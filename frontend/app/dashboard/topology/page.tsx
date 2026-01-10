@@ -11,48 +11,99 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import TopologyCanvas from '@/components/topology/TopologyCanvas';
-import { DeviceData } from '@/hooks/useTopologyLayout';
-import { fetchTopology } from '@/lib/apiClient';
+import { fetchDevices, fetchRooms, fetchDeviceTypes } from '@/lib/apiClient';
 import { toast } from 'sonner';
 
 export default function TopologyPage() {
-  const [devices, setDevices] = useState<DeviceData[]>([]);
+  const [devices, setDevices] = useState<any[]>([]); 
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const onlineCount = devices.filter(d => d.is_online).length;
+
+  // Metrics
+  const onlineCount = devices.filter(d => d.status !== 'offline').length;
   const offlineCount = devices.length - onlineCount;
 
-  const loadTopology = async () => {
+  // Helper to normalize DRF responses (handle pagination)
+  const normalizeData = (response: any) => {
+    if (Array.isArray(response)) return response;
+    if (response && Array.isArray(response.results)) return response.results;
+    return [];
+  };
+
+  const loadData = async () => {
     try {
-      const data = await fetchTopology();
+      if (!isRefreshing) setIsLoading(true);
       
-      // Transform API response to DeviceData[]
-      // API returns: { name, ip, type, status, children: [...] }
-      // We need to flatten this into a list of devices with uplink_device
+      // Fetch devices, rooms, and types to enrich data
+      const [devicesRes, roomsRes, typesRes] = await Promise.all([
+        fetchDevices(),
+        fetchRooms(),
+        fetchDeviceTypes()
+      ]);
+
+      const devicesData = normalizeData(devicesRes);
+      const roomsData = normalizeData(roomsRes);
+      const typesData = normalizeData(typesRes);
       
-      const rootDevice: DeviceData = {
-        id: 'server-01', // Generate a stable ID for the root
-        name: data.name,
-        device_type: 'gateway', // Map 'server' to 'gateway' for visualization
-        ip_address: data.ip,
-        is_online: data.status === 'online',
-        uplink_device: null
+      // Create Room Map (ID -> Name)
+      const roomMap = new Map();
+      roomsData.forEach((r: any) => roomMap.set(r.id, r.name));
+
+      // Create Device Type Map (ID -> Name)
+      const typeMap = new Map();
+      typesData.forEach((t: any) => typeMap.set(t.id, t.name));
+
+      // 1. Define Root Node (HomeForge)
+      const homeForgeNode = {
+          id: 'homeforge',
+          name: 'HomeForge',
+          device_type: 'gateway',
+          is_online: true,
+          ip_address: '10.0.0.1', 
+          status: 'online',
+          roomName: 'Server Room'
       };
 
-      const childDevices: DeviceData[] = (data.children || []).map((child: any) => ({
-        id: `device-${child.id}`,
-        name: child.name,
-        device_type: mapDeviceType(child.device_type),
-        ip_address: child.ip_address,
-        is_online: child.status === 'online',
-        uplink_device: 'server-01', // All children connect to the server
-        room_name: child.room_name
-      }));
+      // 2. Process and Sort Devices
+      const mappedDevices = devicesData.map((d: any) => {
+          // Resolve Device Type Name safely
+          let typeName = 'client';
+          const rawType = d.device_type || d.type;
+          
+          if (typeof rawType === 'number') {
+              typeName = typeMap.get(rawType) || 'client';
+          } else if (typeof rawType === 'string') {
+              typeName = rawType;
+          } else if (typeof rawType === 'object' && rawType?.name) {
+              typeName = rawType.name;
+          }
 
-      setDevices([rootDevice, ...childDevices]);
-    } catch (error) {
-      console.error("Failed to load topology:", error);
-      toast.error("Failed to load network topology");
+          return {
+            ...d,
+            device_type: typeName,
+            is_online: d.status !== 'offline',
+            uplink_device: d.uplink_device || 'homeforge',
+            // Enrich with Room Name for display/sorting
+            roomName: d.room ? roomMap.get(d.room) || 'Unassigned' : 'Unassigned'
+        };
+      });
+
+      // Sort by Room Name, then by Device Name
+      mappedDevices.sort((a: any, b: any) => {
+        if (a.roomName === b.roomName) {
+            return a.name.localeCompare(b.name);
+        }
+        return a.roomName.localeCompare(b.roomName);
+      });
+
+      // 3. Combine
+      setDevices([homeForgeNode, ...mappedDevices]);
+
+    } catch (error: any) {
+      console.error("Failed to load topology data:", error);
+      if (isLoading || isRefreshing) {
+         toast.error(error.message || "Failed to load network data");
+      }
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -60,55 +111,23 @@ export default function TopologyPage() {
   };
 
   useEffect(() => {
-    loadTopology();
+    loadData();
+    
+    // Auto-refresh every 10s instead of 5s to reduce load
+    const interval = setInterval(() => {
+        loadData();
+    }, 10000);
 
-    // Poll for updates every 5 seconds
-    const intervalId = setInterval(() => {
-      // Silent refresh (don't set global loading state)
-      fetchTopology().then(data => {
-        const rootDevice: DeviceData = {
-          id: 'server-01',
-          name: data.name,
-          device_type: 'gateway',
-          ip_address: data.ip,
-          is_online: data.status === 'online',
-          uplink_device: null
-        };
-
-        const childDevices: DeviceData[] = (data.children || []).map((child: any) => ({
-          id: `device-${child.id}`,
-          name: child.name,
-          device_type: mapDeviceType(child.device_type),
-          ip_address: child.ip_address,
-          is_online: child.status === 'online',
-          uplink_device: 'server-01',
-          room_name: child.room_name
-        }));
-
-        setDevices([rootDevice, ...childDevices]);
-      }).catch(console.error);
-    }, 5000);
-
-    return () => clearInterval(intervalId);
+    return () => clearInterval(interval);
   }, []);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    // Force a fresh fetch from the API
-    loadTopology();
-  };
-
-  // Helper to map API device types to UI types
-  const mapDeviceType = (apiType: string): DeviceData['device_type'] => {
-    // API types: light, thermostat, etc.
-    // UI types: 'gateway' | 'switch' | 'ap' | 'client'
-    // For now, map everything else to 'client'
-    return 'client';
+    loadData();
   };
 
   const SidebarContent = () => (
     <div className="flex flex-col gap-4 h-full">
-      {/* Network Health */}
       <div>
         <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Network Health</div>
         <div className="grid gap-3">
@@ -128,13 +147,11 @@ export default function TopologyPage() {
             </div>
         </div>
       </div>
-
-      {/* Device Types - Removed as requested */}
       
       <div className="mt-auto p-4 rounded-lg bg-muted/50 border border-border">
         <p className="text-xs text-muted-foreground leading-relaxed">
           <Wifi className="w-3 h-3 inline mr-1" />
-          Topology is auto-generated based on LLDP and uplink data.
+          Live algorithmic layout. Devices sorted by Room.
         </p>
       </div>
     </div>
@@ -142,10 +159,8 @@ export default function TopologyPage() {
 
   return (
     <div className="h-full flex flex-col bg-background">
-      {/* Header Toolbar */}
-      <div className="flex items-center justify-between px-4 md:px-6 py-3 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex items-center justify-between px-4 md:px-6 py-3 border-b border-border bg-background/95 backdrop-blur">
         <div className="flex items-center gap-4">
-          {/* Mobile Menu Trigger */}
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden -ml-2 text-muted-foreground hover:text-foreground">
@@ -156,7 +171,7 @@ export default function TopologyPage() {
               <SheetHeader className="mb-6">
                 <SheetTitle className="flex items-center gap-2 text-foreground">
                   <Network className="w-5 h-5 text-primary" />
-                  Network Topology
+                  Topology
                 </SheetTitle>
               </SheetHeader>
               <SidebarContent />
@@ -165,9 +180,8 @@ export default function TopologyPage() {
 
           <div className="flex items-center gap-2 text-foreground">
             <Network className="w-5 h-5 text-primary hidden md:block" />
-            <span className="font-semibold tracking-tight">Network Topology</span>
+            <span className="font-semibold tracking-tight">Home Topology</span>
           </div>
-          <div className="h-4 w-px bg-border hidden md:block" />
         </div>
         <div className="flex items-center gap-2">
           <Button 
@@ -176,25 +190,18 @@ export default function TopologyPage() {
             onClick={handleRefresh}
             disabled={isRefreshing}
           >
-            {isRefreshing ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="w-4 h-4 mr-2" />
-            )}
-            <span className="hidden md:inline">Refresh Topology</span>
-            <span className="md:hidden">Refresh</span>
+            {isRefreshing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+            Refresh
           </Button>
         </div>
       </div>
 
       <div className="flex flex-1 overflow-hidden relative md:p-4 bg-muted/20">
         <div className="flex w-full h-full md:rounded-xl overflow-hidden md:border md:border-border bg-background shadow-sm relative">
-          {/* Desktop Sidebar Palette */}
           <div className="w-72 border-r border-border p-4 hidden md:block overflow-y-auto bg-card/30 backdrop-blur-xl">
             <SidebarContent />
           </div>
 
-          {/* React Flow Canvas */}
           <div className="flex-1 h-full relative">
              <TopologyCanvas devices={devices} />
           </div>

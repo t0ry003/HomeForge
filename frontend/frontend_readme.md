@@ -124,3 +124,25 @@ app/
 *   **Avatar Updates**: Fixed avatar disappearance after update by implementing `refreshUser`.
 *   **Performance**: Lazy-initialized `elkjs` in `useTopologyLayout`.
 *   **React Flow**: Optimized `DeviceBuilder` configuration by memoizing `defaultEdgeOptions` and `proOptions`.
+
+### 9. Admin Infrastructure (Phase 1)
+*   **Admin Dashboard**: Created protected route `/dashboard/admin` for Admin/Owner roles.
+*   **Navigation**: Updated `AppSidebar` to conditionally show "Admin Panel" navigation group.
+*   **Room Management**: Added UI to list, create, edit, and delete rooms.
+*   **User Management**: Added UI to list users and manage roles (Admin/User/Viewer).
+*   **Device Type Approval**: Added UI to list device types and approve/reject pending definitions.
+
+### 10. User Capabilities (Phase 2)
+*   **Device Registration Wizard**: 
+    *   Created `/dashboard/devices/page.tsx` implementing a 3-step wizard (Type -> Room -> Details).
+    *   Allows users to register actual devices into the system via the API.
+*   **Device Type Proposal**:
+    *   Created `/dashboard/device-types/page.tsx` with a JSON builder form.
+    *   Enables users to propose new device capabilities (`definition`) which enter a "pending" state for admin review.
+*   **Real Topology Data**:
+    *   Refactored `/dashboard/topology/page.tsx` to fetch live data from `GET /topology/`.
+    *   Updated visualization to support "Physical Topology" (Devices grouped by Rooms) using a grid-based auto-layout.
+*   **Dashboard Integration**:
+    *   Updated the main dashboard to display real-time counts of Registered Devices and Device Types.
+*   **Component Additions**:
+    *   Added `Select` (via `@radix-ui/react-select`) and `Textarea` components to `components/ui`.
