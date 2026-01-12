@@ -68,9 +68,10 @@ This repository contains the backend API for the **HomeForge** smart home applic
     - `Room`: Represents a physical room in the home.
     - `Device`: Represents a smart device (Light, Thermostat, etc.) linked to a Room.
 - **Topology API** (`GET /api/topology/`):
-    - Returns a hierarchical JSON structure of the home network.
-    - **Mock Data**: Automatically generates 10 devices and a "Living Room" for new users if no devices exist.
-    - **Live Simulation**: Randomly toggles the online/offline status of ~30% of devices on every request to simulate a real-time network environment.
+    - Returns a **Network Map** visualization in React Flow format (Nodes & Edges).
+    - **Hub-and-Spoke Layout**: Connects all devices directly to a central "HomeForge Gateway" unit.
+    - **Real-time Status**: Displays `online` (green) or `offline` (red) status for edges and nodes based on database records.
+    - **Detailed Data**: Nodes contain full device context (`ip`, `room`, `device_type`) for rich frontend tooltips.
 
 ### 4. Admin & Infrastructure (Phase 1)
 - **Room Management**: 

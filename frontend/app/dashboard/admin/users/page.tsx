@@ -35,7 +35,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { fetchUsers, updateUserAdmin, deleteUser } from "@/lib/apiClient"
+import { fetchUsers, updateUserAdmin, deleteUser, getAvatarUrl } from "@/lib/apiClient"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([])
@@ -111,6 +112,7 @@ export default function UsersPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[50px]"></TableHead>
               <TableHead>Username</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Full Name</TableHead>
@@ -121,21 +123,29 @@ export default function UsersPage() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center">
+                <TableCell colSpan={6} className="h-24 text-center">
                   No users found.
                 </TableCell>
               </TableRow>
             ) : (
               users.map((user) => (
                 <TableRow key={user.id}>
+                  <TableCell>
+                      <Avatar className="h-8 w-8">
+                            <AvatarImage src={getAvatarUrl(user.profile?.avatar || user.avatar)} alt={user.username} />
+                            <AvatarFallback>{user.username ? user.username.substring(0,2).toUpperCase() : '??'}</AvatarFallback>
+                      </Avatar>
+                  </TableCell>
                   <TableCell className="font-medium">{user.username}</TableCell>
-                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                     {user.email}
+                  </TableCell>
                   <TableCell>{user.first_name} {user.last_name}</TableCell>
                   <TableCell>{getRoleBadge(user.profile?.role || user.role)}</TableCell>
                   <TableCell>

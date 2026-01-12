@@ -51,9 +51,10 @@
 ### D. Topology View (`/app/dashboard/topology`)
 *   **Purpose**: Visualizes the network of connected devices in the home.
 *   **Features**:
-    *   **Auto-Layout**: Uses `elkjs` to automatically arrange nodes in a layered graph.
-    *   **Status Indicators**: Visual cues for Online/Offline status (Green/Red dots).
-    *   **Node Types**: Custom icons for Gateways, Switches, APs, Clients, etc.
+    *   **Layout Strategy**: Custom "Star/Radial" topology algorithm. The Gateway is centered, with all devices connected in a radial pattern.
+    *   **Visual Parity**: Matches the "Device Builder" aesthetic with identical glassmorphism nodes (`BuilderStyleNode`) and dark-themed canvas controls.
+    *   **Status Indicators**: "Online" status is indicated by a glowing green dot (mirroring the Builder's selection state), while offline devices are appropriately styled.
+    *   **Node Types**: Intelligent mapping of device names (e.g., "Camera", "Light") to specific icons and colors (Red/Video, Yellow/Sun) based on the Device Builder's design language.
 
 ### E. Settings (`/app/dashboard/settings`)
 *   **Profile Management**: Update username, email, password, and avatar.
@@ -131,6 +132,17 @@ app/
 *   **Room Management**: Added UI to list, create, edit, and delete rooms.
 *   **User Management**: Added UI to list users and manage roles (Admin/User/Viewer).
 *   **Device Type Approval**: Added UI to list device types and approve/reject pending definitions.
+
+### 11. Visual & Feature Refinements (Phase 3)
+*   **Topology Redesign**:
+    *   **Goal**: Align the Topology view visually with the Device Builder.
+    *   **Implementation**: Replaced `elkjs` with a custom radial layout engine. Ported `CustomNode` styles from Device Builder to a new `BuilderStyleNode` for the topology map.
+    *   **Details**: Nodes now share the exact color palette (e.g., Temperature=Orange, Camera=Red), blur effects, and interactions (hover scales) as the builder.
+*   **Device Management Enhancements**:
+    *   **Custom Icons (UI)**: Replaced the raw text input with a user-friendly **Icon Picker**.
+    *   **Implementation**: Utilizes `lucide-react` icons and a Shadcn `DropdownMenu` to provide a curated grid of smart home icons (Bulbs, Wifi, Sensors, etc.).
+    *   **Data Handling**: Stores the icon name (e.g., "Lightbulb") in the backend. Front-end dynamically resolves this name to the correct Lucide React component for display.
+    *   **Visuals**: Verified icon rendering in the Device List table, falling back to text if a custom string (non-Lucide) was provided previously.
 
 ### 10. User Capabilities (Phase 2)
 *   **Device Registration Wizard**: 

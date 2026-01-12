@@ -214,89 +214,107 @@ from rest_framework import generics, permissions, views
 # ... import statements ...
 class TopologyView(views.APIView):
     """
-    Returns the network topology of the user's home in React Flow format (nodes & edges).
-    Generates mock devices if none exist.
-    Randomly updates device status to simulate activity.
+    Returns the network topology of the home environment.
+    Visualizes the HomeForge Server connected to all registered devices.
+    Uses a radial layout for visualization.
     """
     permission_classes = (permissions.IsAuthenticated,)
 
     def get(self, request):
+        import math # Ensure math is imported
         user = request.user
         
-        # Check if ANY devices exist in the system, if not create mock data
+        # 1. Ensure Data Exists (Mock if empty for demo purposes)
         if not Device.objects.exists():
-            self._create_mock_devices(user)
+            self._create_mock_data(user)
 
-        # Fetch ALL devices from DB storage
-        # Status is updated via background task (monitor_devices) or manual interactions
+        # 2. Fetch Devices
         devices = Device.objects.all()
-        
-        # Build React Flow Nodes and Edges
+
         nodes = []
         edges = []
-
-
-        # 1. Central Home Server Node
+        
+        # 3. Create Central Server Node (The "Hub")
+        gateway_id = "homeforge-gateway"
         nodes.append({
-            "id": "home-server",
-            "type": "input", # Central node
-            "data": { "label": "HomeForge Gateway", "ip": "192.168.1.1", "status": "online" },
-            "position": { "x": 0, "y": 0 }
+            "id": gateway_id,
+            "type": "input", # Central input node
+            "data": { 
+                "label": "HomeForge Gateway",
+                "ip": "192.168.1.1",
+                "status": "online",
+                "type": "server",
+                "room": "Server Room"
+            },
+            "position": { "x": 0, "y": 0 },
+            "style": { 
+                "background": "#F3F4F6", 
+                "color": "#1F2937", 
+                "border": "2px solid #3B82F6",
+                "borderRadius": "8px",
+                "fontWeight": "bold"
+            }
         })
 
-        # 2. Device Nodes - Radial Layout
-        import math
+        # 4. Generate Device Nodes (Spokes)
+        # Layout: Radial positioning around the gateway
+        radius = 350 # Distance from center
+        device_count = devices.count()
         
-        radius = 300
-        count = devices.count()
-        if count > 0:
-            angle_step = (2 * math.pi) / count
-        else:
-            angle_step = 0
-
         for index, device in enumerate(devices):
-            node_id = str(device.id)
-            
             # Calculate position on circle
-            angle = index * angle_step
+            angle = (2 * math.pi * index) / device_count if device_count > 0 else 0
             x_pos = radius * math.cos(angle)
             y_pos = radius * math.sin(angle)
+            
+            node_id = str(device.id)
+            
+            # Identify Status Color
+            status_color = "#10B981" if device.status == Device.STATUS_ONLINE else "#EF4444"
+            if device.status == Device.STATUS_ERROR:
+                status_color = "#F59E0B"
 
             # Node Data
             nodes.append({
                 "id": node_id,
-                "type": "device",  # Custom type for frontend Use
+                "type": "device", # Custom frontend node type recommended
                 "data": { 
-                    "label": f"{device.name}",
-                    "details": {
-                        "ip": device.ip_address,
-                        "type": device.device_type.name,
-                        "room": device.room.name if device.room else "Unassigned",
-                        "status": device.status
-                    }
+                    "label": device.name,
+                    "ip": device.ip_address,
+                    "status": device.status,
+                    "room": device.room.name if device.room else "Unassigned",
+                    "device_type": device.device_type.name if device.device_type else "Unknown",
+                    "icon": device.icon
                 },
                 "position": { "x": x_pos, "y": y_pos },
-                "style": { 
-                    # specific style based on status
-                    "background": "#fff",
-                    "border": "1px solid #777",
+                # Fallback style if custom node is not used in frontend
+                "style": {
                     "width": 180,
-                    "borderColor": "#10B981" if device.status == 'online' else "#EF4444"
+                    "borderColor": status_color,
+                    "borderWidth": "1px",
+                    "borderStyle": "solid",
+                    "padding": "10px",
+                    "borderRadius": "5px",
+                    "background": "white"
                 }
             })
 
-            # Edge from Server to Device
+            # 5. Create Connection (Edge)
             edges.append({
-                "id": f"e-server-{node_id}",
-                "source": "home-server",
+                "id": f"edge-{gateway_id}-{node_id}",
+                "source": gateway_id,
                 "target": node_id,
-                "animated": device.status == 'online',
-                "style": { "stroke": "#10B981" if device.status == 'online' else "#EF4444" }
+                "animated": device.status == Device.STATUS_ONLINE, # Animate only if active
+                "style": { 
+                    "stroke": status_color,
+                    "strokeWidth": 2
+                },
             })
 
         return Response({ "nodes": nodes, "edges": edges })
 
-    def _create_mock_devices(self, user):
+    def _create_mock_data(self, user):
+        """Helper to seed DB with data if completely empty."""
         room, _ = Room.objects.get_or_create(name="Living Room", user=user)
         
         # Ensure default device types exist
@@ -309,12 +327,13 @@ class TopologyView(views.APIView):
             )
             type_objects.append(dt)
         
-        for i in range(1, 11):
+        for i in range(1, 9):
+            d_type = random.choice(type_objects)
             Device.objects.create(
-                name=f"Device {i}",
+                name=f"{d_type.name} {i:02d}",
                 ip_address=f"192.168.1.{100+i}",
-                status=Device.STATUS_ONLINE,
-                device_type=random.choice(type_objects),
+                status=random.choice([Device.STATUS_ONLINE, Device.STATUS_OFFLINE]),
+                device_type=d_type,
                 room=room,
                 user=user
             )

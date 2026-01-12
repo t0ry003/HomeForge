@@ -19,7 +19,7 @@ export function DynamicBreadcrumbs() {
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem className="hidden md:block">
-          <BreadcrumbLink href="/">OpenDash</BreadcrumbLink>
+          <BreadcrumbLink href="/">HomeForge</BreadcrumbLink>
         </BreadcrumbItem>
         {segments.map((segment, index) => {
           const isLast = index === segments.length - 1

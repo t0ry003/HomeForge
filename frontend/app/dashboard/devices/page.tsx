@@ -1,213 +1,154 @@
 'use client';
+
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { fetchDeviceTypes, fetchRooms, registerDevice } from '@/lib/apiClient';
+import { fetchDevices, fetchRooms, fetchDeviceTypes } from '@/lib/apiClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from "@/components/ui/badge";
+import { AddDeviceDialog } from '@/components/devices/AddDeviceDialog';
+import { Search, Loader2, RotateCw } from 'lucide-react';
 import { toast } from "sonner";
-import { Loader2, ArrowLeft, ArrowRight, Check } from 'lucide-react';
+import { clsx } from 'clsx';
+import { getIconComponent } from '@/lib/icons';
 
-export default function RegisterDevicePage() {
-  const router = useRouter();
-  const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  
-  // Data sources
-  const [deviceTypes, setDeviceTypes] = useState<any[]>([]);
-  const [rooms, setRooms] = useState<any[]>([]);
-  const [loadingData, setLoadingData] = useState(true);
+export default function DevicesPage() {
+  const [devices, setDevices] = useState<any[]>([]);
+  const [rooms, setRooms] = useState<Map<number, string>>(new Map());
+  const [types, setTypes] = useState<Map<number, string>>(new Map());
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
 
-  // Form Data
-  const [formData, setFormData] = useState({
-    type_id: '',
-    room_id: '',
-    name: '',
-    ip_address: ''
-  });
-
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [typesRes, roomsRes] = await Promise.all([
-          fetchDeviceTypes(),
-          fetchRooms()
-        ]);
-        setDeviceTypes(typesRes);
-        setRooms(roomsRes);
-      } catch (err) {
-        toast.error("Failed to load form data");
-        console.error(err);
-      } finally {
-        setLoadingData(false);
-      }
-    }
-    loadData();
-  }, []);
-
-  const handleNext = () => {
-    if (step === 1 && !formData.type_id) {
-      toast.error("Please select a device type");
-      return;
-    }
-    if (step === 2 && !formData.room_id) {
-      // Room is optional? Prompt implies selection. Let's make it optional or required.
-      // Usually rooms are required for placement, but let's assume required for this wizard.
-      // If optional, user can skip. Let's make it required for now as per "Step 2: Select Room".
-      toast.error("Please select a room");
-      return;
-    }
-    setStep(s => s + 1);
-  };
-
-  const handleBack = () => setStep(s => s - 1);
-
-  const handleSubmit = async () => {
-    if (!formData.name) {
-      toast.error("Please enter a device name");
-      return;
-    }
-    
+  const loadData = async () => {
     setLoading(true);
     try {
-      await registerDevice({
-        name: formData.name,
-        type_id: formData.type_id,
-        room_id: formData.room_id,
-        meta_data: {
-          ip: formData.ip_address
-        }
-      });
-      toast.success("Device registered successfully!");
-      router.push('/dashboard');
-    } catch (error: any) {
-      toast.error(error.message || "Failed to register device");
+      const [devicesRes, roomsRes, typesRes] = await Promise.all([
+        fetchDevices(),
+        fetchRooms(),
+        fetchDeviceTypes()
+      ]);
+
+      const devicesList = Array.isArray(devicesRes) ? devicesRes : (devicesRes.results || []);
+      const roomsList = Array.isArray(roomsRes) ? roomsRes : (roomsRes.results || []);
+      const typesList = Array.isArray(typesRes) ? typesRes : (typesRes.results || []);
+
+      setDevices(devicesList);
+      
+      const newRoomMap = new Map();
+      roomsList.forEach((r: any) => newRoomMap.set(r.id, r.name));
+      setRooms(newRoomMap);
+
+      const newTypeMap = new Map();
+      typesList.forEach((t: any) => newTypeMap.set(t.id, t.name));
+      setTypes(newTypeMap);
+
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load devices");
     } finally {
       setLoading(false);
     }
   };
 
-  if (loadingData) {
-    return <div className="flex justify-center items-center h-64"><Loader2 className="animate-spin" /></div>;
-  }
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const filteredDevices = devices.filter(d => 
+    d.name.toLowerCase().includes(search.toLowerCase()) || 
+    (d.ip_address && d.ip_address.includes(search))
+  );
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Register New Device</CardTitle>
-          <CardDescription>Step {step} of 3</CardDescription>
-        </CardHeader>
-        <CardContent>
-          
-          {/* Step 1: Device Type */}
-          {step === 1 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Select Device Type</Label>
-                <Select 
-                  value={formData.type_id} 
-                  onValueChange={(val) => setFormData({...formData, type_id: val})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a device type..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {deviceTypes.map((dt) => (
-                      <SelectItem key={dt.id} value={String(dt.id)}>
-                        {dt.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground">
-                    Choose the model of the device you are adding.
-                </p>
-              </div>
-            </div>
-          )}
+    <div className="p-6 space-y-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+           <h1 className="text-2xl font-bold tracking-tight">Devices</h1>
+           <p className="text-muted-foreground">Manage and monitor all connected devices.</p>
+        </div>
+        <div className="flex items-center gap-2">
+           <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
+             <RotateCw className={clsx("w-4 h-4 mr-2", loading && "animate-spin")} />
+             Refresh
+           </Button>
+           <AddDeviceDialog onDeviceAdded={loadData} />
+        </div>
+      </div>
 
-          {/* Step 2: Room */}
-          {step === 2 && (
-            <div className="space-y-4">
-               <div className="space-y-2">
-                <Label>Select Room</Label>
-                <Select 
-                  value={formData.room_id} 
-                  onValueChange={(val) => setFormData({...formData, room_id: val})}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a room..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {rooms.map((r) => (
-                      <SelectItem key={r.id} value={String(r.id)}>
-                        {r.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-sm text-muted-foreground">
-                    Where is this device located?
-                </p>
-              </div>
-            </div>
-          )}
+      <div className="flex items-center space-x-2">
+         <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Search devices..." 
+              className="pl-8"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+         </div>
+      </div>
 
-          {/* Step 3: Details */}
-          {step === 3 && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="dev-name">Device Name</Label>
-                <Input 
-                  id="dev-name" 
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                  placeholder="e.g. Living Room Lamp"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="ip-addr">IP Address (Optional)</Label>
-                <Input 
-                  id="ip-addr" 
-                  value={formData.ip_address}
-                  onChange={(e) => setFormData({...formData, ip_address: e.target.value})}
-                  placeholder="192.168.1.x"
-                />
-              </div>
-            </div>
-          )}
+      <div className="border rounded-md bg-card">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Status</TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Room</TableHead>
+              <TableHead>IP Address</TableHead>
+              <TableHead>Icon</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+               <TableRow>
+                 <TableCell colSpan={6} className="h-24 text-center">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" />
+                 </TableCell>
+               </TableRow>
+            ) : filteredDevices.length === 0 ? (
+               <TableRow>
+                 <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                    No devices found.
+                 </TableCell>
+               </TableRow>
+            ) : (
+                filteredDevices.map((device) => {
+                   const isOnline = device.status === 'online' || device.is_online;
+                   let typeName = 'Unknown';
+                   if (device.device_type) {
+                       if (typeof device.device_type === 'number') typeName = types.get(device.device_type) || `ID: ${device.device_type}`;
+                       else if (typeof device.device_type === 'string') typeName = device.device_type;
+                       else if (device.device_type.name) typeName = device.device_type.name;
+                   }
 
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          {step > 1 ? (
-            <Button variant="outline" onClick={handleBack} disabled={loading}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back
-            </Button>
-          ) : (
-            <div></div> // Spacer
-          )}
-
-          {step < 3 ? (
-            <Button onClick={handleNext}>
-              Next <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          ) : (
-            <Button onClick={handleSubmit} disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {loading ? 'Registering...' : 'Complete Registration'}
-            </Button>
-          )}
-        </CardFooter>
-      </Card>
-      
-      {/* Step Indicators */}
-      <div className="flex justify-center mt-6 gap-2">
-        <div className={`h-2 w-2 rounded-full ${step >= 1 ? 'bg-primary' : 'bg-muted'}`} />
-        <div className={`h-2 w-2 rounded-full ${step >= 2 ? 'bg-primary' : 'bg-muted'}`} />
-        <div className={`h-2 w-2 rounded-full ${step >= 3 ? 'bg-primary' : 'bg-muted'}`} />
+                   return (
+                     <TableRow key={device.id}>
+                       <TableCell>
+                          <div className={clsx("w-2.5 h-2.5 rounded-full", isOnline ? "bg-green-500" : "bg-red-400")} />
+                       </TableCell>
+                       <TableCell className="font-medium">{device.name}</TableCell>
+                       <TableCell>
+                          <Badge variant="outline" className="capitalize">{typeName}</Badge>
+                       </TableCell>
+                       <TableCell>
+                          {device.room ? (rooms.get(device.room) || 'Unassigned') : <span className="text-muted-foreground italic">Unassigned</span>}
+                       </TableCell>
+                       <TableCell className="font-mono text-xs">{device.ip_address || 'N/A'}</TableCell>
+                       <TableCell className="text-xs text-muted-foreground font-mono">
+                          {(() => {
+                            // Check if icon string is valid in our map, else show string (legacy FontAwesome support)
+                            const IconC = device.icon ? getIconComponent(device.icon) : null;
+                            if (IconC) return <IconC className="w-4 h-4 text-foreground/80" />;
+                            return device.icon || '-';
+                          })()}
+                       </TableCell>
+                     </TableRow>
+                   );
+                })
+            )}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

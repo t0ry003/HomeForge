@@ -34,16 +34,13 @@ async function handleApiError(res, defaultMsg) {
     // 3. Field errors
     const parts = [];
     for (const [key, value] of Object.entries(errorData)) {
-      // Backend usually sends array of strings for field errors
-      if (Array.isArray(value)) {
-        parts.push(`${key}: ${value.join(' ')}`);
-      } else if (typeof value === 'string') {
-        parts.push(`${key}: ${value}`);
-      }
+      // Just extract the messages, ignore the field names for a cleaner look
+      const messages = Array.isArray(value) ? value : [value];
+      parts.push(...messages);
     }
     
     if (parts.length > 0) {
-      // Join with newline or something readable
+      // Join with newline
       throw new Error(parts.join('\n'));
     }
   }
@@ -165,12 +162,6 @@ export async function refreshAccessToken() {
   const data = await res.json();
   localStorage.setItem('access', data.access);
   return data.access;
-}
-
-export async function fetchTopology() {
-  const res = await fetchWithAuth(`${getApiBase()}/topology/`);
-  if (!res.ok) await handleApiError(res, 'Failed to fetch topology');
-  return res.json();
 }
 
 // --- Rooms ---
@@ -297,5 +288,11 @@ export async function registerDevice(data) {
     body: JSON.stringify(data),
   });
   if (!res.ok) await handleApiError(res, 'Failed to register device');
+  return res.json();
+}
+
+export async function fetchTopology() {
+  const res = await fetchWithAuth(`${getApiBase()}/topology/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch topology');
   return res.json();
 }

@@ -1,12 +1,10 @@
 {
   "name": "Frontend (Next.js)",
-  "dockerComposeFile": "../../docker-compose.yml",
+  "dockerComposeFile": ["../../docker-compose.yml", "docker-compose.dev.yml"],
   "service": "frontend",
   "workspaceFolder": "/app",
-  
-  // before first start
-  "postCreateCommand": "npm install", 
+  "remoteUser": "root",
+  "postCreateCommand": "npm install"
 
-  // after every start
-  "postStartCommand": "npm run dev"
+  //"postStartCommand": "npm run dev"
 }

@@ -1,5 +1,8 @@
+name: homeforge
+
 services:
   db:
+    container_name: homeforge-db
     image: postgres:15-alpine
     volumes:
       - postgres_data:/var/lib/postgresql/data/
@@ -17,9 +20,11 @@ services:
       retries: 5
 
   backend:
+    container_name: homeforge-backend
     build:
       context: ./backend
       dockerfile: Dockerfile
+    # command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - ./backend:/app
     ports:
@@ -34,9 +39,11 @@ services:
       - db
 
   frontend:
+    container_name: homeforge-frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    # command: npm run dev
     volumes:
       - ./frontend:/app
       - /app/node_modules

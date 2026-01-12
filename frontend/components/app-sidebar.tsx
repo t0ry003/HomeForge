@@ -71,7 +71,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: Shield,
       // @ts-ignore
       items: [
-        { title: "General", url: "/dashboard/admin" },
         { title: "Rooms", url: "/dashboard/admin/rooms" },
         { title: "Users", url: "/dashboard/admin/users" },
         { title: "Device Types", url: "/dashboard/admin/device-types" },

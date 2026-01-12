@@ -638,7 +638,7 @@ const DeviceBuilderContent = () => {
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header Toolbar */}
-      <div className="flex items-center justify-between px-4 md:px-6 py-3 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
+      <div className="flex items-center justify-between px-4 md:px-6 py-3 border-b border-border bg-background backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-foreground">
             <div className="p-1.5 rounded-md bg-primary/10 hidden md:block">
@@ -674,7 +674,7 @@ const DeviceBuilderContent = () => {
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden relative md:p-4 bg-muted/20">
+      <div className="flex flex-1 overflow-hidden relative md:p-4 bg-background/20">
         <div className="flex w-full h-full md:rounded-2xl overflow-hidden md:border md:border-border bg-background shadow-2xl relative">
           <div className="w-72 border-r border-border p-4 hidden md:block overflow-y-auto bg-card/30 backdrop-blur-xl">
             <SidebarContent />

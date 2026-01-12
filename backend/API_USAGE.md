@@ -123,47 +123,49 @@ fetch('http://localhost:8000/api/me/', {
 ### 6. Get Network Topology
 **GET** `/topology/`
 
-Retrieves the network topology of the shared home formatted for React Flow visualization (Nodes & Edges).
+Retrieves the network map of the smart home environment. This endpoint generates a node-based graph structure compatible with libraries like **React Flow**.
 
-**Behavior:**
-- **Real-time Data**: Fetches all registered devices from the database.
-- **Status**: Device status (`online`, `offline`) is updated by the background monitor (`monitor_devices`), not randomized on view.
-- **Layout**: Arranges devices in a radial layout around a central Gateway node.
-- **Custom Nodes**: Uses `type: "device"` for device nodes to support rich frontend rendering.
+**Structure:**
+- **Central Node**: A "HomeForge Gateway" node represents the server.
+- **Device Nodes**: Each registered device is a node connected to the gateway.
+- **Edges**: Connections representing the link between the gateway and devices.
 
-**Response (React Flow Format):**
+**Response Schema:**
 ```json
 {
   "nodes": [
     {
-      "id": "home-server",
+      "id": "homeforge-gateway",
       "type": "input",
-      "data": { "label": "HomeForge Gateway", "ip": "192.168.1.1", "status": "online" },
+      "data": { 
+          "label": "HomeForge Gateway", 
+          "ip": "192.168.1.1", 
+          "status": "online", 
+          "type": "server" 
+      },
       "position": { "x": 0, "y": 0 }
     },
     {
-      "id": "1",
+      "id": "15",
       "type": "device",
       "data": { 
-        "label": "Smart Light",
-        "details": {
-            "ip": "192.168.1.101",
-            "type": "Light",
-            "room": "Living Room",
-            "status": "online"
-        } 
+          "label": "Living Room Cam", 
+          "ip": "192.168.1.105", 
+          "status": "online", 
+          "room": "Living Room", 
+          "device_type": "Camera",
+          "icon": "fa-video"
       },
-      "position": { "x": 300, "y": 0 },
-      "style": { ... }
+      "position": { "x": 250, "y": 100 }
     }
   ],
   "edges": [
     {
-      "id": "e-server-1",
-      "source": "home-server",
-      "target": "1",
-      "animated": true,
-      "style": { "stroke": "#10B981" }
+      "id": "edge-homeforge-gateway-15",
+      "source": "homeforge-gateway",
+      "target": "15",
+      "animated": true, 
+      "style": { "stroke": "#10B981", "strokeWidth": 2 }
     }
   ]
 }
@@ -219,7 +221,8 @@ Retrieves the network topology of the shared home formatted for React Flow visua
   "name": "Kitchen Light",
   "ip_address": "192.168.1.50",
   "device_type": 1,        // ID of an APPROVED device type
-  "room": 2                // ID of a Room (optional)
+  "room": 2,               // ID of a Room (optional)
+  "icon": "fa-lightbulb"   // FontAwesome icon class (optional, default: fa-cube)
 }
 ```
 **GET** `/devices/` - List user's devices.

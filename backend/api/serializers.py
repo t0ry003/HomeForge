@@ -33,7 +33,7 @@ class DeviceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Device
-        fields = ['id', 'name', 'ip_address', 'status', 'device_type', 'device_type_name', 'room', 'room_name', 'room_id']
+        fields = ['id', 'name', 'ip_address', 'status', 'icon', 'device_type', 'device_type_name', 'room', 'room_name', 'room_id']
 
     def validate_device_type(self, value):
         if not value.approved:
