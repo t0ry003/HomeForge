@@ -191,28 +191,55 @@ Retrieves the network map of the smart home environment. This endpoint generates
 
 **POST** `/device-types/propose/` - Propose a new device type (User).  
 - Automatically sets `approved=False`.
+- Includes nested UI Template (`card_template`) and Controls configuration.
 
-**Payload (includes Schema Builder JSON):**
+**Payload:**
 ```json
 {
-  "name": "Super Sensor",
+  "name": "Smart Fan",
   "definition": {
-      "name": "New Device",
+      "name": "Fan v1",
       "structure": [
-          { "id": "mcu-1", "type": "mcu", "label": "MCU", "position": { "x": 100, "y": 10 } },
-          { "id": "temp-1", "type": "temperature", "label": "Temp", "position": { "x": 100, "y": 100 } }
+          { "id": "mcu-1", "type": "mcu", "label": "ESP32", "position": { "x": 50, "y": 50 } },
+          { "id": "relay_1", "type": "relay", "label": "Power", "position": { "x": 150, "y": 50 } },
+          { "id": "pwm_1", "type": "pwm", "label": "Speed", "position": { "x": 150, "y": 150 } }
+      ]
+  },
+  "card_template": {
+      "layout_config": { "w": 2, "h": 2 },
+      "controls": [
+          {
+              "widget_type": "TOGGLE",
+              "label": "Master Power",
+              "variable_mapping": "relay_1"
+          },
+          {
+              "widget_type": "SLIDER",
+              "label": "Fan Speed",
+              "variable_mapping": "pwm_1",
+              "min_value": 0,
+              "max_value": 100,
+              "step": 10
+          }
       ]
   }
 }
 ```
 
-**POST** `/device-types/` - Create a new device type (Admin).
-- `approved=True` by default for Admins.
+**Validation Rule:** Every `variable_mapping` key in the controls (e.g., `relay_1`) must exist as an `id` in the `definition.structure`.
 
-**PUT** `/device-types/<id>/` - Update a device type (Admin only - e.g. Approve).
-**DELETE** `/device-types/<id>/` - Delete a device type (Admin only).
+### 10. Admin Review & Approval
+**GET** `/admin/device-types/pending/`  
+Get a list of all unapproved device types with full nested details (Definition + UI Template).
 
-### 10. Device Registration & Management
+**POST** `/admin/device-types/<id>/approve/`  
+Approve a pending device type.
+
+**POST** `/admin/device-types/<id>/deny/`  
+Deny a device type.  
+**Payload required:** `{"reason": "Invalid specificaton text."}`
+
+### 11. Device Registration & Management
 **POST** `/devices/` - Register a new device.
 
 **Payload:**
@@ -226,13 +253,54 @@ Retrieves the network map of the smart home environment. This endpoint generates
 }
 ```
 **GET** `/devices/` - List user's devices.
-**GET** `/devices/<id>/` - Get details of a device.
+**GET** `/devices/<id>/` - Get details of a device (including `current_state`).
 **PUT** `/devices/<id>/` - Update a device.
 **DELETE** `/devices/<id>/` - Delete a device.
 
+**Device Object Response Example:**
+```json
+{
+    "id": 1,
+    "name": "Kitchen Light",
+    "ip_address": "192.168.1.50",
+    "status": "online",
+    "icon": "fa-lightbulb",
+    "current_state": { "relay_1": true },
+    "device_type": 1,
+    "room": 2
+}
+```
 
+### 12. Device State Control
+**PATCH** `/devices/<id>/state/`  
+Update the current operational state of a device (simulating hardware control).
 
-**POST** `/device-types/<id>/approve/` - Approve a device type (Admin only).
+**Payload:**
+```json
+{
+  "relay_1": true,
+  "pwm_1": 75
+}
+```
+
+**Behavior:**
+- Updates the `current_state` JSON field in the database (merging with existing keys).
+- **Simulation**: Automatically sets the device status to `online` to indicate successful receipt of command.
+- Triggers a synchronization hook (logging placeholder for future MQTT/API calls).
+- Returns the updated state.
+
+**Response:**
+```json
+{
+  "status": "State updated",
+  "device_status": "online",
+  "current_state": {
+      "relay_1": true,
+      "pwm_1": 75,
+      "other_key": "stays_same"
+  }
+}
+```
 
 ## Error Handling
 

@@ -171,11 +171,18 @@ Defined in `docker-compose.yml`:
     ```bash
     python3 manage.py monitor_devices
     ```
-    - **Logic**:
-        - **Mock Devices** (IP starts with 192.168.1.1XX): Simulates random status (Online/Offline/Error).
-        - **Real IPs**: Attempts a system `ping`.
-        - Updates `status` field in database.
-    - **Status Enum**:
-        - `online`: Device reachable.
-        - `offline`: Connectivity lost.
-        - `error`: System error during check.
+
+### 7. Device State & Control (Home Assistant Style)
+- **Architecture**:
+    - Similar to Home Assistant's "Entity State" model, every device has a `current_state` attribute (JSON).
+    - This allows flexible storage for custom DIY devices (e.g., `{"pwm_val": 128, "mode": "party"}`).
+- **Control Flow**:
+    1.  **Frontend**: Sends `PATCH /api/devices/{id}/state/` with key-value pairs (e.g., `{"relay_1": true}`).
+    2.  **Backend**:
+        -   Validates ownership.
+        -   Merges the new values into the stored `current_state` JSON.
+        -   **Simulation**: Automatically marks the device as `status='online'` to simulate a successful "Ack" from hardware.
+        -   **Sync Hook**: A placeholder method `sync_with_hardware` logs the action. This is where MQTT publishing/ESPHome API calls will be injected in the future.
+- **Extensibility**:
+    -   The system relies on `DeviceCardTemplate` to tell the frontend *how* to render the JSON state (e.g., "Key `pwm_val` maps to a Slider 0-255").
+    -   Because the state is schema-less JSON, adding new features to a DIY ESP32 doesn't require database migrations.

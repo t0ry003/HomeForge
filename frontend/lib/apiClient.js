@@ -244,12 +244,28 @@ export async function createDeviceType(data) {
     return res.json();
   }
 
+export async function fetchPendingDeviceTypes() {
+  const res = await fetchWithAuth(`${getApiBase()}/admin/device-types/pending/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch pending device types');
+  return res.json();
+}
+
 export async function approveDeviceType(id) {
-  const res = await fetchWithAuth(`${getApiBase()}/device-types/${id}/approve/`, {
+  const res = await fetchWithAuth(`${getApiBase()}/admin/device-types/${id}/approve/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
     });
   if (!res.ok) await handleApiError(res, 'Failed to approve device type');
+  return res.json();
+}
+
+export async function denyDeviceType(id, reason) {
+  const res = await fetchWithAuth(`${getApiBase()}/admin/device-types/${id}/deny/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+    });
+  if (!res.ok) await handleApiError(res, 'Failed to deny device type');
   return res.json();
 }
 
@@ -288,6 +304,16 @@ export async function registerDevice(data) {
     body: JSON.stringify(data),
   });
   if (!res.ok) await handleApiError(res, 'Failed to register device');
+  return res.json();
+}
+
+export async function updateDeviceState(id, data) {
+  const res = await fetchWithAuth(`${getApiBase()}/devices/${id}/state/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to update device state');
   return res.json();
 }
 

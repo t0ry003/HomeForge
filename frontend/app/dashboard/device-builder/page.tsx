@@ -59,6 +59,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { proposeDeviceType } from "@/lib/apiClient"
 import { useSearchParams } from 'next/navigation'
+import DeviceUICreator from './DeviceUICreator';
 
 // --- Types ---
 type SensorType = 'mcu' | 'temperature' | 'humidity' | 'motion' | 'light' | 'switch' | 'co2';
@@ -199,79 +200,34 @@ const validateGraph = (nodes: Node[], edges: Edge[]) => {
   return { valid: true };
 };
 
-// --- Helper: Hierarchical Export ---
-const buildHierarchy = (nodes: Node[], edges: Edge[]) => {
-  // Revert edges for hierarchy: Child(Source)->Parent(Target) is what ReactFlow has.
-  // Hierarchy builder expects Parent->Children.
-  // We need to find Roots (Nodes that are not targets in PARENT->CHILD direction).
-  // Current Edge: Sensor (Source) -> MCU (Target).
-  // This means Sensor is Child, MCU is Parent.
-  // So existing edges are CHILD -> PARENT.
-  // In a tree, Root has no Parent. So Root is not a Target of any CHILD->PARENT edge.
-  // Wait.
-  // If Sensor->MCU (Child->Parent).
-  // Sensor is Source. MCU is Target.
-  // MCU IS A TARGET.
-  // So if we look for nodes that are NOT targets, we find Sensor.
-  // But Sensor is Leaf.
-  // We want to find Root (MCU).
-  // MCU is NOT a Source (assuming it has no parent).
-  
-  // So Source = Child, Target = Parent.
-  // Leaf nodes are Sources only.
-  // Root node is Target only (or unconnected if single).
-  
-  const sources = new Set(edges.map(e => e.source));
-  // Roots are nodes that are never Sources (i.e. nothing points TO them as parent? No.)
-  // Edge: Child -> Parent.
-  // A node is a Root if it is a Parent but never a Child.
-  // Child is Source. Parent is Target.
-  // So Root is never a Source.
-  
-  const roots = nodes.filter(n => !sources.has(n.id)); 
-  // Wait. Sensor->MCU. Sensor is Source. MCU is Target.
-  // Sensor is Source. MCU is NOT Source.
-  // So roots = [MCU]. Correct.
-
-  const buildNode = (node: Node): any => {
-    // Find children. Children are sources of edges where target is node.id
-    const childEdges = edges.filter(e => e.target === node.id);
-    const children = childEdges.map(e => {
-      const childNode = nodes.find(n => n.id === e.source);
-      return childNode ? buildNode(childNode) : null;
-    }).filter(Boolean);
-
-    return {
-      id: node.id,
-      type: node.data.type,
-      label: node.data.label,
-      position: node.position,
-      ...(children.length > 0 && { children }),
-    };
-  };
-
-  return roots.map(buildNode);
+// --- Helper: Structure Export (Flat with Parent Ref) ---
+const buildStructure = (nodes: Node[], edges: Edge[]) => {
+  return nodes.map(node => {
+     // Find parent
+     const parentEdge = edges.find(e => e.source === node.id);
+     return {
+         id: node.id,
+         type: node.data.type,
+         label: node.data.label,
+         position: node.position,
+         parentId: parentEdge ? parentEdge.target : null
+     };
+  });
 };
 
-// --- Helper: Hierarchical Import ---
-interface HierarchyNode {
-    id: string;
-    type: SensorType;
-    label: string;
-    position: { x: number, y: number };
-    children?: HierarchyNode[];
-}
+// --- Helper: Structure Import (Rebuild from Flat) ---
+const reconstructGraph = (structure: any[]): { nodes: Node[], edges: Edge[] } => {
+    const resultNodes: Node[] = [];
+    const resultEdges: Edge[] = [];
 
-const flattenHierarchy = (nodes: HierarchyNode[], parentId: string | null = null): { nodes: Node[], edges: Edge[] } => {
-    let resultNodes: Node[] = [];
-    let resultEdges: Edge[] = [];
+    if (!Array.isArray(structure)) return { nodes: [], edges: [] };
 
-    nodes.forEach(node => {
+    structure.forEach(node => {
         const sensorDef = AVAILABLE_SENSORS.find(s => s.type === node.type);
         const rfNode: Node = {
             id: node.id,
             type: 'custom',
-            position: node.position,
+            position: node.position || { x: 0, y: 0 },
             data: {
                 label: node.label,
                 type: node.type,
@@ -281,22 +237,15 @@ const flattenHierarchy = (nodes: HierarchyNode[], parentId: string | null = null
         };
         resultNodes.push(rfNode);
 
-        if (parentId) {
-            // Create Edge: Child (Current) -> Parent (parentId)
+        if (node.parentId) {
             resultEdges.push({
-                id: `e-${node.id}-${parentId}`,
+                id: `e-${node.id}-${node.parentId}`,
                 source: node.id,
-                target: parentId,
+                target: node.parentId,
                 animated: true,
                 style: { stroke: 'var(--primary)', strokeWidth: 2 },
                 markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--primary)' },
             });
-        }
-
-        if (node.children) {
-            const { nodes: childNodes, edges: childEdges } = flattenHierarchy(node.children, node.id);
-            resultNodes = [...resultNodes, ...childNodes];
-            resultEdges = [...resultEdges, ...childEdges];
         }
     });
 
@@ -310,10 +259,8 @@ const DeviceBuilderContent = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [deviceName, setDeviceName] = useState("New Device");
+  const [step, setStep] = useState<'nodes' | 'ui'>('nodes');
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  
-  // Submit Dialog State
-  const [isSubmitOpen, setIsSubmitOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { screenToFlowPosition, getViewport, setCenter } = useReactFlow();
@@ -326,7 +273,7 @@ const DeviceBuilderContent = () => {
         try {
             const parsed = JSON.parse(decodeURIComponent(importData));
             if (parsed.structure) {
-                const { nodes: loadedNodes, edges: loadedEdges } = flattenHierarchy(parsed.structure);
+                const { nodes: loadedNodes, edges: loadedEdges } = reconstructGraph(parsed.structure);
                 setNodes(loadedNodes);
                 setEdges(loadedEdges);
                 if (parsed.name) setDeviceName(parsed.name);
@@ -345,7 +292,7 @@ const DeviceBuilderContent = () => {
           try {
              const parsed = JSON.parse(jsonString);
              if (parsed.structure) {
-                 const { nodes: loadedNodes, edges: loadedEdges } = flattenHierarchy(parsed.structure);
+                 const { nodes: loadedNodes, edges: loadedEdges } = reconstructGraph(parsed.structure);
                  setNodes(loadedNodes);
                  setEdges(loadedEdges);
                  if (parsed.name) setDeviceName(parsed.name);
@@ -358,6 +305,8 @@ const DeviceBuilderContent = () => {
 
   // Global Touch End Handler for Mobile Drag & Drop
   useEffect(() => {
+    if (step !== 'nodes') return;
+    
     const handleGlobalTouchEnd = (event: TouchEvent) => {
       const type = (window as any).__draggedType;
       if (!type) return;
@@ -411,7 +360,7 @@ const DeviceBuilderContent = () => {
 
     window.addEventListener('touchend', handleGlobalTouchEnd);
     return () => window.removeEventListener('touchend', handleGlobalTouchEnd);
-  }, [screenToFlowPosition, setNodes]);
+  }, [screenToFlowPosition, setNodes, step]);
 
   const onConnect = useCallback(
     (params: Connection) => {
@@ -540,41 +489,47 @@ const DeviceBuilderContent = () => {
     [screenToFlowPosition, nodes, setNodes],
   );
 
-  const handleOpenSubmitDialog = () => {
+  const handleNextStep = () => {
     const validation = validateGraph(nodes, edges);
     if (!validation.valid) {
-      toast.error("Cannot save invalid device", {
+      toast.error("Invalid Configuration", {
         description: validation.error,
         icon: <AlertCircle className="w-5 h-5 text-red-500" />,
       });
       return;
     }
-    setIsSubmitOpen(true);
+    setStep('ui');
   };
 
-  const handleSubmitProposal = async () => {
+  const handleFinalSubmit = async (cardTemplate: any) => {
       setIsSubmitting(true);
       try {
-        const hierarchy = buildHierarchy(nodes, edges);
+        const structure = buildStructure(nodes, edges);
         const definition = {
             name: deviceName,
             createdAt: new Date().toISOString(),
-            structure: hierarchy
+            structure
         };
         
-        console.log("Export/Proposal:", JSON.stringify(definition, null, 2));
+        console.log("Export/Proposal:", JSON.stringify({ definition, card_template: cardTemplate }, null, 2));
 
         await proposeDeviceType({
             name: deviceName,
-            definition: definition
+            definition: definition,
+            card_template: cardTemplate
         });
         
         toast.success("Device Proposal Submitted", {
             description: "An admin will review your device type."
         });
-        setIsSubmitOpen(false);
+        
+        // Reset 
+        setNodes([]); 
+        setEdges([]); 
+        setStep('nodes');
 
       } catch (e: any) {
+          // console.error(e);
           toast.error(e.message || "Failed to submit proposal");
       } finally {
           setIsSubmitting(false);
@@ -635,6 +590,17 @@ const DeviceBuilderContent = () => {
     </div>
   );
 
+  if (step === 'ui') {
+      return (
+        <DeviceUICreator 
+            nodes={nodes} 
+            onBack={() => setStep('nodes')}
+            onSave={handleFinalSubmit}
+            isSubmitting={isSubmitting}
+        />
+      );
+  }
+
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header Toolbar */}
@@ -666,10 +632,10 @@ const DeviceBuilderContent = () => {
             </Tooltip>
           </TooltipProvider>
 
-          <Button size="sm" onClick={handleOpenSubmitDialog} className="bg-primary hover:bg-primary/90 text-primary-foreground border-0 shadow-lg shadow-primary/20">
-            <Save className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Propose Device</span>
-            <span className="sm:hidden">Propose</span>
+          <Button size="sm" onClick={handleNextStep} className="bg-primary hover:bg-primary/90 text-primary-foreground border-0 shadow-lg shadow-primary/20">
+            <span className="hidden sm:inline">Next: UI Builder</span>
+            <span className="sm:inline hidden">Next</span>
+            <CheckCircle2 className="w-4 h-4 sm:ml-2" />
           </Button>
         </div>
       </div>
@@ -773,29 +739,6 @@ const DeviceBuilderContent = () => {
           </div>
         </div>
       </div>
-
-      <Dialog open={isSubmitOpen} onOpenChange={setIsSubmitOpen}>
-        <DialogContent>
-            <DialogHeader>
-            <DialogTitle>Propose Device Type</DialogTitle>
-            <DialogDescription>
-                Submit this device configuration for approval.
-            </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-2">
-                <div className="space-y-2">
-                    <Label htmlFor="dev-name">Name</Label>
-                    <Input id="dev-name" value={deviceName} onChange={e => setDeviceName(e.target.value)} />
-                </div>
-            </div>
-            <DialogFooter>
-                <Button variant="outline" onClick={() => setIsSubmitOpen(false)}>Cancel</Button>
-                <Button onClick={handleSubmitProposal} disabled={isSubmitting}>
-                    {isSubmitting ? "Submitting..." : "Submit Proposal"}
-                </Button>
-            </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

@@ -284,7 +284,8 @@ class TopologyView(views.APIView):
                     "status": device.status,
                     "room": device.room.name if device.room else "Unassigned",
                     "device_type": device.device_type.name if device.device_type else "Unknown",
-                    "icon": device.icon
+                    "icon": device.icon,
+                    "current_state": device.current_state
                 },
                 "position": { "x": x_pos, "y": y_pos },
                 # Fallback style if custom node is not used in frontend
@@ -370,6 +371,61 @@ class DeviceDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 
+class DeviceStateUpdateView(views.APIView):
+    """
+    PATCH /api/devices/{pk}/state/
+    Update the current_state of a device.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, pk):
+        try:
+            device = Device.objects.get(pk=pk)
+        except Device.DoesNotExist:
+            return Response({"detail": "Device not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Check ownership
+        if device.user != request.user and not IsAdmin().has_permission(request, self):
+            return Response({"detail": "You do not own this device."}, status=status.HTTP_403_FORBIDDEN)
+
+        new_state = request.data
+        if not isinstance(new_state, dict):
+             return Response({"detail": "State must be a JSON object."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Merge new state into existing state
+        current = device.current_state
+        current.update(new_state)
+        # Note: If we need deep merge later, we can implement it. For now, top-level keys update.
+        
+        device.current_state = current
+        
+        # SIMULATION LOGIC:
+        # If the backend successfully receives a command, we assume the device is reachable/active for now.
+        # This mocks the behavior of a successful acknowledgment.
+        device.status = Device.STATUS_ONLINE
+        
+        device.save()
+
+        # Future Hook: Sync with hardware
+        self.sync_with_hardware(device, new_state)
+
+        return Response({
+            "status": "State updated", 
+            "device_status": device.status,
+            "current_state": device.current_state
+        })
+
+    def sync_with_hardware(self, device, state_changes):
+        """
+        Placeholder for future MQTT/API logic.
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"HARDWARE SYNC: Device {device.id} ({device.ip_address}) -> {state_changes}")
+        # Logic to publish to MQTT topic would go here
+        # topic = f"homeforge/devices/{device.id}/set"
+        # mqtt_client.publish(topic, json.dumps(state_changes))
+
 class DeviceTypeProposeView(generics.CreateAPIView):
     """
     Endpoint for users to propose new device types.
@@ -382,26 +438,53 @@ class DeviceTypeProposeView(generics.CreateAPIView):
         # Force approved=False
         serializer.save(approved=False)
 
-class DeviceTypeApproveView(generics.UpdateAPIView):
+
+class AdminPendingDeviceTypeListView(generics.ListAPIView):
     """
-    Endpoint for admins to approve a device type via POST/PUT.
+    Admin: Get all pending (unapproved) device types with full details.
     """
-    queryset = CustomDeviceType.objects.all()
     serializer_class = CustomDeviceTypeSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def post(self, request, *args, **kwargs):
-        # Handle POST as an approval action
-        return self.update(request, *args, **kwargs)
+    def get_queryset(self):
+        if not IsAdmin().has_permission(self.request, self):
+            self.permission_denied(self.request, message="Only Admins can view pending types.")
+        return CustomDeviceType.objects.filter(approved=False)
 
-    def update(self, request, *args, **kwargs):
+
+class AdminDeviceTypeReviewView(views.APIView):
+    """
+    Admin: Approve or Deny a device type.
+    POST /approve/ -> Sets approved=True
+    POST /deny/ -> Sets rejection_reason
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk, action):
         if not IsAdmin().has_permission(request, self):
-             self.permission_denied(request, message="Only Admins can approve types.")
+             return Response({"detail": "Only Admins can review types."}, status=status.HTTP_403_FORBIDDEN)
         
-        instance = self.get_object()
-        instance.approved = True
-        instance.save()
+        try:
+            instance = CustomDeviceType.objects.get(pk=pk)
+        except CustomDeviceType.DoesNotExist:
+            return Response({"detail": "Device Type not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if action == 'approve':
+            instance.approved = True
+            instance.rejection_reason = None # Clear any previous rejection
+            instance.save()
+            return Response({"status": "Approved", "data": CustomDeviceTypeSerializer(instance).data})
+
+        elif action == 'deny':
+            reason = request.data.get('reason')
+            if not reason:
+                return Response({"reason": ["This field is required for denial."]}, status=status.HTTP_400_BAD_REQUEST)
+            
+            instance.approved = False
+            instance.rejection_reason = reason
+            instance.save()
+            return Response({"status": "Denied", "data": CustomDeviceTypeSerializer(instance).data})
         
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
+        return Response({"detail": "Invalid action."}, status=status.HTTP_400_BAD_REQUEST)
+
 

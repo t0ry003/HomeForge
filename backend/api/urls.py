@@ -5,9 +5,11 @@ from .views import (
     TopologyView,
     CustomDeviceTypeListCreateView,
     CustomDeviceTypeDetailView,
-    DeviceTypeApproveView,
+    AdminPendingDeviceTypeListView,
+    AdminDeviceTypeReviewView,
     DeviceListCreateView,
     DeviceDetailView,
+    DeviceStateUpdateView,
     DeviceTypeProposeView,
     RoomListCreateView,
     RoomDetailView,
@@ -28,9 +30,14 @@ urlpatterns = [
     path('device-types/', CustomDeviceTypeListCreateView.as_view(), name='device-types-list'),
     path('device-types/propose/', DeviceTypeProposeView.as_view(), name='device-types-propose'),
     path('device-types/<int:pk>/', CustomDeviceTypeDetailView.as_view(), name='device-types-detail'),
-    path('device-types/<int:pk>/approve/', DeviceTypeApproveView.as_view(), name='device-types-approve'),
+    
+    # Admin Review Endpoints
+    path('admin/device-types/pending/', AdminPendingDeviceTypeListView.as_view(), name='admin-device-types-pending'),
+    path('admin/device-types/<int:pk>/<str:action>/', AdminDeviceTypeReviewView.as_view(), name='admin-device-types-review'), # action: approve or deny
+    
     path('devices/', DeviceListCreateView.as_view(), name='device-list-create'),
     path('devices/<int:pk>/', DeviceDetailView.as_view(), name='device-detail'),
+    path('devices/<int:pk>/state/', DeviceStateUpdateView.as_view(), name='device-state-update'),
     path('rooms/', RoomListCreateView.as_view(), name='room-list-create'),
     path('rooms/<int:pk>/', RoomDetailView.as_view(), name='room-detail'),
     path('users/', UserListView.as_view(), name='user-list'),

@@ -2,14 +2,30 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from .models import Profile, Device, Room, CustomDeviceType
+from .models import Profile, Device, Room, CustomDeviceType, DeviceCardTemplate, DeviceControl
+
+
+class DeviceControlSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeviceControl
+        fields = ['id', 'widget_type', 'label', 'variable_mapping', 'min_value', 'max_value', 'step']
+
+
+class DeviceCardTemplateSerializer(serializers.ModelSerializer):
+    controls = DeviceControlSerializer(many=True)
+
+    class Meta:
+        model = DeviceCardTemplate
+        fields = ['id', 'layout_config', 'controls']
 
 
 class CustomDeviceTypeSerializer(serializers.ModelSerializer):
+    card_template = DeviceCardTemplateSerializer(required=False)
+
     class Meta:
         model = CustomDeviceType
-        fields = ['id', 'name', 'definition', 'approved', 'created_at']
-        read_only_fields = ['id', 'created_at']
+        fields = ['id', 'name', 'definition', 'approved', 'rejection_reason', 'created_at', 'card_template']
+        read_only_fields = ['id', 'created_at', 'approved', 'rejection_reason']
         extra_kwargs = {
             'name': {
                 'error_messages': {
@@ -17,6 +33,70 @@ class CustomDeviceTypeSerializer(serializers.ModelSerializer):
                 }
             }
         }
+
+    def validate(self, data):
+        definition = data.get('definition', {})
+        card_template_data = data.get('card_template')
+
+        if card_template_data:
+            # Extract distinct IDs defined in the node builder structure
+            structure = definition.get('structure', [])
+            defined_ids = {node.get('id') for node in structure if 'id' in node}
+
+            # Check controls against defined IDs
+            controls_data = card_template_data.get('controls', [])
+            for control in controls_data:
+                mapping = control.get('variable_mapping')
+                if mapping and mapping not in defined_ids:
+                    raise serializers.ValidationError(
+                        f"Variable mapping '{mapping}' in controls does not match any ID in the device definition."
+                    )
+        
+        return data
+
+    def create(self, validated_data):
+        card_template_data = validated_data.pop('card_template', None)
+        
+        # Create the Device Type
+        device_type = CustomDeviceType.objects.create(**validated_data)
+        
+        # Create Template and Controls if provided
+        if card_template_data:
+            controls_data = card_template_data.pop('controls', [])
+            template = DeviceCardTemplate.objects.create(device_type=device_type, **card_template_data)
+            
+            for control_data in controls_data:
+                DeviceControl.objects.create(template=template, **control_data)
+        
+        return device_type
+
+    def update(self, instance, validated_data):
+        card_template_data = validated_data.pop('card_template', None)
+        
+        # Update definition and name
+        instance.name = validated_data.get('name', instance.name)
+        instance.definition = validated_data.get('definition', instance.definition)
+        instance.save()
+        
+        if card_template_data:
+            controls_data = card_template_data.pop('controls', [])
+            
+            # Update or Create Template
+            template, created = DeviceCardTemplate.objects.get_or_create(
+                device_type=instance,
+                defaults=card_template_data
+            )
+            
+            if not created:
+                template.layout_config = card_template_data.get('layout_config', template.layout_config)
+                template.save()
+
+            # For simplicity, clear old controls and re-create (full sync)
+            template.controls.all().delete()
+            for control_data in controls_data:
+                DeviceControl.objects.create(template=template, **control_data)
+
+        return instance
 
 
 
@@ -33,7 +113,7 @@ class DeviceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Device
-        fields = ['id', 'name', 'ip_address', 'status', 'icon', 'device_type', 'device_type_name', 'room', 'room_name', 'room_id']
+        fields = ['id', 'name', 'ip_address', 'status', 'icon', 'device_type', 'device_type_name', 'room', 'room_name', 'room_id', 'current_state']
 
     def validate_device_type(self, value):
         if not value.approved:

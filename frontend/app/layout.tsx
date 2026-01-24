@@ -2,6 +2,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { UserProvider } from "@/components/user-provider"
+import QueryProvider from "@/components/query-provider"
 
 export const metadata = {
   title: "HomeForge",
@@ -18,9 +19,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             enableSystem
             disableTransitionOnChange
           >
-            <UserProvider>
-              {children}
-            </UserProvider>
+            <QueryProvider>
+              <UserProvider>
+                {children}
+              </UserProvider>
+            </QueryProvider>
             <Toaster position="top-right" />
           </ThemeProvider>
       </body>

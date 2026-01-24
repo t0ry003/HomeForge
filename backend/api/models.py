@@ -90,6 +90,7 @@ class Device(models.Model):
     device_type = models.ForeignKey('CustomDeviceType', on_delete=models.CASCADE, related_name='devices')
     room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True, related_name='devices')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='devices')
+    current_state = models.JSONField(default=dict, blank=True, help_text="Current state of device controls (e.g., {'relay_1': True})")
 
     def __str__(self):
         return f"{self.name} - {self.ip_address}"
@@ -99,7 +100,52 @@ class CustomDeviceType(models.Model):
     name = models.CharField(max_length=100, unique=True)
     definition = models.JSONField(default=dict, blank=True)
     approved = models.BooleanField(default=False)
+    rejection_reason = models.TextField(blank=True, null=True, help_text="Reason for rejection if denied Admin approval")
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.name} ({'Approved' if self.approved else 'Pending'})"
+
+
+class DeviceCardTemplate(models.Model):
+    """
+    Defines the UI layout for a specific device type card.
+    One-to-One with CustomDeviceType.
+    """
+    device_type = models.OneToOneField(CustomDeviceType, on_delete=models.CASCADE, related_name='card_template')
+    layout_config = models.JSONField(default=dict, blank=True, help_text="Frontend grid layout configuration (x, y, w, h)")
+
+    def __str__(self):
+        return f"Template for {self.device_type.name}"
+
+
+class DeviceControl(models.Model):
+    """
+    Individual control widgets (sliders, toggles) for the device card.
+    """
+    WIDGET_TOGGLE = 'TOGGLE'
+    WIDGET_SLIDER = 'SLIDER'
+    WIDGET_GAUGE = 'GAUGE'
+    
+    WIDGET_CHOICES = [
+        (WIDGET_TOGGLE, 'Toggle Switch'),
+        (WIDGET_SLIDER, 'Slider'),
+        (WIDGET_GAUGE, 'Gauge'),
+    ]
+
+    template = models.ForeignKey(DeviceCardTemplate, on_delete=models.CASCADE, related_name='controls')
+    widget_type = models.CharField(max_length=20, choices=WIDGET_CHOICES)
+    label = models.CharField(max_length=50)
+    variable_mapping = models.CharField(max_length=50, help_text="MQTT/API variable key (e.g., relay_1)")
+    
+    # Slider/Gauge specific fields
+    min_value = models.FloatField(null=True, blank=True)
+    max_value = models.FloatField(null=True, blank=True)
+    step = models.FloatField(null=True, blank=True)
+
+    class Meta:
+        # Ensure a variable name is unique within a single device type template
+        unique_together = ('template', 'variable_mapping')
+
+    def __str__(self):
+        return f"{self.label} ({self.widget_type})"

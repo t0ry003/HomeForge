@@ -1,16 +1,17 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
-import Link from "next/link"
+"use client"
+
+import { useState, useMemo } from "react"
+import { useQuery } from "@tanstack/react-query";
 import { 
   Plus,
-  Cpu,
   LayoutGrid,
   List,
   Filter
 } from "lucide-react"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { 
@@ -24,107 +25,62 @@ import { fetchDevices, fetchDeviceTypes, fetchRooms } from "@/lib/apiClient"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AddDeviceDialog } from '@/components/devices/AddDeviceDialog';
 import { getIconComponent } from "@/lib/icons";
+import SmartDeviceCard from "@/components/devices/SmartDeviceCard";
 
 // Helper to get ID securely
 const getId = (obj: any) => (typeof obj === 'object' && obj !== null ? obj.id : obj);
 
-// Device Card Component
-function DeviceCard({ device, roomName, typeName }: { device: any, roomName?: string, typeName?: string }) {
-    const Icon = (device.icon ? getIconComponent(device.icon) : null) || Cpu;
-    const status = device.status || 'offline'; // Default if missing
-    const isOnline = status === 'online';
-    
-    return (
-        <Card className={`group transition-all duration-300 hover:shadow-md cursor-pointer
-            ${isOnline 
-                ? 'border-green-500/30 shadow-[0_0_15px_-5px_rgba(34,197,94,0.1)] bg-green-500/5 hover:border-green-500/50' 
-                : 'hover:border-primary/50'
-            }
-        `}>
-            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-                <div className="flex flex-col gap-1 w-full overflow-hidden">
-                     <CardTitle className="text-base font-semibold truncate" title={device.name}>
-                        {device.name}
-                    </CardTitle>
-                    {roomName && (
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            {roomName}
-                        </p>
-                    )}
-                </div>
-                <div className="relative flex items-center justify-center h-2.5 w-2.5">
-                    {isOnline && (
-                         <div className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-75 duration-1000" />
-                    )}
-                    <div className={`shrink-0 h-2.5 w-2.5 rounded-full ring-2 ring-background z-10
-                        ${isOnline ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 
-                          status === 'error' ? 'bg-red-500' : 
-                          'bg-zinc-300 dark:bg-zinc-600'}`} 
-                          title={status}
-                    />
-                </div>
-            </CardHeader>
-            <CardContent>
-                <div className="flex flex-col items-center justify-center py-2 relative">
-                    <div className="relative mb-2">
-                        <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className={`relative p-4 rounded-xl transition-colors text-foreground
-                            ${isOnline 
-                                ? 'bg-green-500/10 text-green-700 dark:text-green-400 group-hover:text-green-600' 
-                                : 'bg-secondary/50 group-hover:bg-primary/10 group-hover:text-primary'}
-                        `}>
-                            <Icon className="w-8 h-8" />
-                        </div>
-                    </div>
-                </div>
-                <div className="flex items-center justify-between text-xs text-muted-foreground mt-2 pt-2 border-t">
-                     <span>{typeName || "Device"}</span>
-                     <span className="font-mono hidden md:inline-block">{device.ip_address || "N/A"}</span>
-                </div>
-            </CardContent>
-        </Card>
-    )
-}
-
 export default function DashboardPage() {
-  const [devices, setDevices] = useState<any[]>([]);
-  const [rooms, setRooms] = useState<any[]>([]);
-  const [deviceTypes, setDeviceTypes] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // View State: 'all' | 'room' | 'type'
   const [viewMode, setViewMode] = useState<string>("all");
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [devicesRes, typesRes, roomsRes] = await Promise.all([
-          fetchDevices(),
-          fetchDeviceTypes(),
-          fetchRooms()
-        ]);
-        
-        setDevices(Array.isArray(devicesRes) ? devicesRes : (devicesRes.results || []));
-        setDeviceTypes(Array.isArray(typesRes) ? typesRes : (typesRes.results || []));
-        setRooms(Array.isArray(roomsRes) ? roomsRes : (roomsRes.results || []));
-      } catch (e) {
-        console.error("Failed to load dashboard data", e);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    loadData();
-  }, []);
+  const { data: devices = [], isLoading: loadingDevices } = useQuery({
+    queryKey: ['devices'],
+    queryFn: async () => {
+        const res = await fetchDevices();
+        const raw = Array.isArray(res) ? res : (res.results || []);
+        // Sort by ID to prevent UI jumping when polling
+        return raw.sort((a: any, b: any) => {
+            const idA = typeof a.id === 'number' ? a.id : parseInt(a.id || '0');
+            const idB = typeof b.id === 'number' ? b.id : parseInt(b.id || '0');
+            return idA - idB;
+        });
+    },
+    refetchInterval: 3000, // Poll every 3 seconds for mock hardware feedback
+  });
+
+  const { data: deviceTypes = [], isLoading: loadingTypes } = useQuery({
+      queryKey: ['deviceTypes'],
+      queryFn: async () => {
+          const res = await fetchDeviceTypes();
+          return Array.isArray(res) ? res : (res.results || []);
+      },
+      staleTime: 60000 // Types change rarely
+  });
+
+  const { data: rooms = [], isLoading: loadingRooms } = useQuery({
+      queryKey: ['rooms'],
+      queryFn: async () => {
+          const res = await fetchRooms();
+          return Array.isArray(res) ? res : (res.results || []);
+      },
+      staleTime: 60000
+  });
+
+  const isLoading = loadingDevices || loadingTypes || loadingRooms;
 
   // Helpers for lookups
   const getRoomName = (id: any) => {
-      const room = rooms.find(r => r.id === id);
+      const room = rooms.find((r: any) => r.id === id);
       return room ? room.name : "Unassigned";
   };
   
   const getTypeName = (id: any) => {
-      const type = deviceTypes.find(t => t.id === id);
+      const type = deviceTypes.find((t: any) => t.id === id);
       return type ? type.name : "Unknown Type";
+  };
+
+  const getDeviceTypeObj = (id: any) => {
+      return deviceTypes.find((t: any) => t.id === id); // Updated type annotation
   };
 
   // Grouping Logic
@@ -135,7 +91,7 @@ export default function DashboardPage() {
         // Group by Room
         const groups: Record<string, any[]> = {};
         
-        devices.forEach(d => {
+        devices.forEach((d: any) => { // Updated type annotation
             const rId = getId(d.room);
             const rName = rId ? getRoomName(rId) : "Unassigned";
             if (!groups[rName]) groups[rName] = [];
@@ -143,7 +99,7 @@ export default function DashboardPage() {
         });
 
         // Ensure all rooms exist even if empty (optional, but good for completeness)
-        rooms.forEach(r => {
+        rooms.forEach((r: any) => { // Updated type annotation
              if (!groups[r.name]) groups[r.name] = [];
         });
 
@@ -158,11 +114,11 @@ export default function DashboardPage() {
                  ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                          {groupDevices.map(d => (
-                             <DeviceCard 
+                             <SmartDeviceCard 
                                 key={d.id} 
                                 device={d} 
-                                typeName={getTypeName(getId(d.device_type))}
-                                // roomName hidden since we are in room section
+                                deviceType={getDeviceTypeObj(getId(d.device_type))}
+                                roomName={""} 
                              />
                          ))}
                     </div>
@@ -174,7 +130,7 @@ export default function DashboardPage() {
     if (viewMode === 'type') {
         const groups: Record<string, any[]> = {};
         
-        devices.forEach(d => {
+        devices.forEach((d: any) => { // Updated type annotation
             const tId = getId(d.device_type);
             const tName = tId ? getTypeName(tId) : "Unknown Type";
             if (!groups[tName]) groups[tName] = [];
@@ -189,11 +145,11 @@ export default function DashboardPage() {
                  </div>
                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                         {groupDevices.map(d => (
-                            <DeviceCard 
-                            key={d.id} 
-                            device={d} 
-                            roomName={getRoomName(getId(d.room))}
-                            // typeName hidden
+                            <SmartDeviceCard 
+                                key={d.id} 
+                                device={d} 
+                                deviceType={getDeviceTypeObj(getId(d.device_type))}
+                                roomName={getRoomName(getId(d.room))}
                             />
                         ))}
                 </div>
@@ -204,12 +160,12 @@ export default function DashboardPage() {
     // Default: 'all'
     return (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {devices.map(d => (
-                <DeviceCard 
+            {devices.map((d: any) => ( // Updated type annotation
+                <SmartDeviceCard 
                     key={d.id} 
                     device={d}
+                    deviceType={getDeviceTypeObj(getId(d.device_type))}
                     roomName={getRoomName(getId(d.room))}
-                    typeName={getTypeName(getId(d.device_type))}
                 />
             ))}
         </div>
