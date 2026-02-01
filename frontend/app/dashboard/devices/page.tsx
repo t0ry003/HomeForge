@@ -60,13 +60,13 @@ export default function DevicesPage() {
   );
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div className="p-4 md:p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
            <h1 className="text-2xl font-bold tracking-tight">Devices</h1>
-           <p className="text-muted-foreground">Manage and monitor all connected devices.</p>
+           <p className="text-sm text-muted-foreground">Manage and monitor all connected devices.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
            <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
              <RotateCw className={clsx("w-4 h-4 mr-2", loading && "animate-spin")} />
              Refresh
@@ -87,8 +87,8 @@ export default function DevicesPage() {
          </div>
       </div>
 
-      <div className="border rounded-md bg-card">
-        <Table>
+      <div className="border rounded-md bg-card overflow-x-auto">
+        <Table className="min-w-[600px]">
           <TableHeader>
             <TableRow>
               <TableHead>Status</TableHead>

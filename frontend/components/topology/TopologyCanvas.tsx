@@ -135,7 +135,7 @@ export default function TopologyCanvas({ nodes: initialNodes }: TopologyCanvasPr
       >
         <Background color="var(--muted-foreground)" gap={32} size={2} variant={BackgroundVariant.Dots} className="opacity-[0.15]" />
         <Controls 
-          className="!bg-card/80 !border-border !shadow-xl !rounded-lg overflow-hidden [&>button]:!bg-transparent [&>button]:!border-0 [&>button]:!fill-muted-foreground [&>button:hover]:!bg-muted [&>button:hover]:!fill-foreground" 
+          className="!bg-card/90 !border !border-border !shadow-xl !rounded-lg overflow-hidden [&>button]:!bg-transparent [&>button]:!border-0 [&_svg]:!fill-muted-foreground [&>button:hover]:!bg-muted [&>button:hover_svg]:!fill-foreground" 
         />
       </ReactFlow>
     </div>

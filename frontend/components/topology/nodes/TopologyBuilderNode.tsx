@@ -53,27 +53,31 @@ const TYPE_CONFIG: Record<string, { icon: any, color: string }> = {
   default: { icon: Cpu, color: 'text-slate-500 border-slate-500/50 bg-slate-500/10' }
 };
 
-const resolveType = (type: string = '', id: string = '', name: string = '') => {
+// Resolve node type configuration - ONLY based on device_type for consistency
+const resolveType = (type: string = '', id: string = '') => {
   const t = type.toLowerCase();
   const i = id.toLowerCase();
-  const n = name.toLowerCase();
   
+  // Only check type and ID for gateway detection (input is a ReactFlow type)
   if (t.includes('gateway') || i.includes('gateway') || t === 'input') return TYPE_CONFIG.gateway;
   if (t.includes('server')) return TYPE_CONFIG.server;
-  if (t.includes('camera') || n.includes('camera')) return TYPE_CONFIG.camera;
+  if (t.includes('camera')) return TYPE_CONFIG.camera;
   if (t.includes('light') || t.includes('bulb')) return TYPE_CONFIG.light;
   if (t.includes('sensor') || t.includes('temp') || t.includes('humid')) return TYPE_CONFIG.sensor;
   if (t.includes('switch') || t.includes('plug') || t.includes('relay')) return TYPE_CONFIG.switch;
   if (t.includes('wifi') || t.includes('ap') || t.includes('access point')) return TYPE_CONFIG.ap;
   if (t.includes('router') || t.includes('udm')) return TYPE_CONFIG.router;
-  if (t.includes('pc') || t.includes('laptop') || t.includes('mac') || t.includes('desktop') || n.includes('mac') || n.includes('mbp')) return TYPE_CONFIG.computer;
-  if (t.includes('phone') || t.includes('mobile') || n.includes('phone') || n.includes('iphone')) return TYPE_CONFIG.mobile;
+  if (t.includes('pc') || t.includes('laptop') || t.includes('desktop') || t.includes('computer')) return TYPE_CONFIG.computer;
+  if (t.includes('phone') || t.includes('mobile')) return TYPE_CONFIG.mobile;
+  if (t.includes('tablet')) return TYPE_CONFIG.tablet;
+  if (t.includes('printer')) return TYPE_CONFIG.printer;
+  if (t.includes('iot')) return TYPE_CONFIG.iot;
   
   return TYPE_CONFIG.default;
 };
 
 export default memo(({ id, data, selected }: NodeProps<Node>) => {
-  const config = resolveType(data.device_type || data.type, id, data.name);
+  const config = resolveType(data.device_type || data.type, id);
   
   // Use custom icon if provided, else component default
   const CustomIcon = data.icon ? getIconComponent(data.icon) : null;

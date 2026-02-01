@@ -71,7 +71,7 @@ export default function RegisterPage() {
         <ModeToggle />
       </div>
       
-      <div className="w-full max-w-md animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-500">
+      <div className="w-full max-w-md px-4 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-500">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold tracking-tighter text-primary">HomeForge</h1>
           <p className="text-muted-foreground">Create your account</p>

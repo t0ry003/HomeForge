@@ -1,7 +1,5 @@
 "use client"
 
-"use client"
-
 import { useState, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query";
 import { 
@@ -112,7 +110,7 @@ export default function DashboardPage() {
                  {groupDevices.length === 0 ? (
                      <div className="text-sm text-muted-foreground italic py-4">No devices in this room</div>
                  ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                          {groupDevices.map(d => (
                              <SmartDeviceCard 
                                 key={d.id} 
@@ -143,7 +141,7 @@ export default function DashboardPage() {
                     <h3 className="text-lg font-semibold tracking-tight">{groupName}</h3>
                     <Badge variant="secondary" className="ml-auto">{groupDevices.length}</Badge>
                  </div>
-                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                         {groupDevices.map(d => (
                             <SmartDeviceCard 
                                 key={d.id} 
@@ -159,7 +157,7 @@ export default function DashboardPage() {
 
     // Default: 'all'
     return (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {devices.map((d: any) => ( // Updated type annotation
                 <SmartDeviceCard 
                     key={d.id} 
