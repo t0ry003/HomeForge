@@ -1,6 +1,6 @@
 # HomeForge API Guide
 
-> **Version:** 1.0.0  
+> **Version:** 1.1.0  
 > **Base URL:** `http://localhost:8000/api/`  
 > **Authentication:** JWT (JSON Web Tokens)  
 > **Last Updated:** February 1, 2026
@@ -706,7 +706,168 @@ Get all unapproved device types awaiting review.
 
 ---
 
-### 6.7 Approve Device Type (Admin)
+### 6.7 Get Device Type Details for Editing (Admin)
+
+Get full device type details including both `definition` (node topology) and `card_template` (UI controls) for the admin editor.
+
+| Method | Endpoint | Auth Required | Role Required |
+|--------|----------|---------------|---------------|
+| `GET` | `/admin/device-types/{id}/` | ✅ Yes | `admin` or `owner` |
+
+**Success Response (200 OK):**
+```json
+{
+  "id": 3,
+  "name": "Smart Fan",
+  "definition": {
+    "name": "Fan v1",
+    "structure": [
+      { "id": "mcu-1", "type": "mcu", "label": "ESP32", "position": { "x": 50, "y": 50 } },
+      { "id": "relay_1", "type": "relay", "label": "Power", "position": { "x": 150, "y": 50 } },
+      { "id": "pwm_1", "type": "pwm", "label": "Speed Control", "position": { "x": 150, "y": 150 } }
+    ]
+  },
+  "approved": false,
+  "rejection_reason": null,
+  "created_at": "2026-01-15T10:30:00Z",
+  "card_template": {
+    "id": 5,
+    "layout_config": { "w": 2, "h": 2 },
+    "controls": [
+      {
+        "id": 10,
+        "widget_type": "TOGGLE",
+        "label": "Master Power",
+        "variable_mapping": "relay_1",
+        "min_value": null,
+        "max_value": null,
+        "step": null
+      },
+      {
+        "id": 11,
+        "widget_type": "SLIDER",
+        "label": "Fan Speed",
+        "variable_mapping": "pwm_1",
+        "min_value": 0,
+        "max_value": 100,
+        "step": 10
+      }
+    ]
+  }
+}
+```
+
+> **Frontend Note:** This endpoint returns the complete device type with both the **node topology** (`definition.structure`) for the Node Builder editor AND the **UI controls** (`card_template.controls`) for the Control Editor. Display both in your admin edit interface.
+
+---
+
+### 6.8 Edit Device Type (Admin) - Full Update
+
+Update both the node topology (`definition`) and UI controls (`card_template`) of a device type proposal.
+
+| Method | Endpoint | Auth Required | Role Required |
+|--------|----------|---------------|---------------|
+| `PUT` | `/admin/device-types/{id}/` | ✅ Yes | `admin` or `owner` |
+
+**Request Body:**
+```json
+{
+  "name": "Smart Fan v2",
+  "definition": {
+    "name": "Fan v2",
+    "structure": [
+      { "id": "mcu-1", "type": "mcu", "label": "ESP32", "position": { "x": 50, "y": 50 } },
+      { "id": "relay_1", "type": "relay", "label": "Power", "position": { "x": 150, "y": 50 } },
+      { "id": "pwm_1", "type": "pwm", "label": "Speed", "position": { "x": 150, "y": 150 } },
+      { "id": "temp_1", "type": "sensor", "label": "Temperature", "position": { "x": 250, "y": 100 } }
+    ]
+  },
+  "card_template": {
+    "layout_config": { "w": 2, "h": 3 },
+    "controls": [
+      {
+        "widget_type": "TOGGLE",
+        "label": "Power",
+        "variable_mapping": "relay_1"
+      },
+      {
+        "widget_type": "SLIDER",
+        "label": "Speed",
+        "variable_mapping": "pwm_1",
+        "min_value": 0,
+        "max_value": 100,
+        "step": 5
+      },
+      {
+        "widget_type": "GAUGE",
+        "label": "Temperature",
+        "variable_mapping": "temp_1",
+        "min_value": 0,
+        "max_value": 50
+      }
+    ]
+  }
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "Updated",
+  "data": { /* Full updated device type object */ }
+}
+```
+
+**Behavior:**
+- Replaces the entire `definition` with the new value
+- Replaces the entire `card_template` and all `controls` (full sync)
+- Validates that all `variable_mapping` keys exist in `definition.structure`
+- Does NOT change the `approved` status (use approve/deny endpoints for that)
+
+---
+
+### 6.9 Edit Device Type (Admin) - Partial Update
+
+Partially update a device type. Only the provided fields are updated.
+
+| Method | Endpoint | Auth Required | Role Required |
+|--------|----------|---------------|---------------|
+| `PATCH` | `/admin/device-types/{id}/` | ✅ Yes | `admin` or `owner` |
+
+**Request Body (example - update only the name):**
+```json
+{
+  "name": "Smart Fan Pro"
+}
+```
+
+**Request Body (example - update only card_template):**
+```json
+{
+  "card_template": {
+    "layout_config": { "w": 3, "h": 2 },
+    "controls": [
+      {
+        "widget_type": "TOGGLE",
+        "label": "Power Switch",
+        "variable_mapping": "relay_1"
+      }
+    ]
+  }
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "Updated",
+  "data": { /* Full updated device type object */ }
+}
+```
+
+---
+
+### 6.10 Approve Device Type (Admin)
 
 | Method | Endpoint | Auth Required | Role Required |
 |--------|----------|---------------|---------------|
@@ -722,7 +883,7 @@ Get all unapproved device types awaiting review.
 
 ---
 
-### 6.8 Deny Device Type (Admin)
+### 6.11 Deny Device Type (Admin)
 
 | Method | Endpoint | Auth Required | Role Required |
 |--------|----------|---------------|---------------|
@@ -747,6 +908,32 @@ Get all unapproved device types awaiting review.
     /* ... */
   }
 }
+```
+
+---
+
+### 6.12 Admin Workflow Summary
+
+The typical admin workflow for reviewing a device type proposal:
+
+1. **List pending** - `GET /admin/device-types/pending/` to see all unapproved types
+2. **View details** - `GET /admin/device-types/{id}/` to get full definition + card_template
+3. **Edit if needed** - `PUT /admin/device-types/{id}/` or `PATCH /admin/device-types/{id}/` to fix issues
+4. **Approve or deny** - `POST /admin/device-types/{id}/approve/` or `/deny/`
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  List Pending   │────►│  View Details   │────►│  Edit (if fix   │
+│  GET /pending/  │     │  GET /{id}/     │     │  needed)        │
+└─────────────────┘     └────────┬────────┘     │  PUT/PATCH      │
+                                 │              └────────┬────────┘
+                                 │                       │
+                                 ▼                       ▼
+                        ┌─────────────────┐     ┌─────────────────┐
+                        │    Approve      │     │     Deny        │
+                        │ POST /approve/  │     │  POST /deny/    │
+                        └─────────────────┘     └─────────────────┘
+```
 ```
 
 ---
@@ -1243,6 +1430,9 @@ function NetworkTopology({ api }) {
 | `PUT` | `/device-types/{id}/` | Update type | ✅ | Admin |
 | `DELETE` | `/device-types/{id}/` | Delete type | ✅ | Admin |
 | `GET` | `/admin/device-types/pending/` | List pending | ✅ | Admin |
+| `GET` | `/admin/device-types/{id}/` | Get type for editing | ✅ | Admin |
+| `PUT` | `/admin/device-types/{id}/` | Full update type | ✅ | Admin |
+| `PATCH` | `/admin/device-types/{id}/` | Partial update type | ✅ | Admin |
 | `POST` | `/admin/device-types/{id}/approve/` | Approve type | ✅ | Admin |
 | `POST` | `/admin/device-types/{id}/deny/` | Deny type | ✅ | Admin |
 | `GET` | `/topology/` | Get network map | ✅ | Any |

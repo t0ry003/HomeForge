@@ -548,7 +548,8 @@ For complete API documentation including all endpoints, request/response schemas
 | **Devices** | `GET /devices/`, `POST /devices/`, `PUT /devices/{id}/`, `DELETE /devices/{id}/` |
 | **Device State** | `PATCH /devices/{id}/state/` |
 | **Device Types** | `GET /device-types/`, `POST /device-types/propose/` |
-| **Admin** | `GET /admin/device-types/pending/`, `POST /admin/device-types/{id}/approve/` |
+| **Admin Review** | `GET /admin/device-types/pending/`, `GET/PUT/PATCH /admin/device-types/{id}/` |
+| **Admin Actions** | `POST /admin/device-types/{id}/approve/`, `POST /admin/device-types/{id}/deny/` |
 | **Topology** | `GET /topology/` |
 
 ---

@@ -43,6 +43,7 @@ Unlike commercial solutions, HomeForge gives you complete control over your devi
 - **Visual Device Builder** — Design custom device configurations via drag-and-drop
 - **Real-time Control** — Toggle switches, sliders, and gauges with instant feedback
 - **Custom Device Types** — Propose and approve new device categories
+- **Enhanced Device Cards** — Visual status indicators with offline overlay and disabled controls
 
 ### 🗺️ Network Topology
 - **Interactive Visualization** — React Flow-powered network graph
@@ -66,9 +67,10 @@ Unlike commercial solutions, HomeForge gives you complete control over your devi
 - **shadcn/ui Components** — Accessible, customizable components
 
 ### 🔧 Developer Friendly
-- **RESTful API** — Complete API with OpenAPI documentation
+- **RESTful API** — Complete API v1.1.0 with comprehensive documentation
 - **Docker Ready** — One-command deployment with Docker Compose
 - **Dev Containers** — VS Code development containers included
+- **Debug Tools** — Built-in debug page for testing device states
 - **Extensible** — Clean architecture for custom integrations
 
 ---
@@ -124,11 +126,15 @@ HomeForge/
 ├── 📂 frontend/                # Next.js React App
 │   ├── app/                    # App Router pages
 │   │   ├── dashboard/          # Protected routes
+│   │   │   ├── devices/        # Device management
+│   │   │   ├── device-builder/ # Visual device designer
+│   │   │   ├── topology/       # Network visualization
+│   │   │   └── admin/          # Admin panel (rooms, users, device-types, debug)
 │   │   ├── login/              # Authentication
 │   │   └── register/
 │   ├── components/             # React components
 │   │   ├── ui/                 # shadcn/ui primitives
-│   │   ├── devices/            # Device components
+│   │   ├── devices/            # Device components (SmartDeviceCard)
 │   │   └── topology/           # Graph visualization
 │   ├── lib/                    # Utilities & API client
 │   ├── frontend_readme.md      # Frontend documentation
@@ -372,7 +378,14 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## 📋 Changelog
 
-### [2026-02-01]
+### [2026-02-01] - Latest
+- **Added**: Admin device type editing (GET/PUT/PATCH endpoints)
+- **Added**: Device Builder edit mode for modifying existing device types
+- **Added**: Debug page in admin panel for testing device states
+- **Changed**: Enhanced SmartDeviceCard UI with better offline visual states
+- **Changed**: Device controls now properly disable when offline
+- **Changed**: API updated to v1.1.0 with extended admin endpoints
+- **Removed**: Mock data generation from topology endpoint
 - **Added**: GitHub Copilot instructions for consistent code generation
 - **Added**: MCP server configurations for enhanced AI assistance
 - **Added**: Comprehensive project documentation

@@ -115,7 +115,8 @@ Component → React Query → apiClient.js → Backend API (port 8000)
 │       └── admin/              # Admin-only routes
 │           ├── rooms/          # Room management
 │           ├── users/          # User management
-│           └── device-types/   # Approval queue
+│           ├── device-types/   # Approval queue
+│           └── debug/          # Device state testing
 │
 ├── components/                 # Reusable components
 │   ├── ui/                     # shadcn/ui primitives (24 components)
@@ -217,6 +218,7 @@ Three-step registration wizard:
 - **Rooms** — Create, edit, delete rooms
 - **Users** — View users, manage roles
 - **Device Types** — Approve/reject proposed types
+- **Debug** — Test device states and UI behavior
 
 ---
 
@@ -307,19 +309,19 @@ const {
 ### API Client (`lib/apiClient.js`)
 
 ```javascript
-import apiClient from '@/lib/apiClient'
+import { fetchDevices, updateDevice, updateDeviceState, deleteDevice } from '@/lib/apiClient'
 
-// GET request
-const data = await apiClient.get('/devices/')
+// Fetch all devices
+const devices = await fetchDevices()
 
-// POST request
-await apiClient.post('/devices/', { name: 'Light', room_id: 1 })
+// Update device properties (status, name, etc.)
+await updateDevice(deviceId, { status: 'online' })
 
-// PUT request
-await apiClient.put('/devices/1/', updatedData)
+// Update device state (current_state JSON)
+await updateDeviceState(deviceId, { relay_1: true, brightness: 75 })
 
-// DELETE request
-await apiClient.delete('/devices/1/')
+// Delete a device
+await deleteDevice(deviceId)
 ```
 
 ### Backend URL
