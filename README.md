@@ -379,14 +379,28 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## 📋 Changelog
 
-### [2026-02-01] - Latest
+### [2026-02-01] - v1.2.0 (Latest)
+- **Added**: Extended widget types for sensors (TEMPERATURE, HUMIDITY, MOTION, LIGHT, CO2, PRESSURE, POWER, BATTERY, STATUS)
+- **Added**: SensorWidgets component with color-coded displays
+- **Added**: Tap-to-toggle behavior for single-toggle devices (Home Assistant style)
+- **Added**: Auto-generate widgets from topology sensors in Device Builder
+- **Added**: Drag-and-drop widget reordering with dnd-kit
+- **Added**: Widget layout options (row/square variants, 1-2 column grids)
+- **Added**: Pending approval count badge in admin sidebar
+- **Added**: Admin review mode for approving device types in builder
+- **Added**: Frontend CHANGELOG.md
+- **Changed**: API updated to v1.2.0 with extended widget types
+- **Changed**: Improved mobile responsiveness across all pages
+- **Changed**: SmartDeviceCard now supports square/row widget layouts
+- **Changed**: AddDeviceDialog generates initial_state from device type structure
+
+### [2026-02-01] - v1.1.0
 - **Added**: Admin device type editing (GET/PUT/PATCH endpoints)
 - **Added**: Device Builder edit mode for modifying existing device types
 - **Added**: Debug page in admin panel for testing device states
 - **Added**: Frontend API usage guide (`frontend/API_USAGE.md`)
 - **Changed**: Enhanced SmartDeviceCard UI with better offline visual states
 - **Changed**: Device controls now properly disable when offline
-- **Changed**: API updated to v1.1.0 with extended admin endpoints
 - **Removed**: Mock data generation from topology endpoint
 - **Added**: GitHub Copilot instructions for consistent code generation
 - **Added**: MCP server configurations for enhanced AI assistance
