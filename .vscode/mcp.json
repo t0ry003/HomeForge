@@ -1,0 +1,42 @@
+{
+  "mcp": {
+    "servers": {
+      "git": {
+        "command": "npx",
+        "args": ["@anthropic/mcp-server-git"],
+        "env": {
+          "REPO_PATH": "."
+        }
+      },
+      "github": {
+        "command": "npx",
+        "args": ["@anthropic/mcp-server-github"],
+        "env": {
+          "GITHUB_TOKEN": "${env:GITHUB_TOKEN}"
+        }
+      },
+      "conventional-commits": {
+        "command": "npx",
+        "args": ["@anthropic/mcp-server-conventional-commits"],
+        "env": {
+          "SCOPES": "frontend,backend,api,ui,db,docker,auth,devices,topology"
+        }
+      },
+      "markdown": {
+        "command": "npx",
+        "args": ["@anthropic/mcp-server-markdown"]
+      },
+      "docker": {
+        "command": "npx",
+        "args": ["@anthropic/mcp-server-docker"],
+        "env": {
+          "COMPOSE_FILE": "./docker-compose.yml"
+        }
+      },
+      "yaml": {
+        "command": "npx",
+        "args": ["@anthropic/mcp-server-yaml"]
+      }
+    }
+  }
+}
