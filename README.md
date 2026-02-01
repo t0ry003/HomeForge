@@ -234,6 +234,7 @@ HomeForge/
 | [Backend README](backend/BACKEND_README.md) | Backend architecture, models, and setup |
 | [Frontend README](frontend/frontend_readme.md) | Frontend architecture, components, and patterns |
 | [API Guide](backend/API_GUIDE.md) | Complete API reference with examples |
+| [Frontend API Usage](frontend/API_USAGE.md) | Frontend apiClient.js usage guide |
 | [Copilot Instructions](.github/copilot-instructions.md) | AI coding guidelines and conventions |
 
 ---
@@ -382,6 +383,7 @@ This project is open source and available under the [MIT License](LICENSE).
 - **Added**: Admin device type editing (GET/PUT/PATCH endpoints)
 - **Added**: Device Builder edit mode for modifying existing device types
 - **Added**: Debug page in admin panel for testing device states
+- **Added**: Frontend API usage guide (`frontend/API_USAGE.md`)
 - **Changed**: Enhanced SmartDeviceCard UI with better offline visual states
 - **Changed**: Device controls now properly disable when offline
 - **Changed**: API updated to v1.1.0 with extended admin endpoints

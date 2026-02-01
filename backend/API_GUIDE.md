@@ -1,6 +1,6 @@
 # HomeForge API Guide
 
-> **Version:** 1.1.0  
+> **Version:** 1.2.0  
 > **Base URL:** `http://localhost:8000/api/`  
 > **Authentication:** JWT (JSON Web Tokens)  
 > **Last Updated:** February 1, 2026
@@ -1108,12 +1108,31 @@ interface Device {
 ```typescript
 interface DeviceControl {
   id: number;
-  widget_type: 'TOGGLE' | 'SLIDER' | 'GAUGE';
+  widget_type: 
+    // Interactive Controls
+    | 'TOGGLE'       // Boolean on/off switch
+    | 'SLIDER'       // Numeric range control
+    | 'GAUGE'        // Read-only numeric display
+    | 'BUTTON'       // Trigger action button
+    // Sensor Displays
+    | 'TEMPERATURE'  // Temperature reading display
+    | 'HUMIDITY'     // Humidity reading display
+    | 'MOTION'       // Motion detection indicator
+    | 'LIGHT'        // Light level display
+    | 'CO2'          // CO2 level display
+    | 'PRESSURE'     // Pressure reading display
+    | 'POWER'        // Power consumption display
+    | 'BATTERY'      // Battery level display
+    | 'STATUS';      // Generic status display
   label: string;                          // Display label
   variable_mapping: string;               // Key for current_state
   min_value: number | null;               // For SLIDER/GAUGE
   max_value: number | null;               // For SLIDER/GAUGE
   step: number | null;                    // For SLIDER
+  // Optional display customization
+  variant: 'row' | 'square' | 'compact' | null;  // Layout variant
+  size: 'sm' | 'md' | 'lg' | null;               // Size preset
+  unit: string | null;                           // Display unit (e.g., '°C', '%', 'ppm')
 }
 
 interface DeviceCardTemplate {

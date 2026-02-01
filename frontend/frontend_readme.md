@@ -29,6 +29,7 @@
 - 🌐 **Topology View** — Visualize your connected device network
 - ⚙️ **Settings** — User profiles, themes, and preferences
 - 🛡️ **Admin Panel** — Room management, user roles, and device approvals
+- 📱 **Mobile Responsive** — Fully optimized for phones, tablets, and desktops
 
 ---
 
@@ -187,10 +188,30 @@ useEffect(() => {
 
 Interactive canvas for designing device configurations:
 
-- **Drag & Drop** — Desktop and mobile touch support
+- **Drag & Drop Nodes** — Desktop and mobile touch support
+- **Drag & Drop Widget Ordering** — Reorder widgets with touch-friendly drag handles
 - **Node Connections** — Top handle = output, Bottom = input
 - **Validation** — Single MCU per device
 - **Glassmorphism UI** — Translucent, modern node design
+- **Auto-Generate** — Automatically create UI widgets from topology sensors
+- **Sensor Widgets** — Temperature, Humidity, Motion, Light, CO2 displays
+- **Flexible Layouts** — Row, Square, or Compact widget styles with 1-2 column grids
+
+### Smart Device Cards
+
+Device cards support intelligent behavior:
+
+- **Single Toggle Devices** — Tap the entire card to toggle on/off
+- **Multi-Control Devices** — Individual toggles and sliders for each relay
+- **Sensor Displays** — Read-only widgets for monitoring (no sliders for sensors)
+- **Widget Types:**
+  - `TOGGLE` — On/off switch for relays
+  - `SLIDER` — Range control (brightness, speed, etc.)
+  - `TEMPERATURE` — Color-coded temperature display
+  - `HUMIDITY` — Humidity with progress bar
+  - `MOTION` — Motion detection status with alerts
+  - `LIGHT` — Light level (lux) or bright/dark indicator
+  - `CO2` — Air quality with quality badges
 
 ### Topology View (`/dashboard/topology`)
 
@@ -217,8 +238,35 @@ Three-step registration wizard:
 
 - **Rooms** — Create, edit, delete rooms
 - **Users** — View users, manage roles
-- **Device Types** — Approve/reject proposed types
+- **Device Types** — Manage device type definitions
+- **Approvals** — Review and approve/deny submitted device types with live preview
 - **Debug** — Test device states and UI behavior
+
+---
+
+## Mobile Responsiveness
+
+All pages follow consistent responsive patterns:
+
+### Layout Patterns
+
+| Pattern | Mobile | Tablet+ |
+|---------|--------|--------|
+| Page Padding | `p-4` | `p-6` |
+| Headers | Stacked (column) | Inline (row) |
+| Buttons | Full width | Auto width |
+| Tables | Horizontal scroll | Full display |
+| Grids | 1 column | 2-5 columns |
+
+### Breakpoints
+
+| Breakpoint | Width | Usage |
+|------------|-------|-------|
+| Default | 0-639px | Mobile - single column, stacked layouts |
+| `sm` | 640px+ | Large phones - 2 columns, horizontal buttons |
+| `md` | 768px+ | Tablets - increased padding |
+| `lg` | 1024px+ | Desktop - sidebars, full layouts |
+| `xl` | 1280px+ | Large desktop - expanded grids |
 
 ---
 
@@ -249,10 +297,15 @@ Three-step registration wizard:
 |-----------|---------|
 | `AppSidebar` | Main navigation sidebar |
 | `NavUser` | User dropdown menu |
-| `SmartDeviceCard` | Device display card |
+| `SmartDeviceCard` | Device display card with smart toggle behavior |
+| `SensorWidgets` | Temperature, Humidity, Motion, Light, CO2 displays |
 | `IconPicker` | Icon selection UI |
 | `TopologyCanvas` | React Flow wrapper |
+| `TopologyBuilderNode` | Network device node (type-based coloring) |
 | `BuilderStyleNode` | Glassmorphism graph node |
+| `DeviceUICreator` | Widget builder with auto-generation |
+| `SortableSquareWidget` | Draggable square widget (dnd-kit) |
+| `SortableRowWidget` | Draggable row widget (dnd-kit) |
 
 ---
 
@@ -421,6 +474,7 @@ The frontend auto-connects to the backend:
 
 ## Additional Resources
 
+- [Changelog](CHANGELOG.md)
 - [Backend API Documentation](backend_api.md)
 - [Copilot Instructions](.github/copilot-instructions.md)
 - [shadcn/ui](https://ui.shadcn.com)

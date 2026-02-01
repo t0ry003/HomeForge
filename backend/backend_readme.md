@@ -312,12 +312,33 @@ Individual UI widget definition.
 | Field | Type | Description |
 |-------|------|-------------|
 | `template` | ForeignKey → DeviceCardTemplate | Parent template |
-| `widget_type` | CharField | TOGGLE / SLIDER / GAUGE |
+| `widget_type` | CharField | See widget types table below |
 | `label` | CharField | Display label |
 | `variable_mapping` | CharField | State key (e.g., "relay_1") |
 | `min_value` | FloatField | Slider/gauge minimum |
 | `max_value` | FloatField | Slider/gauge maximum |
 | `step` | FloatField | Slider increment |
+| `variant` | CharField | Layout variant: row / square / compact |
+| `size` | CharField | Size preset: sm / md / lg |
+| `unit` | CharField | Display unit (e.g., "°C", "%", "ppm") |
+
+**Widget Types:**
+
+| Category | Widget Type | Description |
+|----------|-------------|-------------|
+| **Interactive** | `TOGGLE` | Boolean on/off switch |
+| | `SLIDER` | Numeric range control (requires min/max/step) |
+| | `GAUGE` | Read-only numeric display |
+| | `BUTTON` | Trigger action button |
+| **Sensors** | `TEMPERATURE` | Temperature reading display |
+| | `HUMIDITY` | Humidity reading display |
+| | `MOTION` | Motion detection indicator |
+| | `LIGHT` | Light level display |
+| | `CO2` | CO2 level display |
+| | `PRESSURE` | Pressure reading display |
+| | `POWER` | Power consumption display |
+| | `BATTERY` | Battery level display |
+| | `STATUS` | Generic status display |
 
 ---
 
