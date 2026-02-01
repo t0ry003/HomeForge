@@ -207,11 +207,6 @@ class ProfileView(generics.RetrieveUpdateAPIView):
         return Response(UserSerializer(user, context={'request': request}).data, status=status.HTTP_200_OK)
 
 
-
-import random
-from rest_framework import generics, permissions, views
-
-# ... import statements ...
 class TopologyView(views.APIView):
     """
     Returns the network topology of the home environment.
@@ -223,12 +218,8 @@ class TopologyView(views.APIView):
     def get(self, request):
         import math # Ensure math is imported
         user = request.user
-        
-        # 1. Ensure Data Exists (Mock if empty for demo purposes)
-        if not Device.objects.exists():
-            self._create_mock_data(user)
 
-        # 2. Fetch Devices
+        # Fetch Devices (returns empty if none exist - no mock data)
         devices = Device.objects.all()
 
         nodes = []
@@ -314,34 +305,6 @@ class TopologyView(views.APIView):
 
         return Response({ "nodes": nodes, "edges": edges })
 
-    def _create_mock_data(self, user):
-        """Helper to seed DB with data if completely empty."""
-        room, _ = Room.objects.get_or_create(name="Living Room", user=user)
-        
-        # Ensure default device types exist
-        default_types = ['Light', 'Thermostat', 'Camera', 'Speaker', 'Lock']
-        type_objects = []
-        for type_name in default_types:
-            dt, _ = CustomDeviceType.objects.get_or_create(
-                name=type_name, 
-                defaults={'approved': True}
-            )
-            type_objects.append(dt)
-        
-        for i in range(1, 9):
-            d_type = random.choice(type_objects)
-            Device.objects.create(
-                name=f"{d_type.name} {i:02d}",
-                ip_address=f"192.168.1.{100+i}",
-                status=random.choice([Device.STATUS_ONLINE, Device.STATUS_OFFLINE]),
-                device_type=d_type,
-                room=room,
-                user=user
-            )
-
-    # def _randomize_device_statuses(self, user):
-    #     # Deprecated: Status is now managed by the monitor_devices command
-    #     pass
 
 class DeviceListCreateView(generics.ListCreateAPIView):
     """
@@ -454,11 +417,56 @@ class AdminPendingDeviceTypeListView(generics.ListAPIView):
 
 class AdminDeviceTypeReviewView(views.APIView):
     """
-    Admin: Approve or Deny a device type.
+    Admin: Approve, Deny, or Edit a device type.
     POST /approve/ -> Sets approved=True
     POST /deny/ -> Sets rejection_reason
+    POST /edit/ -> Edit the device type definition and card_template
     """
     permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk, action=None):
+        """GET /admin/device-types/{pk}/ - Get full device type details for editing"""
+        if not IsAdmin().has_permission(request, self):
+            return Response({"detail": "Only Admins can view device type details."}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            instance = CustomDeviceType.objects.get(pk=pk)
+        except CustomDeviceType.DoesNotExist:
+            return Response({"detail": "Device Type not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        return Response(CustomDeviceTypeSerializer(instance).data)
+
+    def put(self, request, pk, action=None):
+        """PUT /admin/device-types/{pk}/ - Full update of device type (definition + card_template)"""
+        if not IsAdmin().has_permission(request, self):
+            return Response({"detail": "Only Admins can edit device types."}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            instance = CustomDeviceType.objects.get(pk=pk)
+        except CustomDeviceType.DoesNotExist:
+            return Response({"detail": "Device Type not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = CustomDeviceTypeSerializer(instance, data=request.data, partial=False)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"status": "Updated", "data": serializer.data})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, pk, action=None):
+        """PATCH /admin/device-types/{pk}/ - Partial update of device type"""
+        if not IsAdmin().has_permission(request, self):
+            return Response({"detail": "Only Admins can edit device types."}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            instance = CustomDeviceType.objects.get(pk=pk)
+        except CustomDeviceType.DoesNotExist:
+            return Response({"detail": "Device Type not found."}, status=status.HTTP_404_NOT_FOUND)
+        
+        serializer = CustomDeviceTypeSerializer(instance, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"status": "Updated", "data": serializer.data})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def post(self, request, pk, action):
         if not IsAdmin().has_permission(request, self):
@@ -485,6 +493,6 @@ class AdminDeviceTypeReviewView(views.APIView):
             instance.save()
             return Response({"status": "Denied", "data": CustomDeviceTypeSerializer(instance).data})
         
-        return Response({"detail": "Invalid action."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "Invalid action. Use 'approve' or 'deny'."}, status=status.HTTP_400_BAD_REQUEST)
 
 

@@ -33,6 +33,7 @@ urlpatterns = [
     
     # Admin Review Endpoints
     path('admin/device-types/pending/', AdminPendingDeviceTypeListView.as_view(), name='admin-device-types-pending'),
+    path('admin/device-types/<int:pk>/', AdminDeviceTypeReviewView.as_view(), name='admin-device-types-edit'), # GET/PUT/PATCH for editing
     path('admin/device-types/<int:pk>/<str:action>/', AdminDeviceTypeReviewView.as_view(), name='admin-device-types-review'), # action: approve or deny
     
     path('devices/', DeviceListCreateView.as_view(), name='device-list-create'),
