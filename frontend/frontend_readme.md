@@ -1,160 +1,426 @@
-# HomeForge Frontend Documentation
+# HomeForge Frontend
 
-## 1. Project Overview
-**HomeForge** (formerly OpenDash) is a modern smart home management dashboard built with Next.js. It provides a visual interface for managing smart home devices, designing device topologies, and configuring user settings.
+> A modern smart home management platform built with Next.js, React, and TypeScript.
 
-## 2. Technology Stack
+---
 
-### Core Frameworks
-*   **Next.js 16**: App Router architecture for routing and server-side rendering.
-*   **React 19**: UI library.
-*   **TypeScript**: Static typing for improved developer experience and code safety.
+## Table of Contents
+
+- [Overview](#overview)
+- [Technology Stack](#technology-stack)
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
+- [Core Systems](#core-systems)
+- [Features](#features)
+- [Component Library](#component-library)
+- [State Management](#state-management)
+- [API Integration](#api-integration)
+- [Theming](#theming)
+- [Getting Started](#getting-started)
+
+---
+
+## Overview
+
+**HomeForge** is a smart home management dashboard that provides:
+
+- 🏠 **Device Management** — Register and monitor smart home devices
+- 🔧 **Device Builder** — Design custom device configurations via drag-and-drop
+- 🌐 **Topology View** — Visualize your connected device network
+- ⚙️ **Settings** — User profiles, themes, and preferences
+- 🛡️ **Admin Panel** — Room management, user roles, and device approvals
+
+---
+
+## Technology Stack
+
+### Core
+
+| Package | Version | Purpose |
+|---------|---------|---------|
+| Next.js | 16+ | App Router, SSR, file-based routing |
+| React | 19 | UI library |
+| TypeScript | 5+ | Static typing |
 
 ### UI & Styling
-*   **Tailwind CSS 4**: Utility-first CSS framework.
-*   **Shadcn UI**: Reusable component library built on Radix UI primitives.
-*   **Lucide React**: Icon set.
-*   **Next Themes**: Dark/Light mode support.
-*   **Framer Motion**: Animation library.
 
-### Visualization & Interaction
-*   **React Flow (@xyflow/react)**: Interactive node-based graph for the Device Builder and Topology views.
-*   **Elkjs**: Automatic graph layout engine for the Topology view.
-*   **@dnd-kit**: Drag-and-drop utilities (supplementing React Flow).
+| Package | Purpose |
+|---------|---------|
+| Tailwind CSS 4 | Utility-first CSS |
+| shadcn/ui | Component library (Radix UI) |
+| Lucide React | Icons |
+| next-themes | Dark/Light mode |
+| Framer Motion | Animations |
 
-### State & Utilities
-*   **Sonner**: Toast notifications.
-*   **Zustand / Context API**: State management (UserProvider, Sidebar state).
-*   **Axios / Fetch**: API communication (via `lib/apiClient.js`).
+### Visualization
 
-## 3. Key Features & Modules
+| Package | Purpose |
+|---------|---------|
+| @xyflow/react | Node-based graph canvas |
+| elkjs | Graph layout algorithms |
+| @dnd-kit | Drag-and-drop |
 
-### A. Authentication (`/app/login`, `/app/register`)
-*   **Login**: JWT-based authentication. Stores tokens in `localStorage`.
-*   **Register**: User sign-up with client-side password complexity validation (Min 4 chars, 1 Uppercase).
-*   **Protection**: `fetchWithAuth` utility intercepts 401 responses to handle token refreshing or redirection.
+### Data & State
 
-### B. Dashboard Layout (`/app/dashboard`)
-*   **AppSidebar**: Responsive sidebar with collapsible sections, user profile footer, and navigation.
-*   **Theming**: Global accent color support (Blue default) that applies to buttons, hover states, and focus rings.
+| Package | Purpose |
+|---------|---------|
+| TanStack Query | Server state & caching |
+| React Context | Global client state |
+| Sonner | Toast notifications |
 
-### C. Device Builder (`/app/dashboard/device-builder`)
-*   **Purpose**: A drag-and-drop interface for designing custom smart devices (e.g., connecting sensors to an MCU).
-*   **Key Capabilities**:
-    *   **Canvas**: Infinite canvas with zoom/pan, constrained by `translateExtent`.
-    *   **Drag & Drop**: Supports desktop (HTML5 DnD) and Mobile (Touch Events).
-    *   **Mobile Support**: Custom `touchend` handler to calculate drop positions on touch devices.
-    *   **Connection Logic**: Enforced directionality (Top Handle = Source/Output, Bottom Handle = Target/Input).
-    *   **Validation**: Ensures only one MCU exists per device.
-    *   **Visuals**: Glassmorphism node design (`CustomNode`), dynamic handle visibility.
+---
 
-### D. Topology View (`/app/dashboard/topology`)
-*   **Purpose**: Visualizes the network of connected devices in the home.
-*   **Features**:
-    *   **Layout Strategy**: Custom "Star/Radial" topology algorithm. The Gateway is centered, with all devices connected in a radial pattern.
-    *   **Visual Parity**: Matches the "Device Builder" aesthetic with identical glassmorphism nodes (`BuilderStyleNode`) and dark-themed canvas controls.
-    *   **Status Indicators**: "Online" status is indicated by a glowing green dot (mirroring the Builder's selection state), while offline devices are appropriately styled.
-    *   **Node Types**: Intelligent mapping of device names (e.g., "Camera", "Light") to specific icons and colors (Red/Video, Yellow/Sun) based on the Device Builder's design language.
+## Architecture
 
-### E. Settings (`/app/dashboard/settings`)
-*   **Profile Management**: Update username, email, password, and avatar.
-*   **Appearance**: Toggle Dark/Light mode and select custom accent colors.
+### Provider Hierarchy
 
-## 4. Directory Structure
 ```
-app/
-├── app/                 # Next.js App Router pages
-│   ├── dashboard/       # Protected routes
-│   ├── login/           # Auth pages
-│   └── globals.css      # Global styles & Tailwind theme
-├── components/          # React components
-│   ├── ui/              # Shadcn UI primitives
-│   ├── topology/        # Graph specific components
-│   └── ...              # Layout components (Sidebar, Nav)
-├── hooks/               # Custom hooks (use-mobile, useTopologyLayout)
-├── lib/                 # Utilities (API client, cn helper)
-└── public/              # Static assets
+RootLayout
+└── ThemeProvider          # Dark/Light mode
+    └── QueryProvider      # React Query client
+        └── UserProvider   # Auth & user state
+            └── {children}
+            └── Toaster    # Global notifications
 ```
 
-## 5. Development Log
+### Request Flow
 
-### Recent Changes (Dec 2025)
+```
+Component → React Query → apiClient.js → Backend API (port 8000)
+                              ↓
+                     JWT Token Management
+                     (localStorage: access/refresh)
+```
 
-#### Mobile & Interaction Improvements
-*   **Mobile Drag & Drop**: Fixed an issue where dragging nodes from the bottom sheet on mobile didn't work. Implemented a global `touchend` handler to calculate drop positions accurately.
-*   **Canvas Constraints**: Limited the infinite canvas size using `translateExtent` to keep users focused on the workspace.
-*   **Connection Logic**: Enforced strict "Top-to-Bottom" connection flow (Top=Source, Bottom=Target) and added auto-swap logic for intuitive connections.
+---
 
-#### Visual Polish & Theming
-*   **Tag Removal**: Removed the "MCU" text label from Device Builder nodes and the "OFFLINE" badge from Topology nodes for a cleaner look.
-*   **Global Accent Color**:
-    *   Updated the global theme to use a consistent Blue accent (`oklch(0.55 0.2 260)`).
-    *   Applied this accent color to **Sidebar hover states**, **Button hover states** (Ghost/Outline), and **Input focus rings**.
-    *   Ensured consistent behavior across Light and Dark modes.
+## Project Structure
 
-### Previous Improvements
+```
+/app
+├── app/                        # Next.js App Router
+│   ├── layout.tsx              # Root layout with providers
+│   ├── page.tsx                # Landing page
+│   ├── globals.css             # Global styles & CSS variables
+│   ├── login/                  # Login page
+│   ├── register/               # Registration page
+│   └── dashboard/              # Protected routes
+│       ├── layout.tsx          # Dashboard layout (sidebar + header)
+│       ├── page.tsx            # Dashboard home
+│       ├── devices/            # Device registration wizard
+│       ├── device-builder/     # Visual device designer
+│       ├── device-types/       # Device type proposals
+│       ├── topology/           # Network visualization
+│       ├── settings/           # User preferences
+│       └── admin/              # Admin-only routes
+│           ├── rooms/          # Room management
+│           ├── users/          # User management
+│           └── device-types/   # Approval queue
+│
+├── components/                 # Reusable components
+│   ├── ui/                     # shadcn/ui primitives (24 components)
+│   ├── devices/                # Device-related components
+│   ├── topology/               # Graph visualization
+│   ├── app-sidebar.tsx         # Main navigation
+│   ├── nav-user.tsx            # User menu
+│   ├── query-provider.tsx      # React Query setup
+│   ├── theme-provider.tsx      # Theme configuration
+│   └── user-provider.tsx       # Auth context
+│
+├── hooks/                      # Custom React hooks
+│   └── use-mobile.ts           # Mobile detection
+│
+├── lib/                        # Utilities
+│   ├── apiClient.js            # API communication
+│   ├── utils.ts                # Helper functions (cn)
+│   └── icons.ts                # Icon mappings
+│
+└── public/                     # Static assets
+```
 
-#### 1. Application Renaming
-*   **Action**: Renamed the application from "OpenDash" to "**HomeForge**".
-*   **Files Modified**: `app/login/page.tsx`, `app/register/page.tsx`, `components/sidebar.tsx`, `components/app-sidebar.tsx`.
+---
 
-#### 2. Registration Improvements
-*   **Action**: Added client-side password validation.
-*   **Rule**: Password must contain at least 1 uppercase letter and be at least 4 characters long.
-*   **File**: `app/register/page.tsx`.
+## Core Systems
 
-#### 3. Settings Page Enhancements
-*   **Action**: Expanded the profile settings form.
-*   **New Features**: Added inputs for **Username**, **Email**, **New Password**. Integrated these fields into the `updateProfile` API call.
-*   **File**: `app/dashboard/settings/page.tsx`.
+### Authentication
 
-#### 4. API Client Updates
-*   **Action**: Updated `lib/apiClient.js` to handle the new fields (`username`, `email`, `password`) in the `updateProfile` function.
+JWT-based authentication with automatic token refresh:
 
-#### 5. User Experience & Theming
-*   **Persistence**:
-    *   Updated `UserProvider` to persist user data and accent color to `localStorage`.
-    *   Implemented `useLayoutEffect` to apply the accent color immediately on page load.
-    *   Updated `NavUser` to calculate initials dynamically.
-*   **Visual Polish**:
-    *   **Sidebar**: Replaced lightning icon with **Hammer** icon. Removed faded gradient background and drop shadows from logo.
-    *   **Settings Page**: Centered form labels and added descriptive icons. Centered accent color picker.
-    *   **User Menu**: Added accent-colored border to user avatar.
+```
+1. Login (POST /api/login/) → Receive access + refresh tokens
+2. Store tokens in localStorage
+3. fetchWithAuth() adds Bearer token to requests
+4. On 401 → Attempt token refresh → Retry or redirect to /login
+```
 
-#### 6. Bug Fixes & Optimizations
-*   **Avatar Updates**: Fixed avatar disappearance after update by implementing `refreshUser`.
-*   **Performance**: Lazy-initialized `elkjs` in `useTopologyLayout`.
-*   **React Flow**: Optimized `DeviceBuilder` configuration by memoizing `defaultEdgeOptions` and `proOptions`.
+**Key Files:**
+- `lib/apiClient.js` — `login()`, `logout()`, `fetchWithAuth()`
+- `components/user-provider.tsx` — `useUser()` hook
 
-### 9. Admin Infrastructure (Phase 1)
-*   **Admin Dashboard**: Created protected route `/dashboard/admin` for Admin/Owner roles.
-*   **Navigation**: Updated `AppSidebar` to conditionally show "Admin Panel" navigation group.
-*   **Room Management**: Added UI to list, create, edit, and delete rooms.
-*   **User Management**: Added UI to list users and manage roles (Admin/User/Viewer).
-*   **Device Type Approval**: Added UI to list device types and approve/reject pending definitions.
+### Protected Routes
 
-### 11. Visual & Feature Refinements (Phase 3)
-*   **Topology Redesign**:
-    *   **Goal**: Align the Topology view visually with the Device Builder.
-    *   **Implementation**: Replaced `elkjs` with a custom radial layout engine. Ported `CustomNode` styles from Device Builder to a new `BuilderStyleNode` for the topology map.
-    *   **Details**: Nodes now share the exact color palette (e.g., Temperature=Orange, Camera=Red), blur effects, and interactions (hover scales) as the builder.
-*   **Device Management Enhancements**:
-    *   **Custom Icons (UI)**: Replaced the raw text input with a user-friendly **Icon Picker**.
-    *   **Implementation**: Utilizes `lucide-react` icons and a Shadcn `DropdownMenu` to provide a curated grid of smart home icons (Bulbs, Wifi, Sensors, etc.).
-    *   **Data Handling**: Stores the icon name (e.g., "Lightbulb") in the backend. Front-end dynamically resolves this name to the correct Lucide React component for display.
-    *   **Visuals**: Verified icon rendering in the Device List table, falling back to text if a custom string (non-Lucide) was provided previously.
+Dashboard routes check authentication in `app/dashboard/layout.tsx`:
 
-### 10. User Capabilities (Phase 2)
-*   **Device Registration Wizard**: 
-    *   Created `/dashboard/devices/page.tsx` implementing a 3-step wizard (Type -> Room -> Details).
-    *   Allows users to register actual devices into the system via the API.
-*   **Device Type Proposal**:
-    *   Created `/dashboard/device-types/page.tsx` with a JSON builder form.
-    *   Enables users to propose new device capabilities (`definition`) which enter a "pending" state for admin review.
-*   **Real Topology Data**:
-    *   Refactored `/dashboard/topology/page.tsx` to fetch live data from `GET /topology/`.
-    *   Updated visualization to support "Physical Topology" (Devices grouped by Rooms) using a grid-based auto-layout.
-*   **Dashboard Integration**:
-    *   Updated the main dashboard to display real-time counts of Registered Devices and Device Types.
-*   **Component Additions**:
-    *   Added `Select` (via `@radix-ui/react-select`) and `Textarea` components to `components/ui`.
+```typescript
+useEffect(() => {
+  fetchProfile()
+    .then(() => setIsAuthorized(true))
+    .catch(() => router.push('/login'))
+}, [])
+```
+
+### Role-Based Access
+
+| Role | Access |
+|------|--------|
+| `owner` | Full access + Admin Panel |
+| `admin` | Full access + Admin Panel |
+| `user` | Standard dashboard |
+| `viewer` | Read-only |
+
+---
+
+## Features
+
+### Device Builder (`/dashboard/device-builder`)
+
+Interactive canvas for designing device configurations:
+
+- **Drag & Drop** — Desktop and mobile touch support
+- **Node Connections** — Top handle = output, Bottom = input
+- **Validation** — Single MCU per device
+- **Glassmorphism UI** — Translucent, modern node design
+
+### Topology View (`/dashboard/topology`)
+
+Network visualization of connected devices:
+
+- **Radial Layout** — Gateway-centered star topology
+- **Live Data** — Fetched from `/topology/` endpoint
+- **Status Indicators** — Online (green glow) / Offline
+
+### Device Management (`/dashboard/devices`)
+
+Three-step registration wizard:
+1. Select Device Type
+2. Choose Room
+3. Configure Details
+
+### Settings (`/dashboard/settings`)
+
+- Profile (name, email, avatar, password)
+- Theme (Dark/Light)
+- Accent color picker
+
+### Admin Panel (`/dashboard/admin`)
+
+- **Rooms** — Create, edit, delete rooms
+- **Users** — View users, manage roles
+- **Device Types** — Approve/reject proposed types
+
+---
+
+## Component Library
+
+### shadcn/ui Components (`components/ui/`)
+
+| Component | Description |
+|-----------|-------------|
+| `button` | Action buttons with variants |
+| `card` | Content containers |
+| `dialog` | Modal dialogs |
+| `input` | Text inputs |
+| `select` | Dropdowns |
+| `switch` | Toggle controls |
+| `slider` | Range inputs |
+| `table` | Data tables |
+| `tooltip` | Hover information |
+| `popover` | Floating content |
+| `command` | Command palette |
+| `dropdown-menu` | Action menus |
+| `sheet` | Slide-out panels |
+| `skeleton` | Loading placeholders |
+
+### Custom Components
+
+| Component | Purpose |
+|-----------|---------|
+| `AppSidebar` | Main navigation sidebar |
+| `NavUser` | User dropdown menu |
+| `SmartDeviceCard` | Device display card |
+| `IconPicker` | Icon selection UI |
+| `TopologyCanvas` | React Flow wrapper |
+| `BuilderStyleNode` | Glassmorphism graph node |
+
+---
+
+## State Management
+
+### Server State (React Query)
+
+Configured in `components/query-provider.tsx`:
+
+```typescript
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5000,            // Refetch after 5 seconds
+      refetchOnWindowFocus: true, // Refresh on tab focus
+    },
+  },
+})
+```
+
+**Usage:**
+```typescript
+// Queries
+const { data, isLoading } = useQuery({
+  queryKey: ['devices'],
+  queryFn: () => apiClient.get('/devices/')
+})
+
+// Mutations
+const mutation = useMutation({
+  mutationFn: (data) => apiClient.post('/devices/', data),
+  onSuccess: () => queryClient.invalidateQueries(['devices'])
+})
+```
+
+### Client State (Context)
+
+**UserContext** (`components/user-provider.tsx`):
+
+```typescript
+const { 
+  user,              // Current user data
+  isLoading,         // Loading state
+  logout,            // Logout function
+  updateAccentColor, // Theme customization
+  refreshUser        // Refetch profile
+} = useUser()
+```
+
+---
+
+## API Integration
+
+### API Client (`lib/apiClient.js`)
+
+```javascript
+import apiClient from '@/lib/apiClient'
+
+// GET request
+const data = await apiClient.get('/devices/')
+
+// POST request
+await apiClient.post('/devices/', { name: 'Light', room_id: 1 })
+
+// PUT request
+await apiClient.put('/devices/1/', updatedData)
+
+// DELETE request
+await apiClient.delete('/devices/1/')
+```
+
+### Backend URL
+
+Auto-detected based on current hostname:
+
+```javascript
+// Browser: Uses current protocol + hostname:8000
+// Server: Falls back to http://localhost:8000
+```
+
+### Error Handling
+
+Django REST Framework errors are normalized:
+
+```javascript
+// Field errors → Joined message
+// detail string → Thrown as-is
+// non_field_errors → Combined message
+```
+
+---
+
+## Theming
+
+### Dark Mode
+
+Managed by `next-themes`:
+
+```typescript
+<ThemeProvider
+  attribute="class"
+  defaultTheme="system"
+  enableSystem
+/>
+```
+
+### Accent Colors
+
+Customizable via `UserProvider`:
+
+```typescript
+const ACCENT_COLORS = {
+  default: "oklch(0.205 0 0)",
+  violet:  "oklch(0.5 0.2 280)",
+  blue:    "oklch(0.5 0.2 250)",
+  green:   "oklch(0.6 0.15 150)",
+  orange:  "oklch(0.6 0.15 50)",
+  pink:    "oklch(0.6 0.2 340)",
+  cyan:    "oklch(0.6 0.15 200)",
+}
+```
+
+Colors are applied via CSS custom properties (`--primary`, `--ring`).
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- Backend API running on port 8000
+
+### Installation
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+
+# Start production server
+npm start
+```
+
+### Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Development server (hot reload) |
+| `npm run build` | Production build |
+| `npm start` | Production server |
+| `npm run lint` | ESLint |
+
+### Environment
+
+The frontend auto-connects to the backend:
+- **Dev:** `http://localhost:8000`
+- **Prod:** Same hostname, port 8000
+
+---
+
+## Additional Resources
+
+- [Backend API Documentation](backend_api.md)
+- [Copilot Instructions](.github/copilot-instructions.md)
+- [shadcn/ui](https://ui.shadcn.com)
+- [React Flow](https://reactflow.dev)
+- [TanStack Query](https://tanstack.com/query)

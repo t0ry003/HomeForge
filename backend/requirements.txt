@@ -5,4 +5,4 @@ django-channels
 psycopg2-binary
 djangorestframework-simplejwt
 Pillow
-Pillow
+uv
