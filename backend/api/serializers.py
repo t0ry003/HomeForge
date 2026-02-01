@@ -8,7 +8,33 @@ from .models import Profile, Device, Room, CustomDeviceType, DeviceCardTemplate,
 class DeviceControlSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeviceControl
-        fields = ['id', 'widget_type', 'label', 'variable_mapping', 'min_value', 'max_value', 'step']
+        fields = ['id', 'widget_type', 'label', 'variable_mapping', 'min_value', 'max_value', 'step', 'variant', 'size', 'unit']
+        extra_kwargs = {
+            'min_value': {'required': False},
+            'max_value': {'required': False},
+            'step': {'required': False},
+            'variant': {'required': False},
+            'size': {'required': False},
+            'unit': {'required': False},
+        }
+
+    def validate(self, data):
+        """
+        Validate that SLIDER widgets have min/max/step values.
+        Sensor widgets do not require these fields.
+        """
+        widget_type = data.get('widget_type')
+        
+        # SLIDER requires min/max/step
+        if widget_type == 'SLIDER':
+            if data.get('min_value') is None:
+                raise serializers.ValidationError({'min_value': 'This field is required for SLIDER widgets.'})
+            if data.get('max_value') is None:
+                raise serializers.ValidationError({'max_value': 'This field is required for SLIDER widgets.'})
+            if data.get('step') is None:
+                raise serializers.ValidationError({'step': 'This field is required for SLIDER widgets.'})
+        
+        return data
 
 
 class DeviceCardTemplateSerializer(serializers.ModelSerializer):

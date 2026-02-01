@@ -121,16 +121,63 @@ class DeviceCardTemplate(models.Model):
 
 class DeviceControl(models.Model):
     """
-    Individual control widgets (sliders, toggles) for the device card.
+    Individual control widgets (sliders, toggles, sensors) for the device card.
     """
+    # Interactive Controls
     WIDGET_TOGGLE = 'TOGGLE'
     WIDGET_SLIDER = 'SLIDER'
+    WIDGET_BUTTON = 'BUTTON'
+    
+    # Display/Sensor Widgets
     WIDGET_GAUGE = 'GAUGE'
+    WIDGET_TEMPERATURE = 'TEMPERATURE'
+    WIDGET_HUMIDITY = 'HUMIDITY'
+    WIDGET_MOTION = 'MOTION'
+    WIDGET_LIGHT = 'LIGHT'
+    WIDGET_CO2 = 'CO2'
+    WIDGET_PRESSURE = 'PRESSURE'
+    WIDGET_POWER = 'POWER'
+    WIDGET_BATTERY = 'BATTERY'
+    WIDGET_STATUS = 'STATUS'
     
     WIDGET_CHOICES = [
+        # Interactive
         (WIDGET_TOGGLE, 'Toggle Switch'),
         (WIDGET_SLIDER, 'Slider'),
+        (WIDGET_BUTTON, 'Button'),
+        # Sensors/Display
         (WIDGET_GAUGE, 'Gauge'),
+        (WIDGET_TEMPERATURE, 'Temperature Sensor'),
+        (WIDGET_HUMIDITY, 'Humidity Sensor'),
+        (WIDGET_MOTION, 'Motion Sensor'),
+        (WIDGET_LIGHT, 'Light Sensor'),
+        (WIDGET_CO2, 'CO2 Sensor'),
+        (WIDGET_PRESSURE, 'Pressure Sensor'),
+        (WIDGET_POWER, 'Power Meter'),
+        (WIDGET_BATTERY, 'Battery Level'),
+        (WIDGET_STATUS, 'Status Indicator'),
+    ]
+    
+    # Display variant options
+    VARIANT_ROW = 'row'
+    VARIANT_SQUARE = 'square'
+    VARIANT_COMPACT = 'compact'
+    
+    VARIANT_CHOICES = [
+        (VARIANT_ROW, 'Row'),
+        (VARIANT_SQUARE, 'Square'),
+        (VARIANT_COMPACT, 'Compact'),
+    ]
+    
+    # Size options
+    SIZE_SM = 'sm'
+    SIZE_MD = 'md'
+    SIZE_LG = 'lg'
+    
+    SIZE_CHOICES = [
+        (SIZE_SM, 'Small'),
+        (SIZE_MD, 'Medium'),
+        (SIZE_LG, 'Large'),
     ]
 
     template = models.ForeignKey(DeviceCardTemplate, on_delete=models.CASCADE, related_name='controls')
@@ -142,6 +189,11 @@ class DeviceControl(models.Model):
     min_value = models.FloatField(null=True, blank=True)
     max_value = models.FloatField(null=True, blank=True)
     step = models.FloatField(null=True, blank=True)
+    
+    # New optional display fields
+    variant = models.CharField(max_length=20, choices=VARIANT_CHOICES, null=True, blank=True, help_text="Display variant: row, square, or compact")
+    size = models.CharField(max_length=10, choices=SIZE_CHOICES, null=True, blank=True, help_text="Widget size: sm, md, or lg")
+    unit = models.CharField(max_length=20, null=True, blank=True, help_text="Display unit (e.g., °C, %, lux, ppm)")
 
     class Meta:
         # Ensure a variable name is unique within a single device type template
