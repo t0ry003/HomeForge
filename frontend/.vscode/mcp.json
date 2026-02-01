@@ -1,0 +1,67 @@
+{
+  "servers": {
+    "shadcn-ui": {
+      "command": "npx",
+      "args": [
+        "@anthropic/mcp-server-shadcn-ui"
+      ],
+      "env": {
+        "COMPONENTS_PATH": "./components/ui"
+      }
+    },
+    "tailwindcss": {
+      "command": "npx",
+      "args": [
+        "@anthropic/mcp-server-tailwindcss"
+      ],
+      "env": {
+        "CONFIG_PATH": "./tailwind.config.ts"
+      }
+    },
+    "nextjs": {
+      "command": "npx",
+      "args": [
+        "@anthropic/mcp-server-nextjs"
+      ],
+      "env": {
+        "APP_DIR": "./app"
+      }
+    },
+    "react-query": {
+      "command": "npx",
+      "args": [
+        "@anthropic/mcp-server-tanstack-query"
+      ]
+    },
+    "typescript": {
+      "command": "npx",
+      "args": [
+        "@anthropic/mcp-server-typescript"
+      ],
+      "env": {
+        "TSCONFIG_PATH": "./tsconfig.json"
+      }
+    },
+    "lucide": {
+      "command": "npx",
+      "args": [
+        "@anthropic/mcp-server-lucide"
+      ]
+    },
+    "eslint": {
+      "command": "npx",
+      "args": [
+        "@anthropic/mcp-server-eslint"
+      ],
+      "env": {
+        "CONFIG_PATH": "./eslint.config.mjs"
+      }
+    },
+    "git": {
+      "command": "npx",
+      "args": [
+        "@anthropic/mcp-server-git"
+      ]
+    }
+  }
+}
