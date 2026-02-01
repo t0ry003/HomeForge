@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -eu
 # Script: parameterized migration helper
 # Usage:
 #   ./migrate_api.sh [app1 app2 ...]                 # migrate these apps across all DBs
