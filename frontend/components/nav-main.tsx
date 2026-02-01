@@ -27,9 +27,12 @@ export function NavMain({
     url: string
     icon: LucideIcon
     isActive?: boolean
+    badge?: number
     items?: {
       title: string
       url: string
+      icon?: LucideIcon
+      badge?: number
     }[]
   }[]
 }) {
@@ -42,9 +45,14 @@ export function NavMain({
             <Collapsible key={item.title} asChild defaultOpen={item.isActive} className="group/collapsible">
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip={item.title}>
-                  <a href={item.url}>
+                  <a href={item.url} className="relative">
                     <item.icon />
                     <span>{item.title}</span>
+                    {item.badge && item.badge > 0 && (
+                      <span className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    )}
                   </a>
                 </SidebarMenuButton>
                 <CollapsibleTrigger asChild>
@@ -58,8 +66,14 @@ export function NavMain({
                     {item.items.map((subItem) => (
                       <SidebarMenuSubItem key={subItem.title}>
                         <SidebarMenuSubButton asChild>
-                          <a href={subItem.url}>
+                          <a href={subItem.url} className="flex items-center gap-2">
+                            {subItem.icon && <subItem.icon className="h-4 w-4" />}
                             <span>{subItem.title}</span>
+                            {subItem.badge && subItem.badge > 0 && (
+                              <span className="ml-auto flex h-4 min-w-4 px-1 shrink-0 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-white">
+                                {subItem.badge > 99 ? '99+' : subItem.badge}
+                              </span>
+                            )}
                           </a>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
@@ -71,9 +85,14 @@ export function NavMain({
           ) : (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild tooltip={item.title}>
-                <a href={item.url}>
+                <a href={item.url} className="relative">
                   <item.icon />
                   <span>{item.title}</span>
+                  {item.badge && item.badge > 0 && (
+                    <span className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white">
+                      {item.badge > 99 ? '99+' : item.badge}
+                    </span>
+                  )}
                 </a>
               </SidebarMenuButton>
             </SidebarMenuItem>

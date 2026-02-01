@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import ReactFlow, {
     useNodesState,
     useEdgesState,
@@ -16,16 +17,16 @@ import 'reactflow/dist/style.css';
 
 import { 
     Cpu, Thermometer, Droplets, Activity, Sun, ToggleLeft, Wind, 
-    CheckCircle2, XCircle, AlertCircle, Inbox
+    CheckCircle2, XCircle, Inbox, RotateCw
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 
-import { fetchPendingDeviceTypes, approveDeviceType, denyDeviceType } from "@/lib/apiClient";
+import { fetchPendingDeviceTypes, denyDeviceType, approveDeviceType } from "@/lib/apiClient";
 import SmartDeviceCard from "@/components/devices/SmartDeviceCard";
 
 // --- Graph Definitions (Copied from Builder) ---
@@ -109,6 +110,7 @@ const reconstructGraph = (structure: any[]): { nodes: Node[], edges: Edge[] } =>
 
 
 export default function AdminApprovalsPage() {
+    const router = useRouter();
     const [pendingTypes, setPendingTypes] = useState<any[]>([]);
     const [selectedType, setSelectedType] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -158,17 +160,6 @@ export default function AdminApprovalsPage() {
         }
     };
 
-    const handleApprove = async () => {
-        if (!selectedType) return;
-        try {
-            await approveDeviceType(selectedType.id);
-            toast.success("Device Type Approved");
-            handleRemoveFromList(selectedType.id);
-        } catch (e: any) {
-            toast.error("Approval Failed", { description: e.message });
-        }
-    };
-
     const handleDeny = async () => {
         if (!selectedType || !denyReason) return;
         try {
@@ -179,6 +170,17 @@ export default function AdminApprovalsPage() {
             handleRemoveFromList(selectedType.id);
         } catch (e: any) {
             toast.error("Denial Failed", { description: e.message });
+        }
+    };
+
+    const handleApprove = async () => {
+        if (!selectedType) return;
+        try {
+            await approveDeviceType(selectedType.id);
+            toast.success("Device Type Approved", { description: `${selectedType.name} is now available for use.` });
+            handleRemoveFromList(selectedType.id);
+        } catch (e: any) {
+            toast.error("Approval Failed", { description: e.message });
         }
     };
 
@@ -195,116 +197,134 @@ export default function AdminApprovalsPage() {
     // Mock Device for Preview
     const previewDevice = selectedType ? {
         id: "preview-123",
-        name: "Preview Device",
+        name: selectedType.name || "Preview Device",
         ip_address: "192.168.1.xxx",
         status: "online",
-        icon: "fa-cube", // default
-        current_state: {} // could partially fill default values if controls had defaults
+        icon: selectedType.definition?.icon || "fa-cube",
+        current_state: {}
     } : null;
 
     return (
-        <div className="flex flex-col h-[calc(100vh-4rem)] p-4 gap-4">
+        <div className="flex flex-col h-[calc(100vh-4rem)] gap-4 p-4 md:p-6">
              {/* Header */}
-             <div className="flex items-center justify-between">
+             <div className="flex items-center justify-between shrink-0">
                 <div>
                      <h1 className="text-2xl font-bold tracking-tight">Pending Approvals</h1>
-                     <p className="text-muted-foreground">Review and audit proposed device types</p>
+                     <p className="text-sm text-muted-foreground">Review and approve device type definitions</p>
                 </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={loadPending}>Refresh</Button>
-                </div>
+                <Button variant="outline" size="sm" onClick={loadPending} disabled={isLoading}>
+                    <RotateCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                    Refresh
+                </Button>
             </div>
 
             {/* Main Content */}
             {isLoading ? (
-                <div className="flex-1 flex items-center justify-center text-muted-foreground">Loading...</div>
+                <div className="flex-1 flex items-center justify-center text-muted-foreground">
+                    <RotateCw className="w-5 h-5 animate-spin mr-2" />
+                    Loading pending approvals...
+                </div>
             ) : pendingTypes.length === 0 ? (
-                 <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground bg-muted/20 rounded-xl border-2 border-dashed">
-                    <Inbox className="w-12 h-12 mb-4 opacity-50" />
+                 <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground rounded-xl border border-dashed bg-muted/5">
+                    <div className="p-4 rounded-full bg-muted/20 mb-4">
+                        <Inbox className="w-10 h-10 opacity-50" />
+                    </div>
                     <p className="text-lg font-medium">No pending approvals</p>
-                    <p className="text-sm opacity-75">Good job! You're all caught up.</p>
+                    <p className="text-sm opacity-75">All device types have been reviewed</p>
                 </div>
             ) : (
-                <div className="flex-1 flex gap-6 overflow-hidden">
-                    {/* List (Left Sidebar for selection) */}
-                    <div className="w-64 flex flex-col gap-2 overflow-y-auto pr-2 border-r">
+                <div className="flex-1 flex flex-col lg:flex-row gap-4 overflow-hidden min-h-0">
+                    {/* Left Panel: Pending List */}
+                    <div className="w-full lg:w-64 flex flex-col gap-2 overflow-y-auto shrink-0 lg:pr-2">
+                        <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                            {pendingTypes.length} pending
+                        </div>
+                        <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0">
                          {pendingTypes.map(t => (
                              <div 
                                 key={t.id} 
                                 onClick={() => handleSelect(t)}
-                                className={`p-3 rounded-lg border cursor-pointer transition-colors ${selectedType?.id === t.id ? 'bg-primary/10 border-primary shadow-sm' : 'hover:bg-muted bg-card'}`}
+                                className={`cursor-pointer transition-all p-3 rounded-lg border min-w-[200px] lg:min-w-0 ${
+                                    selectedType?.id === t.id 
+                                        ? 'border-primary bg-primary/5 shadow-sm' 
+                                        : 'border-border bg-card hover:bg-muted/50'
+                                }`}
                              >
-                                <div className="font-semibold truncate">{t.name}</div>
-                                <div className="text-xs text-muted-foreground flex justify-between mt-1">
-                                    <span>{new Date(t.created_at || Date.now()).toLocaleDateString()}</span>
-                                    {t.definition?.structure?.length > 0 && <Badge variant="secondary" className="text-[10px] h-4">Valid</Badge>}
+                                <div className="flex items-center justify-between gap-2">
+                                    <span className="font-medium text-sm truncate">{t.name}</span>
+                                    <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 text-[10px] shrink-0 px-1.5 py-0">
+                                        Pending
+                                    </Badge>
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1.5">
+                                    {t.definition?.structure?.length || 0} component{(t.definition?.structure?.length || 0) !== 1 ? 's' : ''} · {new Date(t.created_at || Date.now()).toLocaleDateString()}
                                 </div>
                              </div>
                          ))}
+                        </div>
                     </div>
 
-                    {/* Detail View */}
+                    {/* Right Panel: Detail View */}
                     {selectedType && (
-                        <div className="flex-1 flex flex-col gap-4 overflow-hidden">
-                             {/* Top Info */}
-                             <div className="flex items-start justify-between bg-card p-4 rounded-lg border shadow-sm">
+                        <div className="flex-1 flex flex-col gap-4 overflow-hidden min-h-0 lg:border-l lg:pl-4">
+                             {/* Header with Actions */}
+                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
                                 <div>
-                                    <h2 className="text-xl font-bold flex items-center gap-2">
-                                        {selectedType.name}
-                                        <Badge status="warning">Pending</Badge>
-                                    </h2>
-                                    <p className="text-sm text-muted-foreground mt-1">
-                                        Submitted by {selectedType.owner || "Unknown User"}
+                                    <h2 className="text-lg font-bold">{selectedType.name}</h2>
+                                    <p className="text-xs text-muted-foreground">
+                                        by {selectedType.owner || selectedType.created_by?.username || "Unknown"}
                                     </p>
                                 </div>
-                                <div className="flex gap-2">
-                                     <Button variant="destructive" onClick={() => setIsDenyOpen(true)}>
-                                        <XCircle className="w-4 h-4 mr-2" /> Deny
+                                <div className="flex gap-2 w-full sm:w-auto">
+                                     <Button variant="outline" size="sm" className="flex-1 sm:flex-none border-red-500/30 text-red-600 hover:bg-red-500/10 hover:text-red-600" onClick={() => setIsDenyOpen(true)}>
+                                        <XCircle className="w-4 h-4 mr-1.5" /> Deny
                                      </Button>
-                                     <Button className="bg-green-600 hover:bg-green-700" onClick={handleApprove}>
-                                        <CheckCircle2 className="w-4 h-4 mr-2" /> Approve
+                                     <Button size="sm" className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700" onClick={handleApprove}>
+                                        <CheckCircle2 className="w-4 h-4 mr-1.5" /> Approve
                                      </Button>
                                 </div>
                              </div>
 
-                             {/* Split View */}
-                             <div className="flex-1 grid grid-cols-2 gap-4 min-h-0">
-                                 {/* Panel 1: Hardware Map */}
-                                 <Card className="flex flex-col overflow-hidden h-full">
-                                     <CardHeader className="py-3 px-4 border-b bg-muted/40">
-                                         <CardTitle className="text-sm font-medium">Hardware Topology</CardTitle>
-                                     </CardHeader>
-                                     <CardContent className="flex-1 p-0 relative bg-muted/10">
-                                        <ReactFlowProvider>
+                             {/* Preview Panels - Stacked on smaller, side by side on larger */}
+                             <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0 overflow-auto">
+                                 {/* Panel 1: Hardware Topology */}
+                                 <div className="flex flex-col rounded-lg border bg-card overflow-hidden min-h-[300px]">
+                                     <div className="py-2 px-3 border-b bg-muted/30 shrink-0">
+                                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Hardware Topology</span>
+                                     </div>
+                                     <div className="flex-1 relative">
+                                        <ReactFlowProvider key={selectedType?.id}>
                                             <ReactFlow
                                                 nodes={nodes}
                                                 edges={edges}
                                                 nodeTypes={nodeTypes}
                                                 fitView
+                                                fitViewOptions={{ padding: 0.3 }}
                                                 proOptions={{ hideAttribution: true }}
                                                 nodesDraggable={false}
                                                 nodesConnectable={false}
                                                 elementsSelectable={false}
+                                                className="bg-background"
                                             />
                                         </ReactFlowProvider>
-                                     </CardContent>
-                                 </Card>
+                                     </div>
+                                 </div>
 
                                  {/* Panel 2: UI Preview */}
-                                 <Card className="flex flex-col overflow-hidden h-full">
-                                     <CardHeader className="py-3 px-4 border-b bg-muted/40">
-                                         <CardTitle className="text-sm font-medium">User Interface (Preview)</CardTitle>
-                                     </CardHeader>
-                                     <CardContent className="flex-1 p-6 flex items-center justify-center bg-muted/20">
-                                         <div className="w-full max-w-sm pointer-events-none opacity-90 hover:opacity-100 transition-opacity">
+                                 <div className="flex flex-col rounded-lg border bg-card overflow-hidden min-h-[300px]">
+                                     <div className="py-2 px-3 border-b bg-muted/30 shrink-0">
+                                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Card Preview</span>
+                                     </div>
+                                     <div className="flex-1 p-4 flex items-center justify-center overflow-auto bg-background">
+                                         <div className="w-full max-w-xs pointer-events-none">
                                              <SmartDeviceCard 
                                                 device={previewDevice} 
                                                 deviceType={selectedType}
                                                 readOnly={true}
                                              />
                                          </div>
-                                     </CardContent>
-                                 </Card>
+                                     </div>
+                                 </div>
                              </div>
                         </div>
                     )}
@@ -317,11 +337,11 @@ export default function AdminApprovalsPage() {
                     <DialogHeader>
                         <DialogTitle>Deny Device Type</DialogTitle>
                         <DialogDescription>
-                            Please provide a reason for rejecting this device proposal. This will be sent to the user.
+                            Please provide a reason for rejecting &quot;{selectedType?.name}&quot;. This will be sent to the creator.
                         </DialogDescription>
                     </DialogHeader>
                     <Textarea 
-                        placeholder="e.g. Invalid sensor configuration..." 
+                        placeholder="e.g. Invalid sensor configuration, missing controls..." 
                         value={denyReason}
                         onChange={(e) => setDenyReason(e.target.value)}
                         className="min-h-[100px]"
@@ -335,5 +355,3 @@ export default function AdminApprovalsPage() {
         </div>
     );
 }
-
-```

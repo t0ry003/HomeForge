@@ -1,9 +1,10 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Check, X, ShieldAlert, Edit, Code, Plus } from "lucide-react"
+import { X, ShieldAlert, Edit, Plus, Eye } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -23,7 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { fetchDeviceTypes, approveDeviceType, deleteDeviceType } from "@/lib/apiClient"
+import { fetchDeviceTypes, deleteDeviceType } from "@/lib/apiClient"
 
 function getComponentSummary(definition: any): string {
   if (!definition || !Array.isArray(definition.structure) && !Array.isArray(definition)) return "Unknown";
@@ -49,6 +50,7 @@ function getComponentSummary(definition: any): string {
 }
 
 export default function DeviceTypesPage() {
+  const router = useRouter()
   const [deviceTypes, setDeviceTypes] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [deleteId, setDeleteId] = useState<number | null>(null)
@@ -69,16 +71,6 @@ export default function DeviceTypesPage() {
     loadDeviceTypes()
   }, [])
 
-  const handleApprove = async (id: number) => {
-    try {
-      await approveDeviceType(id)
-      toast.success("Device type approved")
-      loadDeviceTypes()
-    } catch (error: any) {
-      toast.error(error.message || "Failed to approve device type")
-    }
-  }
-
   const confirmReject = async () => {
     if (!deleteId) return
     try {
@@ -93,23 +85,23 @@ export default function DeviceTypesPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Device Types</h2>
-          <p className="text-muted-foreground">
-            Approve or reject new device definitions.
+          <p className="text-sm text-muted-foreground">
+            Manage device definitions. Pending devices must be reviewed before approval.
           </p>
         </div>
-        <Link href="/dashboard/device-builder">
-            <Button>
+        <Link href="/dashboard/device-builder" className="w-full sm:w-auto">
+            <Button className="w-full sm:w-auto">
                 <Plus className="mr-2 h-4 w-4" /> New Definition
             </Button>
         </Link>
       </div>
 
-      <div className="rounded-md border bg-card">
-        <Table>
+      <div className="rounded-md border bg-card overflow-x-auto">
+        <Table className="min-w-[500px]">
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
@@ -156,8 +148,8 @@ export default function DeviceTypesPage() {
 
                         {!dt.approved ? (
                             <>
-                                <Button size="sm" variant="outline" className="border-green-500/50 hover:bg-green-500/10 hover:text-green-500 h-8 px-2" onClick={() => handleApprove(dt.id)}>
-                                    <Check className="h-4 w-4" />
+                                <Button size="sm" variant="outline" className="border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-600 h-8 px-2" onClick={() => router.push('/dashboard/admin/approvals')} title="Go to Pending Approvals">
+                                    <Eye className="h-4 w-4" />
                                 </Button>
                                 <Button size="sm" variant="outline" className="border-red-500/50 hover:bg-red-500/10 hover:text-red-500 h-8 px-2" onClick={() => setDeleteId(dt.id)}>
                                     <X className="h-4 w-4" />

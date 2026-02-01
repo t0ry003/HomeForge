@@ -94,21 +94,21 @@ export default function RoomsPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Rooms</h2>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Manage your home's rooms and zones.
           </p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
+        <Button onClick={() => handleOpenDialog()} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Add Room
         </Button>
       </div>
 
-      <div className="rounded-md border bg-card">
-        <Table>
+      <div className="rounded-md border bg-card overflow-x-auto">
+        <Table className="min-w-[300px]">
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
