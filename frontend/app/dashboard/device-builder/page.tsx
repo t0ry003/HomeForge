@@ -57,7 +57,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { proposeDeviceType, fetchAdminDeviceType, updateAdminDeviceType } from "@/lib/apiClient"
+import { proposeDeviceType, fetchAdminDeviceType, updateAdminDeviceType, approveDeviceType } from "@/lib/apiClient"
 import { useSearchParams } from 'next/navigation'
 import DeviceUICreator from './DeviceUICreator';
 
@@ -265,16 +265,46 @@ const DeviceBuilderContent = () => {
   
   // Edit mode state
   const [editMode, setEditMode] = useState(false);
+  const [reviewMode, setReviewMode] = useState(false); // Admin review mode
   const [editId, setEditId] = useState<number | null>(null);
   const [cardTemplate, setCardTemplate] = useState<any>(null);
 
   const { screenToFlowPosition, getViewport, setCenter } = useReactFlow();
   const searchParams = useSearchParams();
 
-  // Load from URL/Props - support both import (JSON) and edit (ID for API fetch)
+  // Load from URL/Props - support import, edit, and review modes
   useEffect(() => {
     const editIdParam = searchParams.get('edit');
+    const reviewIdParam = searchParams.get('review'); // Admin review mode
     const importData = searchParams.get('import');
+    
+    // Review mode: admin reviewing a pending device type before approval
+    if (reviewIdParam) {
+      const id = parseInt(reviewIdParam, 10);
+      if (!isNaN(id)) {
+        setReviewMode(true);
+        setEditMode(true); // Review uses edit mode internally
+        setEditId(id);
+        
+        fetchAdminDeviceType(id)
+          .then((data) => {
+            if (data.definition?.structure) {
+              const { nodes: loadedNodes, edges: loadedEdges } = reconstructGraph(data.definition.structure);
+              setNodes(loadedNodes);
+              setEdges(loadedEdges);
+            }
+            if (data.name) setDeviceName(data.name);
+            if (data.card_template) setCardTemplate(data.card_template);
+            
+            toast.success("Loaded device type for review", { id: "review-load" });
+          })
+          .catch((err) => {
+            console.error("Failed to load device type for review", err);
+            toast.error(err.message || "Failed to load device type");
+          });
+      }
+      return;
+    }
     
     // Edit mode: fetch full device type from admin endpoint
     if (editIdParam) {
@@ -549,40 +579,65 @@ const DeviceBuilderContent = () => {
             structure
         };
         
+        // Generate initial state from structure (variable names with null values)
+        const initialState: Record<string, any> = {};
+        structure.forEach((node: any) => {
+          if (node.type !== 'mcu') {
+            // Set default values based on node type
+            if (node.type === 'switch') {
+              initialState[node.id] = false; // Relays default to off
+            } else if (node.type === 'temperature') {
+              initialState[node.id] = 20; // Default room temp
+            } else if (node.type === 'humidity') {
+              initialState[node.id] = 50; // Default humidity
+            } else if (node.type === 'light') {
+              initialState[node.id] = 0; // Light level
+            } else if (node.type === 'motion') {
+              initialState[node.id] = false; // No motion
+            } else if (node.type === 'co2') {
+              initialState[node.id] = 400; // Normal CO2 ppm
+            } else {
+              initialState[node.id] = null; // Unknown type
+            }
+          }
+        });
+        
         const payload = {
             name: deviceName,
             definition: definition,
-            card_template: newCardTemplate
+            card_template: newCardTemplate,
+            initial_state: initialState // Include initial state template
         };
         
-        console.log(editMode ? "Update:" : "Proposal:", JSON.stringify(payload, null, 2));
+        console.log(reviewMode ? "Review & Approve:" : (editMode ? "Update:" : "Proposal:"), JSON.stringify(payload, null, 2));
 
-        if (editMode && editId) {
+        if (reviewMode && editId) {
+          // Review mode: update then approve
+          await updateAdminDeviceType(editId, payload);
+          await approveDeviceType(editId);
+          toast.success("Device Type Approved", {
+            description: "The device type is now available for use."
+          });
+          window.location.href = '/dashboard/admin/approvals';
+        } else if (editMode && editId) {
           // Edit mode: update existing device type
           await updateAdminDeviceType(editId, payload);
           toast.success("Device Type Updated", {
             description: "The device type has been saved."
           });
+          window.location.href = '/dashboard/admin/device-types';
         } else {
           // New proposal mode
           await proposeDeviceType(payload);
           toast.success("Device Proposal Submitted", {
             description: "An admin will review your device type."
           });
-        }
-        
-        // Reset or redirect
-        if (!editMode) {
           setNodes([]); 
           setEdges([]); 
           setStep('nodes');
-        } else {
-          // In edit mode, go back to admin page
-          window.location.href = '/dashboard/admin/device-types';
         }
 
       } catch (e: any) {
-          // console.error(e);
           toast.error(e.message || "Failed to submit");
       } finally {
           setIsSubmitting(false);
@@ -652,6 +707,7 @@ const DeviceBuilderContent = () => {
             isSubmitting={isSubmitting}
             initialCardTemplate={cardTemplate}
             editMode={editMode}
+            reviewMode={reviewMode}
         />
       );
   }
@@ -666,9 +722,13 @@ const DeviceBuilderContent = () => {
               <Cpu className="w-4 h-4 text-primary" />
             </div>
             <span className="font-semibold tracking-tight hidden sm:inline">
-              {editMode ? 'Edit Device Type' : 'Device Builder'}
+              {reviewMode ? 'Review Device Type' : (editMode ? 'Edit Device Type' : 'Device Builder')}
             </span>
-            {editMode && (
+            {reviewMode ? (
+              <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                REVIEW
+              </span>
+            ) : editMode && (
               <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
                 EDITING
               </span>
@@ -680,6 +740,7 @@ const DeviceBuilderContent = () => {
             onChange={(e) => setDeviceName(e.target.value)}
             className="h-8 w-40 md:w-64 bg-muted/50 border-border text-foreground focus-visible:ring-primary/50 transition-all focus:bg-background"
             placeholder="Device Name"
+            readOnly={reviewMode}
           />
         </div>
         <div className="flex items-center gap-2">
