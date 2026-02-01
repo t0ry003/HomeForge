@@ -87,11 +87,44 @@ export function AddDeviceDialog({ onDeviceAdded, trigger }: AddDeviceDialogProps
 
   const handleBack = () => setStep(s => s - 1);
 
+  // Generate initial state from device type structure
+  const generateInitialState = (deviceType: any): Record<string, any> => {
+    const initialState: Record<string, any> = {};
+    const structure = deviceType?.definition?.structure || [];
+    
+    structure.forEach((node: any) => {
+      if (node.type !== 'mcu') {
+        // Set default values based on node type
+        if (node.type === 'switch') {
+          initialState[node.id] = false; // Relays default to off
+        } else if (node.type === 'temperature') {
+          initialState[node.id] = 0.0; // Temperature
+        } else if (node.type === 'humidity') {
+          initialState[node.id] = 0.0; // Humidity
+        } else if (node.type === 'light') {
+          initialState[node.id] = 0.0; // Light level
+        } else if (node.type === 'motion') {
+          initialState[node.id] = false; // No motion
+        } else if (node.type === 'co2') {
+          initialState[node.id] = 0.0; // CO2 ppm
+        } else {
+          initialState[node.id] = 0.0; // Default numeric
+        }
+      }
+    });
+    
+    return initialState;
+  };
+
   const handleSubmit = async () => {
     if (!formData.name) {
       toast.error("Please enter a device name");
       return;
     }
+    
+    // Find selected device type to generate initial state
+    const selectedType = deviceTypes.find(t => t.id.toString() === formData.type_id);
+    const initialState = selectedType ? generateInitialState(selectedType) : {};
     
     setLoading(true);
     try {
@@ -100,7 +133,8 @@ export function AddDeviceDialog({ onDeviceAdded, trigger }: AddDeviceDialogProps
         device_type: parseInt(formData.type_id),
         room: parseInt(formData.room_id),
         ip_address: formData.ip_address,
-        icon: formData.icon
+        icon: formData.icon,
+        current_state: initialState
       });
       toast.success("Device added successfully");
       setOpen(false);
