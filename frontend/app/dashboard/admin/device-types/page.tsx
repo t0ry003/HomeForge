@@ -147,8 +147,8 @@ export default function DeviceTypesPage() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2 items-center">
-                         {/* Edit in Builder */}
-                         <Link href={`/dashboard/device-builder?import=${encodeURIComponent(JSON.stringify(dt.definition))}`}>
+                         {/* Edit in Builder - uses edit mode with ID to fetch full data including card_template */}
+                         <Link href={`/dashboard/device-builder?edit=${dt.id}`}>
                             <Button variant="ghost" size="icon" title="Edit in Builder">
                                 <Edit className="h-4 w-4 text-muted-foreground hover:text-primary" />
                             </Button>

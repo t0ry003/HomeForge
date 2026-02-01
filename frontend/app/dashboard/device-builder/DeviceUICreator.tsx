@@ -49,11 +49,27 @@ interface Widget {
   step?: number;
 }
 
+interface CardTemplateControl {
+  widget_type: 'TOGGLE' | 'SLIDER';
+  label: string;
+  variable_mapping: string;
+  min_value?: number | null;
+  max_value?: number | null;
+  step?: number | null;
+}
+
+interface CardTemplate {
+  layout_config?: { w?: number; h?: number };
+  controls?: CardTemplateControl[];
+}
+
 interface DeviceUICreatorProps {
   nodes: Node[];
   onBack: () => void;
   onSave: (template: any) => void;
   isSubmitting: boolean;
+  initialCardTemplate?: CardTemplate | null;
+  editMode?: boolean;
 }
 
 const WIDGET_TYPES = [
@@ -61,8 +77,29 @@ const WIDGET_TYPES = [
   { type: 'SLIDER', icon: SlidersHorizontal, label: 'Range Slider', defaultLabel: 'Level' },
 ] as const;
 
-export default function DeviceUICreator({ nodes, onBack, onSave, isSubmitting }: DeviceUICreatorProps) {
-  const [widgets, setWidgets] = useState<Widget[]>([]);
+// Convert card_template controls to Widget format
+function convertControlsToWidgets(controls: CardTemplateControl[]): Widget[] {
+  return controls.map((control, index) => ({
+    id: `widget-${Date.now()}-${index}`,
+    type: control.widget_type,
+    label: control.label,
+    variable_mapping: control.variable_mapping,
+    ...(control.widget_type === 'SLIDER' && {
+      min: control.min_value ?? 0,
+      max: control.max_value ?? 100,
+      step: control.step ?? 1
+    })
+  }));
+}
+
+export default function DeviceUICreator({ nodes, onBack, onSave, isSubmitting, initialCardTemplate, editMode = false }: DeviceUICreatorProps) {
+  const [widgets, setWidgets] = useState<Widget[]>(() => {
+    // Initialize from card_template if provided
+    if (initialCardTemplate?.controls && initialCardTemplate.controls.length > 0) {
+      return convertControlsToWidgets(initialCardTemplate.controls);
+    }
+    return [];
+  });
   const [selectedWidgetId, setSelectedWidgetId] = useState<string | null>(null);
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
 
@@ -139,7 +176,13 @@ export default function DeviceUICreator({ nodes, onBack, onSave, isSubmitting }:
           <div className="h-4 w-px bg-border hidden md:block" />
           <div className="flex items-center gap-2 text-foreground">
              <span className="font-semibold tracking-tight hidden sm:inline">UI Designer</span>
-             <Badge variant="outline" className="ml-2 font-mono text-[10px] hidden md:inline-flex">PREVIEW MODE</Badge>
+             {editMode ? (
+               <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 ml-2">
+                 EDITING
+               </span>
+             ) : (
+               <Badge variant="outline" className="ml-2 font-mono text-[10px] hidden md:inline-flex">PREVIEW MODE</Badge>
+             )}
           </div>
         </div>
         <div className="flex items-center gap-2">

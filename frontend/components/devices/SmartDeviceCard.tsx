@@ -106,11 +106,12 @@ export default function SmartDeviceCard({ device, deviceType, roomName, readOnly
 
   const renderWidget = (control: any) => {
       const value = currentState[control.variable_mapping];
+      const isDisabled = !isOnline || readOnly;
 
       switch(control.widget_type) {
           case 'TOGGLE':
               return (
-                  <div key={control.variable_mapping} className="flex items-center justify-between p-2 rounded-lg bg-card/50 border border-border/50">
+                  <div key={control.variable_mapping} className={`flex items-center justify-between p-2 rounded-lg bg-card/50 border border-border/50 ${isDisabled ? 'opacity-50' : ''}`}>
                       <div className="flex items-center gap-2">
                           <Power className="w-4 h-4 text-muted-foreground" />
                           <span className="text-sm font-medium">{control.label}</span>
@@ -118,6 +119,7 @@ export default function SmartDeviceCard({ device, deviceType, roomName, readOnly
                       <Switch 
                           checked={!!value}
                           onCheckedChange={(checked) => handleStateChange(control.variable_mapping, checked, true)}
+                          disabled={isDisabled}
                       />
                   </div>
               );
@@ -128,7 +130,7 @@ export default function SmartDeviceCard({ device, deviceType, roomName, readOnly
                const currentVal = typeof value === 'number' ? value : min;
 
               return (
-                  <div key={control.variable_mapping} className="space-y-3 p-2 rounded-lg bg-card/50 border border-border/50">
+                  <div key={control.variable_mapping} className={`space-y-3 p-2 rounded-lg bg-card/50 border border-border/50 ${isDisabled ? 'opacity-50' : ''}`}>
                       <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                               <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
@@ -142,6 +144,7 @@ export default function SmartDeviceCard({ device, deviceType, roomName, readOnly
                           max={max} 
                           step={step}
                           onValueChange={(vals) => handleStateChange(control.variable_mapping, vals[0], false)}
+                          disabled={isDisabled}
                       />
                   </div>
               );
@@ -151,17 +154,35 @@ export default function SmartDeviceCard({ device, deviceType, roomName, readOnly
   };
 
   return (
-    <Card className={`group transition-all duration-300 hover:shadow-md
+    <Card className={`group transition-all duration-300 relative overflow-hidden
         ${isOnline 
-            ? 'border-green-500/30 shadow-[0_0_15px_-5px_rgba(34,197,94,0.1)] bg-green-500/5 hover:border-green-500/50' 
-            : 'hover:border-primary/50 opacity-80'
+            ? 'border-l-4 border-l-green-500 border-t-border border-r-border border-b-border shadow-[0_0_20px_-5px_rgba(34,197,94,0.15)] hover:shadow-[0_0_25px_-5px_rgba(34,197,94,0.25)] bg-card' 
+            : 'border-l-4 border-l-zinc-400 dark:border-l-zinc-600 border-t-border/50 border-r-border/50 border-b-border/50 bg-muted/30 saturate-50 hover:saturate-100'
         }
     `}>
+        {/* Offline overlay */}
+        {!isOnline && (
+            <div className="absolute inset-0 bg-background/40 backdrop-blur-[1px] z-10 pointer-events-none" />
+        )}
+        
         <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
             <div className="flex flex-col gap-1 w-full overflow-hidden">
+                <div className="flex items-center gap-2">
                     <CardTitle className="text-base font-semibold truncate" title={device.name}>
-                    {device.name}
-                </CardTitle>
+                        {device.name}
+                    </CardTitle>
+                    {/* Status badge */}
+                    <Badge 
+                        variant="secondary" 
+                        className={`text-[9px] h-4 px-1.5 py-0 font-medium shrink-0
+                            ${isOnline 
+                                ? 'bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/30' 
+                                : 'bg-zinc-500/10 text-zinc-500 dark:text-zinc-400 border-zinc-500/20'
+                            }`}
+                    >
+                        {isOnline ? 'CONNECTED' : 'OFFLINE'}
+                    </Badge>
+                </div>
                 <div className="flex items-center gap-2">
                     {roomName && (
                         <p className="text-xs text-muted-foreground">
@@ -173,38 +194,38 @@ export default function SmartDeviceCard({ device, deviceType, roomName, readOnly
                     )}
                 </div>
             </div>
-            
-             <div className="relative flex items-center justify-center h-2.5 w-2.5">
-                {isOnline && (
-                        <div className="absolute inset-0 rounded-full bg-green-500 animate-ping opacity-75 duration-1000" />
-                )}
-                <div className={`shrink-0 h-2.5 w-2.5 rounded-full ring-2 ring-background z-10
-                    ${isOnline ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 
-                        'bg-zinc-300 dark:bg-zinc-600'}`} 
-                />
-            </div>
         </CardHeader>
 
         <CardContent className="space-y-4">
-            {/* Top Section: Icon & Main Status */}
+            {/* Top Section: Icon with glow ring & Status */}
             <div className="flex items-center justify-between">
-                 <div className={`relative p-3 rounded-xl transition-colors
+                 <div className={`relative p-3 rounded-xl transition-all duration-300
                     ${isOnline 
-                        ? 'bg-green-500/10 text-green-700 dark:text-green-400' 
+                        ? 'bg-gradient-to-br from-green-500/20 to-emerald-500/10 text-green-600 dark:text-green-400 ring-2 ring-green-500/30 shadow-[0_0_15px_-3px_rgba(34,197,94,0.4)]' 
                         : 'bg-secondary/50 text-muted-foreground'}
                 `}>
-                    <Icon className="w-6 h-6" />
+                    {/* Pulse ring for online devices */}
+                    {isOnline && (
+                        <div className="absolute inset-0 rounded-xl ring-2 ring-green-500/40 animate-pulse" />
+                    )}
+                    <Icon className="w-6 h-6 relative z-10" />
                 </div>
                 
                 <div className="text-right">
-                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">IP Address</p>
-                     <p className="text-xs font-mono hidden md:block">{device.ip_address || 'N/A'}</p>
+                     <div className="flex items-center gap-1.5 justify-end">
+                        <div className={`h-2 w-2 rounded-full ${isOnline ? 'bg-green-500 animate-pulse' : 'bg-zinc-400 dark:bg-zinc-600'}`} />
+                        <p className={`text-[10px] uppercase tracking-wider font-semibold
+                            ${isOnline ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
+                            {isOnline ? 'Online' : 'Offline'}
+                        </p>
+                     </div>
+                     <p className="text-xs font-mono text-muted-foreground hidden md:block mt-0.5">{device.ip_address || 'N/A'}</p>
                 </div>
             </div>
 
             {/* Dynamic Controls */}
             {controls.length > 0 ? (
-                <div className="pt-2 space-y-2 animate-in slide-in-from-bottom-2 duration-300">
+                <div className={`pt-2 space-y-2 animate-in slide-in-from-bottom-2 duration-300 ${!isOnline ? 'pointer-events-none relative z-0' : ''}`}>
                     {controls.map((c: any) => renderWidget(c))}
                 </div>
             ) : (

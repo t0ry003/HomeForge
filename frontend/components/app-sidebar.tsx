@@ -74,6 +74,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         { title: "Rooms", url: "/dashboard/admin/rooms" },
         { title: "Users", url: "/dashboard/admin/users" },
         { title: "Device Types", url: "/dashboard/admin/device-types" },
+        { title: "Debug", url: "/dashboard/admin/debug" },
       ]
     });
   }

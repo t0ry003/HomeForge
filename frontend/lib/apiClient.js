@@ -277,6 +277,24 @@ export async function deleteDeviceType(id) {
   return true;
 }
 
+// --- Admin Device Type Editing ---
+
+export async function fetchAdminDeviceType(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/admin/device-types/${id}/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch device type');
+  return res.json();
+}
+
+export async function updateAdminDeviceType(id, data, partial = false) {
+  const res = await fetchWithAuth(`${getApiBase()}/admin/device-types/${id}/`, {
+    method: partial ? 'PATCH' : 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to update device type');
+  return res.json();
+}
+
 // --- User Device Type Proposal ---
 
 export async function proposeDeviceType(data) {
@@ -315,6 +333,24 @@ export async function updateDeviceState(id, data) {
   });
   if (!res.ok) await handleApiError(res, 'Failed to update device state');
   return res.json();
+}
+
+export async function updateDevice(id, data) {
+  const res = await fetchWithAuth(`${getApiBase()}/devices/${id}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to update device');
+  return res.json();
+}
+
+export async function deleteDevice(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/devices/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to delete device');
+  return true;
 }
 
 export async function fetchTopology() {

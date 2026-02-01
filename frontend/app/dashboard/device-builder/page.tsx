@@ -57,7 +57,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { proposeDeviceType } from "@/lib/apiClient"
+import { proposeDeviceType, fetchAdminDeviceType, updateAdminDeviceType } from "@/lib/apiClient"
 import { useSearchParams } from 'next/navigation'
 import DeviceUICreator from './DeviceUICreator';
 
@@ -262,13 +262,51 @@ const DeviceBuilderContent = () => {
   const [step, setStep] = useState<'nodes' | 'ui'>('nodes');
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Edit mode state
+  const [editMode, setEditMode] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [cardTemplate, setCardTemplate] = useState<any>(null);
 
   const { screenToFlowPosition, getViewport, setCenter } = useReactFlow();
   const searchParams = useSearchParams();
 
-  // Load from URL/Props
+  // Load from URL/Props - support both import (JSON) and edit (ID for API fetch)
   useEffect(() => {
+    const editIdParam = searchParams.get('edit');
     const importData = searchParams.get('import');
+    
+    // Edit mode: fetch full device type from admin endpoint
+    if (editIdParam) {
+      const id = parseInt(editIdParam, 10);
+      if (!isNaN(id)) {
+        setEditMode(true);
+        setEditId(id);
+        
+        fetchAdminDeviceType(id)
+          .then((data) => {
+            // Load the node topology
+            if (data.definition?.structure) {
+              const { nodes: loadedNodes, edges: loadedEdges } = reconstructGraph(data.definition.structure);
+              setNodes(loadedNodes);
+              setEdges(loadedEdges);
+            }
+            // Set the name
+            if (data.name) setDeviceName(data.name);
+            // Store card_template for later
+            if (data.card_template) setCardTemplate(data.card_template);
+            
+            toast.success("Loaded device type for editing", { id: "edit-load" });
+          })
+          .catch((err) => {
+            console.error("Failed to load device type for editing", err);
+            toast.error(err.message || "Failed to load device type");
+          });
+      }
+      return; // Don't process import if we have edit
+    }
+    
+    // Legacy import mode (JSON in URL)
     if (importData) {
         try {
             const parsed = JSON.parse(decodeURIComponent(importData));
@@ -501,7 +539,7 @@ const DeviceBuilderContent = () => {
     setStep('ui');
   };
 
-  const handleFinalSubmit = async (cardTemplate: any) => {
+  const handleFinalSubmit = async (newCardTemplate: any) => {
       setIsSubmitting(true);
       try {
         const structure = buildStructure(nodes, edges);
@@ -511,26 +549,41 @@ const DeviceBuilderContent = () => {
             structure
         };
         
-        console.log("Export/Proposal:", JSON.stringify({ definition, card_template: cardTemplate }, null, 2));
-
-        await proposeDeviceType({
+        const payload = {
             name: deviceName,
             definition: definition,
-            card_template: cardTemplate
-        });
+            card_template: newCardTemplate
+        };
         
-        toast.success("Device Proposal Submitted", {
+        console.log(editMode ? "Update:" : "Proposal:", JSON.stringify(payload, null, 2));
+
+        if (editMode && editId) {
+          // Edit mode: update existing device type
+          await updateAdminDeviceType(editId, payload);
+          toast.success("Device Type Updated", {
+            description: "The device type has been saved."
+          });
+        } else {
+          // New proposal mode
+          await proposeDeviceType(payload);
+          toast.success("Device Proposal Submitted", {
             description: "An admin will review your device type."
-        });
+          });
+        }
         
-        // Reset 
-        setNodes([]); 
-        setEdges([]); 
-        setStep('nodes');
+        // Reset or redirect
+        if (!editMode) {
+          setNodes([]); 
+          setEdges([]); 
+          setStep('nodes');
+        } else {
+          // In edit mode, go back to admin page
+          window.location.href = '/dashboard/admin/device-types';
+        }
 
       } catch (e: any) {
           // console.error(e);
-          toast.error(e.message || "Failed to submit proposal");
+          toast.error(e.message || "Failed to submit");
       } finally {
           setIsSubmitting(false);
       }
@@ -597,6 +650,8 @@ const DeviceBuilderContent = () => {
             onBack={() => setStep('nodes')}
             onSave={handleFinalSubmit}
             isSubmitting={isSubmitting}
+            initialCardTemplate={cardTemplate}
+            editMode={editMode}
         />
       );
   }
@@ -610,7 +665,14 @@ const DeviceBuilderContent = () => {
             <div className="p-1.5 rounded-md bg-primary/10 hidden md:block">
               <Cpu className="w-4 h-4 text-primary" />
             </div>
-            <span className="font-semibold tracking-tight hidden sm:inline">Device Builder</span>
+            <span className="font-semibold tracking-tight hidden sm:inline">
+              {editMode ? 'Edit Device Type' : 'Device Builder'}
+            </span>
+            {editMode && (
+              <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
+                EDITING
+              </span>
+            )}
           </div>
           <div className="h-4 w-px bg-border hidden md:block" />
           <Input 
