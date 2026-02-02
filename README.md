@@ -1,6 +1,6 @@
-<p align="center">
+<!-- <p align="center">
   <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/home.svg" width="80" height="80" alt="HomeForge Logo">
-</p>
+</p> -->
 
 <h1 align="center">HomeForge</h1>
 
