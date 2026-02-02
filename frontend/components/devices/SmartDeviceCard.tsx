@@ -333,7 +333,7 @@ export default function SmartDeviceCard({ device, deviceType, roomName, readOnly
   return (
     <Card 
       className={cn(
-        "group transition-all duration-300 relative overflow-hidden",
+        "group transition-all duration-300 relative overflow-hidden select-none",
         isOnline 
           ? 'border-l-4 border-l-green-500 border-t-border border-r-border border-b-border shadow-[0_0_20px_-5px_rgba(34,197,94,0.15)] hover:shadow-[0_0_25px_-5px_rgba(34,197,94,0.25)] bg-card' 
           : 'border-l-4 border-l-zinc-400 dark:border-l-zinc-600 border-t-border/50 border-r-border/50 border-b-border/50 bg-muted/30 saturate-50 hover:saturate-100',
