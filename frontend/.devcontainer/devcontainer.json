@@ -4,7 +4,8 @@
   "service": "frontend",
   "workspaceFolder": "/app",
   "remoteUser": "root",
-  "postCreateCommand": "npm install"
+  "postCreateCommand": "npm install",
+  "postAttachCommand": "chmod +x run.sh"
 
   //"postStartCommand": "npm run dev"
 }

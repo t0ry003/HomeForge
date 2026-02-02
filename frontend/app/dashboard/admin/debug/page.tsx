@@ -77,9 +77,9 @@ function DeviceDebugCard({ device, onRefresh }: { device: Device; onRefresh: () 
     mutationFn: async (data: Partial<Device>) => {
       return updateDevice(device.id, data)
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success(`Device "${device.name}" updated`)
-      queryClient.invalidateQueries({ queryKey: ['devices'] })
+      await queryClient.invalidateQueries({ queryKey: ['devices'] })
       onRefresh()
     },
     onError: (error: any) => {
@@ -91,9 +91,9 @@ function DeviceDebugCard({ device, onRefresh }: { device: Device; onRefresh: () 
     mutationFn: async (data: Record<string, any>) => {
       return updateDeviceState(device.id, data)
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success(`Device state updated`)
-      queryClient.invalidateQueries({ queryKey: ['devices'] })
+      await queryClient.invalidateQueries({ queryKey: ['devices'] })
       onRefresh()
     },
     onError: (error: any) => {
@@ -105,9 +105,9 @@ function DeviceDebugCard({ device, onRefresh }: { device: Device; onRefresh: () 
     mutationFn: async () => {
       return deleteDevice(device.id)
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       toast.success(`Device "${device.name}" deleted`)
-      queryClient.invalidateQueries({ queryKey: ['devices'] })
+      await queryClient.invalidateQueries({ queryKey: ['devices'] })
       onRefresh()
       setDeleteDialogOpen(false)
     },
@@ -394,6 +394,7 @@ export default function DebugPage() {
       }
     }
     toast.success('All devices set to online')
+    await queryClient.invalidateQueries({ queryKey: ['devices'] })
     refetch()
   }
 
@@ -406,6 +407,7 @@ export default function DebugPage() {
       }
     }
     toast.success('All devices set to offline')
+    await queryClient.invalidateQueries({ queryKey: ['devices'] })
     refetch()
   }
 
