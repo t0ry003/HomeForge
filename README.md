@@ -55,6 +55,13 @@ Unlike commercial solutions, HomeForge gives you complete control over your devi
 - **Profile Customization** — Avatars, accent colors, and themes
 - **JWT Authentication** — Secure token-based auth with refresh flow
 
+### 🔔 Notification System
+- **Real-time Alerts** — Device events, approvals, and system messages
+- **Priority Levels** — Low, normal, high, and urgent notifications
+- **Multi-type Support** — Device status, admin approvals, warnings, errors
+- **Read Tracking** — Mark as read with timestamps and bulk actions
+- **Admin Broadcasts** — Send notifications to all users or specific roles
+
 ### 🏗️ Room Organization
 - **Physical Grouping** — Organize devices by location
 - **Room Dashboard** — View all devices in a room at a glance
@@ -67,7 +74,8 @@ Unlike commercial solutions, HomeForge gives you complete control over your devi
 - **shadcn/ui Components** — Accessible, customizable components
 
 ### 🔧 Developer Friendly
-- **RESTful API** — Complete API v1.1.0 with comprehensive documentation
+- **RESTful API** — Complete API v1.3.0 with comprehensive documentation
+- **React Query Caching** — Optimized data fetching with 30s stale time
 - **Docker Ready** — One-command deployment with Docker Compose
 - **Dev Containers** — VS Code development containers included
 - **Debug Tools** — Built-in debug page for testing device states
@@ -379,7 +387,25 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## 📋 Changelog
 
-### [2026-02-01] - v1.2.0 (Latest)
+### [2026-02-02] - v1.3.0 (Latest)
+- **Added**: Notification System with full API integration (create, read, mark as read, delete)
+- **Added**: Notification Center component with bell icon in sidebar footer
+- **Added**: Real-time unread count badge with 30-second polling
+- **Added**: Multi-type notifications (device events, approvals, system messages)
+- **Added**: Priority levels support (low, normal, high, urgent)
+- **Added**: Unified Device Types Management page with status filter dropdown
+- **Added**: URL filter support for device types (`?filter=pending`)
+- **Added**: Custom scrollbars matching shadcn/ui aesthetic
+- **Added**: Mobile device type selector dropdown
+- **Changed**: Migrated all pages to React Query for improved caching and performance
+- **Changed**: Skeleton loading states replace spinners for better perceived performance
+- **Changed**: Client-side navigation using Next.js Link components throughout
+- **Changed**: Topology canvas background now properly respects theme colors
+- **Changed**: Notification bell moved to sidebar footer next to user avatar
+- **Removed**: Separate Approvals and Denied Types pages (consolidated into Device Types)
+- **Removed**: Badge counts from sidebar menu items (notifications handle this now)
+
+### [2026-02-01] - v1.2.0
 - **Added**: Extended widget types for sensors (TEMPERATURE, HUMIDITY, MOTION, LIGHT, CO2, PRESSURE, POWER, BATTERY, STATUS)
 - **Added**: SensorWidgets component with color-coded displays
 - **Added**: Tap-to-toggle behavior for single-toggle devices (Home Assistant style)
