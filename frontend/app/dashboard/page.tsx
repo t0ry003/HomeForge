@@ -28,10 +28,13 @@ import SmartDeviceCard from "@/components/devices/SmartDeviceCard";
 // Helper to get ID securely
 const getId = (obj: any) => (typeof obj === 'object' && obj !== null ? obj.id : obj);
 
+// Module-level cache to prevent "no devices" flash on remount
+let cachedDevicesExist = false;
+
 export default function DashboardPage() {
   const [viewMode, setViewMode] = useState<string>("all");
 
-  const { data: devices = [], isLoading: loadingDevices } = useQuery({
+  const { data: devicesData, isLoading: loadingDevices, isSuccess: devicesSuccess } = useQuery({
     queryKey: ['devices'],
     queryFn: async () => {
         const res = await fetchDevices();
@@ -44,9 +47,14 @@ export default function DashboardPage() {
         });
     },
     refetchInterval: 3000, // Poll every 3 seconds for mock hardware feedback
+    staleTime: 2000, // Keep data fresh for 2 seconds to prevent flicker
   });
 
-  const { data: deviceTypes = [], isLoading: loadingTypes } = useQuery({
+  // Ensure devices is always an array - use undefined to detect "never loaded"
+  const devices = Array.isArray(devicesData) ? devicesData : [];
+  const hasLoadedDevices = devicesData !== undefined;
+
+  const { data: deviceTypesData, isLoading: loadingTypes, isSuccess: typesSuccess } = useQuery({
       queryKey: ['deviceTypes'],
       queryFn: async () => {
           const res = await fetchDeviceTypes();
@@ -54,8 +62,9 @@ export default function DashboardPage() {
       },
       staleTime: 60000 // Types change rarely
   });
+  const deviceTypes = Array.isArray(deviceTypesData) ? deviceTypesData : [];
 
-  const { data: rooms = [], isLoading: loadingRooms } = useQuery({
+  const { data: roomsData, isLoading: loadingRooms, isSuccess: roomsSuccess } = useQuery({
       queryKey: ['rooms'],
       queryFn: async () => {
           const res = await fetchRooms();
@@ -63,8 +72,18 @@ export default function DashboardPage() {
       },
       staleTime: 60000
   });
+  const rooms = Array.isArray(roomsData) ? roomsData : [];
 
-  const isLoading = loadingDevices || loadingTypes || loadingRooms;
+  // Show loading until we've successfully loaded devices at least once
+  // Track if we've ever had devices to prevent flash of "no devices"
+  if (devices.length > 0) {
+    cachedDevicesExist = true;
+  }
+  const isInitialLoading = !hasLoadedDevices || (loadingDevices && !cachedDevicesExist);
+  
+  // Only show "no devices" if we've never had devices OR if we truly have 0 after a successful fetch
+  // If we've had devices before, keep showing skeleton during refetch that returns empty
+  const showNoDevices = !isInitialLoading && devices.length === 0 && !cachedDevicesExist;
 
   // Helpers for lookups
   const getRoomName = (id: any) => {
@@ -219,13 +238,13 @@ export default function DashboardPage() {
 
       {/* Content */}
       <div className="flex-1">
-         {isLoading ? (
+         {(isInitialLoading || (devices.length === 0 && cachedDevicesExist)) ? (
              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[1,2,3,4].map(i => (
                     <Card key={i}><CardContent className="h-40 flex items-center justify-center"><Skeleton className="h-20 w-20 rounded-full" /></CardContent></Card>
                 ))}
              </div>
-         ) : devices.length === 0 ? (
+         ) : showNoDevices ? (
              <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg text-muted-foreground bg-muted/30">
                  <p className="mb-4 text-lg">No devices found</p>
                  <AddDeviceDialog 

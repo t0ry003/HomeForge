@@ -387,7 +387,18 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## 📋 Changelog
 
-### [2026-02-02] - v1.3.0 (Latest)
+### [2026-02-02] - v1.3.1 (Latest)
+- **Fixed**: Dashboard "No Devices" flash during API refetches with module-level cache
+- **Fixed**: Notification URL transformation for device type deep linking
+- **Fixed**: DevContainer setup with improved run scripts for backend and frontend
+- **Changed**: Dashboard loading logic now uses `cachedDevicesExist` to persist device state
+- **Changed**: Added `staleTime: 2000` to devices query to reduce unnecessary refetches
+- **Changed**: Array safety checks with `Array.isArray()` for devices/rooms/deviceTypes
+- **Changed**: Run scripts simplified (removed shebang and `set -e` for broader compatibility)
+- **Removed**: Badge counts from sidebar (consolidated into notification system)
+- **Removed**: Polling for pending device types in sidebar (notifications handle this)
+
+### [2026-02-02] - v1.3.0
 - **Added**: Notification System with full API integration (create, read, mark as read, delete)
 - **Added**: Notification Center component with bell icon in sidebar footer
 - **Added**: Real-time unread count badge with 30-second polling

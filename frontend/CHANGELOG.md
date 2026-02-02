@@ -1,5 +1,48 @@
 # HomeForge Frontend Changelog
 
+## [2026-02-02] - Dashboard Loading State & Notification Fixes
+
+### Changed
+
+#### Dashboard Page (`app/dashboard/page.tsx`)
+- **Fixed "No Devices" Flash**: Prevented false "no devices" message appearing during API refetches
+- **Module-Level Cache**: Added `cachedDevicesExist` variable to persist device existence across component remounts
+- **Improved Loading Logic**:
+  - `isInitialLoading`: True only when data hasn't loaded yet OR loading without prior device data
+  - `showNoDevices`: Only shows when truly no devices exist (never had devices before)
+  - If devices existed before, shows skeleton instead of "no devices" during temporary empty responses
+- **Array Safety**: Added `Array.isArray()` checks to ensure devices/rooms/deviceTypes are always arrays
+- **Stale Time**: Added `staleTime: 2000` to devices query to reduce unnecessary refetches
+
+#### Notification Center (`components/notifications/notification-center.tsx`)
+- **URL Transformation Fix**: Updated `getActionUrl()` to handle more URL patterns:
+  - Normalizes URLs by removing trailing slashes
+  - Matches `/admin/device-types/\d+` pattern anywhere in URL (not just at start)
+  - Properly redirects device type notifications to `/dashboard/admin/device-types?filter=pending`
+
+#### Device Types Page (`app/dashboard/admin/device-types/page.tsx`)
+- **URL Filter Support**: Added `useSearchParams` to read initial filter from URL query parameter
+- **Deep Linking**: Navigating to `?filter=pending` auto-selects the pending filter on page load
+
+#### Sidebar (`components/app-sidebar.tsx`)
+- **Removed Badge Counts**: Removed pending count badge from Admin Panel and Device Types menu items
+- **Removed Polling**: Removed `fetchPendingDeviceTypes` polling effect (notifications handle this now)
+- **Cleanup**: Removed unused `pendingCount` state and interval
+
+### Technical Details
+
+The dashboard "no devices" flash was caused by:
+1. React Query refetching devices every 3 seconds
+2. Occasional 401 errors causing empty array responses
+3. Component showing "no devices" before next successful fetch
+
+Solution uses a module-level variable (`cachedDevicesExist`) that:
+- Sets to `true` when devices are loaded
+- Persists across component remounts
+- Prevents "no devices" message when we know devices existed
+
+---
+
 ## [2026-02-02] - Notification System API Integration & UI Improvements
 
 ### Added

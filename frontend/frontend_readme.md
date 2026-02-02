@@ -435,6 +435,30 @@ const {
 } = useUser()
 ```
 
+### Dashboard Loading State
+
+The dashboard uses a module-level cache to prevent UI flicker:
+
+```typescript
+// Module-level cache persists across component remounts
+let cachedDevicesExist = false;
+
+// Inside component:
+if (devices.length > 0) {
+  cachedDevicesExist = true;
+}
+
+// Logic:
+// - Show skeleton: during initial load OR if devices were empty but we had them before
+// - Show "no devices": only if we've NEVER had devices
+// - Show devices: when loaded with devices
+```
+
+This prevents the "no devices" flash that can occur when:
+- API refetch temporarily returns empty (401 errors, network issues)
+- Component remounts during navigation
+- React Query cache is stale
+
 ---
 
 ## API Integration
