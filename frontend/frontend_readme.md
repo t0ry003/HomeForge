@@ -270,6 +270,40 @@ All pages follow consistent responsive patterns:
 
 ---
 
+## UX Improvements
+
+### Interaction Polish
+
+| Feature | Implementation | File |
+|---------|---------------|------|
+| **Non-selectable device cards** | `select-none` class prevents accidental text selection when clicking/dragging | `SmartDeviceCard.tsx` |
+| **Smooth dropdown animations** | GPU-accelerated with `will-change`, opacity fade, `forwards` fill | `globals.css` |
+| **Mobile breadcrumb visibility** | Shows separator + current page on mobile (e.g., "/ Settings") | `dynamic-breadcrumbs.tsx` |
+
+### Animation Performance
+
+The sidebar collapsible animations use optimized CSS:
+
+```css
+.collapsible-content[data-state="open"] {
+  animation: collapsible-open 0.2s ease-out forwards;
+  will-change: height, opacity;
+}
+
+.collapsible-content[data-state="closed"] {
+  animation: collapsible-close 0.15s ease-in forwards;
+  will-change: height, opacity;
+}
+```
+
+Key optimizations:
+- `will-change` promotes elements to GPU layer
+- `forwards` fill mode prevents snap-back on completion
+- Opacity fade (0 → 1) creates smoother visual transition
+- Faster close animation (0.15s) feels more responsive
+
+---
+
 ## Component Library
 
 ### shadcn/ui Components (`components/ui/`)

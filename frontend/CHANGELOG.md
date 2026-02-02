@@ -1,5 +1,28 @@
 # HomeForge Frontend Changelog
 
+## [2026-02-01] - UX Polish & Bug Fixes
+
+### Fixed
+
+#### Device Cards Text Selection (`components/devices/SmartDeviceCard.tsx`)
+- **Added**: `select-none` class to Card component
+- **Impact**: Text in device cards no longer gets accidentally selected when clicking or dragging over them
+
+#### Sidebar Dropdown Animation (`app/globals.css`)
+- **Changed**: Collapsible animations now include opacity fade (0 → 1)
+- **Added**: `will-change: height, opacity` for GPU-accelerated animation
+- **Added**: `forwards` fill mode to prevent animation jitter
+- **Changed**: Close animation uses faster 0.15s timing with `ease-in`
+- **Impact**: Admin Panel dropdown now opens/closes smoothly without jittering
+
+#### Breadcrumb Mobile Visibility (`components/dynamic-breadcrumbs.tsx`)
+- **Changed**: Separator now shows on mobile when navigating to sub-pages
+- **Changed**: Logic uses `isFirst` flag to determine separator visibility
+- **Changed**: Only the current (last) breadcrumb item shows on mobile, with separator
+- **Impact**: Users can see "/ Settings" or "/ Admin" on mobile instead of just the page name
+
+---
+
 ## [2026-02-01] - Mobile Responsiveness & Layout Consistency Update
 
 ### Overview
