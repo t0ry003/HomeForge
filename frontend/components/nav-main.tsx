@@ -1,6 +1,7 @@
 "use client"
 
 import { ChevronRight, type LucideIcon } from "lucide-react"
+import Link from "next/link"
 
 import {
   Collapsible,
@@ -45,7 +46,7 @@ export function NavMain({
             <Collapsible key={item.title} asChild defaultOpen={item.isActive} className="group/collapsible">
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip={item.title}>
-                  <a href={item.url} className="relative">
+                  <Link href={item.url} className="relative">
                     <item.icon />
                     <span>{item.title}</span>
                     {item.badge && item.badge > 0 && (
@@ -53,7 +54,7 @@ export function NavMain({
                         {item.badge > 99 ? '99+' : item.badge}
                       </span>
                     )}
-                  </a>
+                  </Link>
                 </SidebarMenuButton>
                 <CollapsibleTrigger asChild>
                   <SidebarMenuAction className="data-[state=open]:rotate-90">
@@ -66,7 +67,7 @@ export function NavMain({
                     {item.items.map((subItem) => (
                       <SidebarMenuSubItem key={subItem.title}>
                         <SidebarMenuSubButton asChild>
-                          <a href={subItem.url} className="flex items-center gap-2">
+                          <Link href={subItem.url} className="flex items-center gap-2">
                             {subItem.icon && <subItem.icon className="h-4 w-4" />}
                             <span>{subItem.title}</span>
                             {subItem.badge && subItem.badge > 0 && (
@@ -74,7 +75,7 @@ export function NavMain({
                                 {subItem.badge > 99 ? '99+' : subItem.badge}
                               </span>
                             )}
-                          </a>
+                          </Link>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
                     ))}
@@ -85,7 +86,7 @@ export function NavMain({
           ) : (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild tooltip={item.title}>
-                <a href={item.url} className="relative">
+                <Link href={item.url} className="relative">
                   <item.icon />
                   <span>{item.title}</span>
                   {item.badge && item.badge > 0 && (
@@ -93,7 +94,7 @@ export function NavMain({
                       {item.badge > 99 ? '99+' : item.badge}
                     </span>
                   )}
-                </a>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           )

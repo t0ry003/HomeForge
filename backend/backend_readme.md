@@ -198,6 +198,15 @@ HomeForge is an open-source smart home management system designed for DIY IoT en
 - **React Flow Compatible**: Returns nodes/edges graph structure
 - **Radial Layout**: Gateway at center, devices in circle
 - **Real-time Status**: Color-coded connections (green/red/amber)
+
+### 8. Notification System
+
+- **Multi-type Notifications**: Device events, approvals, system messages
+- **Priority Levels**: Low, normal, high, urgent
+- **Read Tracking**: Mark as read with timestamps
+- **Admin Broadcasts**: Send to all users or specific roles
+- **Auto-notifications**: Triggered on device type proposals/reviews
+- **Flexible References**: JSON field for related object IDs
 - **Rich Node Data**: IP, room, type, icon, current state
 
 ---
@@ -339,6 +348,37 @@ Individual UI widget definition.
 | | `POWER` | Power consumption display |
 | | `BATTERY` | Battery level display |
 | | `STATUS` | Generic status display |
+
+#### Notification
+User notification for alerts and system messages.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `user` | ForeignKey → User | Notification recipient |
+| `notification_type` | CharField | Type of notification (see below) |
+| `title` | CharField(200) | Notification title |
+| `message` | TextField | Full message content |
+| `priority` | CharField | low / normal / high / urgent |
+| `is_read` | BooleanField | Read status |
+| `reference_data` | JSONField | Related object IDs (e.g., device_type_id) |
+| `action_url` | CharField | Optional link for action button |
+| `created_at` | DateTimeField | When notification was created |
+| `read_at` | DateTimeField | When notification was read |
+
+**Notification Types:**
+
+| Type | Description |
+|------|-------------|
+| `device_type_pending` | Admin: New device type awaiting approval |
+| `device_type_approved` | User: Device type was approved |
+| `device_type_denied` | User: Device type was denied |
+| `device_offline` | Device went offline |
+| `device_online` | Device came online |
+| `device_error` | Device has an error |
+| `system` | General system notification |
+| `info` | Informational message |
+| `warning` | Warning message |
+| `error` | Error message |
 
 ---
 
@@ -571,6 +611,9 @@ For complete API documentation including all endpoints, request/response schemas
 | **Device Types** | `GET /device-types/`, `POST /device-types/propose/` |
 | **Admin Review** | `GET /admin/device-types/pending/`, `GET/PUT/PATCH /admin/device-types/{id}/` |
 | **Admin Actions** | `POST /admin/device-types/{id}/approve/`, `POST /admin/device-types/{id}/deny/` |
+| **Denied Types** | `GET /admin/device-types/denied/`, `DELETE /admin/device-types/denied/{id}/`, `DELETE /admin/device-types/denied/delete/` |
+| **Notifications** | `GET /notifications/`, `GET /notifications/unread-count/`, `POST /notifications/{id}/read/`, `POST /notifications/read-all/` |
+| **Admin Notif** | `POST /admin/notifications/create/`, `POST /admin/notifications/broadcast/` |
 | **Topology** | `GET /topology/` |
 
 ---
@@ -621,6 +664,95 @@ docker exec -it homeforge-web python manage.py createsuperuser
 
 ---
 
+## Performance Optimizations
+
+The HomeForge backend includes several performance optimizations for production-ready performance.
+
+### Query Optimization
+
+All views use **`select_related()`** and **`prefetch_related()`** to prevent N+1 query problems:
+
+```python
+# Device queries include related room, user, and device_type
+Device.objects.select_related(
+    'room', 'user', 'device_type', 'device_type__card_template'
+).prefetch_related(
+    'device_type__card_template__controls'
+)
+
+# Room queries prefetch related devices
+Room.objects.select_related('user').prefetch_related('devices')
+```
+
+### Database Indexes
+
+Optimized indexes are applied to frequently queried fields:
+
+| Model | Index | Fields |
+|-------|-------|--------|
+| `Device` | `device_user_status_idx` | `user`, `status` |
+| `Device` | `device_room_idx` | `room` |
+| `Device` | `device_type_idx` | `device_type` |
+| `CustomDeviceType` | `devicetype_approved_idx` | `approved`, `created_at` |
+
+### Caching
+
+Approved device types are cached to reduce database load:
+
+```python
+# Cache configuration (settings.py)
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'homeforge-cache',
+        'TIMEOUT': 300,  # 5 minutes
+    }
+}
+```
+
+For production with multiple workers, use Redis:
+
+```python
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379'),
+    }
+}
+```
+
+### Pagination
+
+API list endpoints are paginated by default:
+
+```python
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 50,
+}
+```
+
+Response format for paginated endpoints:
+
+```json
+{
+  "count": 150,
+  "next": "http://localhost:8000/api/devices/?page=2",
+  "previous": null,
+  "results": [...]
+}
+```
+
+### TopologyView Optimization
+
+The topology endpoint is optimized with:
+
+- **Single query evaluation** - Devices fetched once and converted to list
+- **Pre-computed mappings** - Status colors calculated once
+- **Selective field loading** - Uses `.only()` to fetch required fields
+
+---
+
 ## Roadmap
 
 ### Planned Features
@@ -638,6 +770,50 @@ docker exec -it homeforge-web python manage.py createsuperuser
 ## License
 
 This project is open source. See LICENSE file for details.
+
+---
+
+## Changelog
+
+### v1.4.0 (February 2, 2026)
+
+#### New Features
+- **Notification System** - Complete notification API with 10 notification types
+  - User notifications with read/unread tracking
+  - Priority levels (low, normal, high, urgent)
+  - Admin broadcast to all users or specific roles
+  - Auto-notifications on device type proposals
+  - Bulk read/delete operations
+
+- **Denied Device Types Management**
+  - List denied device types: `GET /admin/device-types/denied/`
+  - Delete single: `DELETE /admin/device-types/denied/{id}/`
+  - Bulk delete: `DELETE /admin/device-types/denied/delete/`
+  - Separate pending (awaiting review) from denied (rejected)
+
+#### Performance Optimizations
+- Added `select_related()` and `prefetch_related()` to all views
+- Database indexes on frequently queried fields:
+  - `Device`: user+status, room, device_type
+  - `CustomDeviceType`: approved+created_at
+  - `Notification`: user+is_read, user+type, created_at
+- Caching for approved device types (5-minute TTL)
+- Pagination enabled (50 items per page default)
+- TopologyView optimized with single query evaluation
+
+#### Extended Widget Types
+- Added sensor widgets: TEMPERATURE, HUMIDITY, MOTION, LIGHT, CO2, PRESSURE, POWER, BATTERY, STATUS
+- Added BUTTON widget for trigger actions
+- New optional display fields: `variant`, `size`, `unit`
+
+#### Bug Fixes
+- Removed auto-creation of mock data in TopologyView
+- Fixed admin device type editing (GET/PUT/PATCH support)
+
+#### Database Migrations
+- `0016_add_extended_widget_types` - Widget types and display fields
+- `0017_add_performance_indexes` - Database indexes
+- `0018_add_notification_model` - Notification system
 
 ---
 

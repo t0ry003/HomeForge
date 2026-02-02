@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useCallback } from "react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Plus, Pencil, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -23,35 +24,69 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
 import { fetchRooms, createRoom, updateRoom, deleteRoom } from "@/lib/apiClient"
 
 export default function RoomsPage() {
-  const [rooms, setRooms] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingRoom, setEditingRoom] = useState<any>(null)
   const [roomToDelete, setRoomToDelete] = useState<number | null>(null)
-  
-  // Form State
   const [name, setName] = useState("")
+  const queryClient = useQueryClient()
 
-  const loadRooms = async () => {
-    try {
-      setIsLoading(true)
+  // Fetch rooms with React Query
+  const { data: rooms = [], isLoading } = useQuery({
+    queryKey: ['rooms'],
+    queryFn: async () => {
       const data = await fetchRooms()
-      setRooms(Array.isArray(data) ? data : (data.results || []))
-    } catch (error: any) {
-      toast.error(error.message || "Failed to load rooms")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+      return Array.isArray(data) ? data : (data.results || [])
+    },
+    staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
+  })
 
-  useEffect(() => {
-    loadRooms()
-  }, [])
+  // Create room mutation
+  const createMutation = useMutation({
+    mutationFn: (payload: { name: string }) => createRoom(payload),
+    onSuccess: () => {
+      toast.success("Room created")
+      queryClient.invalidateQueries({ queryKey: ['rooms'] })
+      setIsDialogOpen(false)
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to create room")
+    },
+  })
 
-  const handleOpenDialog = (room: any = null) => {
+  // Update room mutation
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: { name: string } }) => 
+      updateRoom(id, payload),
+    onSuccess: () => {
+      toast.success("Room updated")
+      queryClient.invalidateQueries({ queryKey: ['rooms'] })
+      setIsDialogOpen(false)
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to update room")
+    },
+  })
+
+  // Delete room mutation
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => deleteRoom(id),
+    onSuccess: () => {
+      toast.success("Room deleted")
+      queryClient.invalidateQueries({ queryKey: ['rooms'] })
+      setRoomToDelete(null)
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to delete room")
+      setRoomToDelete(null)
+    },
+  })
+
+  const handleOpenDialog = useCallback((room: any = null) => {
     if (room) {
       setEditingRoom(room)
       setName(room.name)
@@ -60,38 +95,23 @@ export default function RoomsPage() {
       setName("")
     }
     setIsDialogOpen(true)
-  }
+  }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault()
-    try {
-      const payload = { name }
-      if (editingRoom) {
-        await updateRoom(editingRoom.id, payload)
-        toast.success("Room updated")
-      } else {
-        await createRoom(payload)
-        toast.success("Room created")
-      }
-      setIsDialogOpen(false)
-      loadRooms()
-    } catch (error: any) {
-      toast.error(error.message || (editingRoom ? "Failed to update room" : "Failed to create room"))
+    const payload = { name }
+    if (editingRoom) {
+      updateMutation.mutate({ id: editingRoom.id, payload })
+    } else {
+      createMutation.mutate(payload)
     }
-  }
+  }, [name, editingRoom, updateMutation, createMutation])
 
-  const confirmDelete = async () => {
-    if (!roomToDelete) return
-    try {
-      await deleteRoom(roomToDelete)
-      toast.success("Room deleted")
-      loadRooms()
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete room")
-    } finally {
-      setRoomToDelete(null)
+  const confirmDelete = useCallback(() => {
+    if (roomToDelete) {
+      deleteMutation.mutate(roomToDelete)
     }
-  }
+  }, [roomToDelete, deleteMutation])
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -117,11 +137,20 @@ export default function RoomsPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={2} className="h-24 text-center">
-                  Loading...
-                </TableCell>
-              </TableRow>
+              // Skeleton rows for loading state
+              <>
+                {[1, 2, 3].map((i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Skeleton className="h-8 w-8" />
+                        <Skeleton className="h-8 w-8" />
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </>
             ) : rooms.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={2} className="h-24 text-center">

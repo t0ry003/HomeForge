@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState, useCallback } from "react"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { MoreHorizontal, Shield, User as UserIcon, Eye, Check } from "lucide-react"
 import { toast } from "sonner"
 
@@ -35,52 +36,61 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
+import { Skeleton } from "@/components/ui/skeleton"
 import { fetchUsers, updateUserAdmin, deleteUser, getAvatarUrl } from "@/lib/apiClient"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
 export default function UsersPage() {
-  const [users, setUsers] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(true)
   const [userToDelete, setUserToDelete] = useState<number | null>(null)
+  const queryClient = useQueryClient()
 
-  const loadUsers = async () => {
-    try {
-      setIsLoading(true)
+  // Fetch users with React Query
+  const { data: users = [], isLoading } = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
       const data = await fetchUsers()
-      setUsers(Array.isArray(data) ? data : (data.results || []))
-    } catch (error: any) {
-      toast.error(error.message || "Failed to load users")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+      return Array.isArray(data) ? data : (data.results || [])
+    },
+    staleTime: 30000,
+    gcTime: 5 * 60 * 1000,
+  })
 
-  useEffect(() => {
-    loadUsers()
-  }, [])
-
-  const handleRoleChange = async (userId: number, newRole: string) => {
-    try {
-      await updateUserAdmin(userId, { role: newRole })
+  // Role change mutation
+  const roleChangeMutation = useMutation({
+    mutationFn: ({ userId, newRole }: { userId: number; newRole: string }) => 
+      updateUserAdmin(userId, { role: newRole }),
+    onSuccess: (_, { newRole }) => {
       toast.success(`User role updated to ${newRole}`)
-      loadUsers()
-    } catch (error: any) {
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+    onError: (error: any) => {
       toast.error(error.message || "Failed to update role")
-    }
-  }
+    },
+  })
 
-  const confirmDelete = async () => {
-    if (!userToDelete) return
-    try {
-        await deleteUser(userToDelete)
-        toast.success("User deleted")
-        loadUsers()
-    } catch (error: any) {
-        toast.error(error.message || "Failed to delete user")
-    } finally {
-        setUserToDelete(null)
+  // Delete user mutation
+  const deleteMutation = useMutation({
+    mutationFn: (userId: number) => deleteUser(userId),
+    onSuccess: () => {
+      toast.success("User deleted")
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+      setUserToDelete(null)
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to delete user")
+      setUserToDelete(null)
+    },
+  })
+
+  const handleRoleChange = useCallback((userId: number, newRole: string) => {
+    roleChangeMutation.mutate({ userId, newRole })
+  }, [roleChangeMutation])
+
+  const confirmDelete = useCallback(() => {
+    if (userToDelete) {
+      deleteMutation.mutate(userToDelete)
     }
-  }
+  }, [userToDelete, deleteMutation])
 
   const getRoleBadge = (role: string) => {
     switch (role) {
@@ -122,11 +132,19 @@ export default function UsersPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
-                  Loading...
-                </TableCell>
-              </TableRow>
+              // Skeleton rows for loading state
+              <>
+                {[1, 2, 3, 4].map((i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-8 w-8 rounded-full" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                  </TableRow>
+                ))}
+              </>
             ) : users.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center">

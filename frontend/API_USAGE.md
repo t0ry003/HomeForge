@@ -1,9 +1,9 @@
 # HomeForge API Guide
 
-> **Version:** 1.2.0  
+> **Version:** 1.4.0  
 > **Base URL:** `http://localhost:8000/api/`  
 > **Authentication:** JWT (JSON Web Tokens)  
-> **Last Updated:** February 1, 2026
+> **Last Updated:** February 2, 2026
 
 A comprehensive API reference for the HomeForge smart home management platform. This guide is designed for frontend developers and AI agents to build complete user interfaces.
 
@@ -54,11 +54,12 @@ When making backend changes, ensure you update:
 4. [Rooms](#4-rooms)
 5. [Devices](#5-devices)
 6. [Device Types](#6-device-types)
-7. [Network Topology](#7-network-topology)
-8. [Role-Based Access Control](#8-role-based-access-control)
-9. [Data Models](#9-data-models)
-10. [Error Handling](#10-error-handling)
-11. [Integration Examples](#11-integration-examples)
+7. [Notifications](#7-notifications)
+8. [Network Topology](#8-network-topology)
+9. [Role-Based Access Control](#9-role-based-access-control)
+10. [Data Models](#10-data-models)
+11. [Error Handling](#11-error-handling)
+12. [Integration Examples](#12-integration-examples)
 
 ---
 
@@ -912,14 +913,130 @@ Partially update a device type. Only the provided fields are updated.
 
 ---
 
-### 6.12 Admin Workflow Summary
+### 6.12 List Denied Device Types (Admin)
+
+| Method | Endpoint | Auth Required | Role Required |
+|--------|----------|---------------|---------------|
+| `GET` | `/admin/device-types/denied/` | ✅ Yes | `admin` or `owner` |
+
+Returns all denied device types (rejected proposals) that are stored for review or cleanup.
+
+**Success Response (200 OK):**
+```json
+{
+  "count": 2,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 3,
+      "name": "Smart Fan",
+      "approved": false,
+      "rejection_reason": "Invalid relay configuration",
+      "created_at": "2026-01-28T10:30:00Z",
+      "definition": { /* ... */ },
+      "card_template": { /* ... */ }
+    },
+    {
+      "id": 7,
+      "name": "Broken Sensor",
+      "approved": false,
+      "rejection_reason": "Missing required fields",
+      "created_at": "2026-01-25T14:22:00Z",
+      "definition": { /* ... */ },
+      "card_template": null
+    }
+  ]
+}
+```
+
+---
+
+### 6.13 Delete Single Denied Device Type (Admin)
+
+| Method | Endpoint | Auth Required | Role Required |
+|--------|----------|---------------|---------------|
+| `DELETE` | `/admin/device-types/denied/{id}/` | ✅ Yes | `admin` or `owner` |
+
+Permanently deletes a specific denied device type.
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "Deleted",
+  "message": "Denied device type 'Smart Fan' has been deleted."
+}
+```
+
+**Error Response (404 Not Found):**
+```json
+{
+  "detail": "Denied device type not found."
+}
+```
+
+---
+
+### 6.14 Bulk Delete Denied Device Types (Admin)
+
+| Method | Endpoint | Auth Required | Role Required |
+|--------|----------|---------------|---------------|
+| `DELETE` | `/admin/device-types/denied/delete/` | ✅ Yes | `admin` or `owner` |
+
+Delete multiple denied device types at once.
+
+**Option 1: Delete ALL denied types (no request body)**
+
+```http
+DELETE /api/admin/device-types/denied/delete/
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "Deleted",
+  "message": "Deleted all 5 denied device type(s).",
+  "deleted_count": 5
+}
+```
+
+**Option 2: Delete specific types by ID**
+
+**Request Body:**
+```json
+{
+  "ids": [3, 7, 12]
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "Deleted",
+  "message": "Deleted 3 denied device type(s).",
+  "deleted_count": 3
+}
+```
+
+**Error Response (404 Not Found):**
+```json
+{
+  "detail": "No matching denied device types found."
+}
+```
+
+---
+
+### 6.15 Admin Workflow Summary
 
 The typical admin workflow for reviewing a device type proposal:
 
-1. **List pending** - `GET /admin/device-types/pending/` to see all unapproved types
+1. **List pending** - `GET /admin/device-types/pending/` to see types awaiting review
 2. **View details** - `GET /admin/device-types/{id}/` to get full definition + card_template
 3. **Edit if needed** - `PUT /admin/device-types/{id}/` or `PATCH /admin/device-types/{id}/` to fix issues
 4. **Approve or deny** - `POST /admin/device-types/{id}/approve/` or `/deny/`
+5. **Manage denied** - `GET /admin/device-types/denied/` to review rejected proposals
+6. **Cleanup** - `DELETE /admin/device-types/denied/delete/` to remove old denied types
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
@@ -932,13 +1049,358 @@ The typical admin workflow for reviewing a device type proposal:
                         ┌─────────────────┐     ┌─────────────────┐
                         │    Approve      │     │     Deny        │
                         │ POST /approve/  │     │  POST /deny/    │
-                        └─────────────────┘     └─────────────────┘
+                        └─────────────────┘     └────────┬────────┘
+                                                         │
+                                                         ▼
+                                                ┌─────────────────┐
+                                                │  List Denied    │
+                                                │  GET /denied/   │
+                                                └────────┬────────┘
+                                                         │
+                                                         ▼
+                                                ┌─────────────────┐
+                                                │ Delete Denied   │
+                                                │DELETE /denied/  │
+                                                └─────────────────┘
 ```
 ```
 
 ---
 
-## 7. Network Topology
+## 7. Notifications
+
+Real-time notification system for alerts, approvals, and system messages.
+
+### Notification Types
+
+| Type | Description |
+|------|-------------|
+| `device_type_pending` | Admin: New device type awaiting approval |
+| `device_type_approved` | User: Your device type was approved |
+| `device_type_denied` | User: Your device type was denied |
+| `device_offline` | Device went offline |
+| `device_online` | Device came online |
+| `device_error` | Device has an error |
+| `system` | General system notification |
+| `info` | Informational message |
+| `warning` | Warning message |
+| `error` | Error message |
+
+### Priority Levels
+
+| Priority | Use Case |
+|----------|----------|
+| `low` | Non-urgent, informational |
+| `normal` | Standard notifications |
+| `high` | Important, time-sensitive |
+| `urgent` | Critical, requires immediate action |
+
+---
+
+### 7.1 List Notifications
+
+| Method | Endpoint | Auth Required |
+|--------|----------|---------------|
+| `GET` | `/notifications/` | ✅ Yes |
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `is_read` | boolean | Filter by read status (`true`/`false`) |
+| `type` | string | Filter by notification type |
+| `priority` | string | Filter by priority level |
+
+**Example Request:**
+```http
+GET /api/notifications/?is_read=false&type=device_type_pending
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "count": 3,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "notification_type": "device_type_pending",
+      "notification_type_display": "Device Type Pending",
+      "title": "New Device Type Proposal",
+      "message": "'Smart Thermostat' has been proposed and is awaiting approval.",
+      "priority": "normal",
+      "priority_display": "Normal",
+      "is_read": false,
+      "reference_data": {
+        "device_type_id": 5,
+        "proposed_by": "johndoe"
+      },
+      "action_url": "/admin/device-types/5/",
+      "created_at": "2026-02-02T10:30:00Z",
+      "read_at": null,
+      "time_ago": "2h ago"
+    }
+  ]
+}
+```
+
+---
+
+### 7.2 Get Unread Count
+
+| Method | Endpoint | Auth Required |
+|--------|----------|---------------|
+| `GET` | `/notifications/unread-count/` | ✅ Yes |
+
+Returns the count of unread notifications, broken down by type.
+
+**Success Response (200 OK):**
+```json
+{
+  "unread_count": 5,
+  "by_type": {
+    "device_type_pending": 2,
+    "system": 1,
+    "device_offline": 2
+  }
+}
+```
+
+---
+
+### 7.3 Get Single Notification
+
+| Method | Endpoint | Auth Required |
+|--------|----------|---------------|
+| `GET` | `/notifications/{id}/` | ✅ Yes |
+
+**Success Response (200 OK):**
+```json
+{
+  "id": 1,
+  "notification_type": "device_type_pending",
+  "notification_type_display": "Device Type Pending",
+  "title": "New Device Type Proposal",
+  "message": "'Smart Thermostat' has been proposed and is awaiting approval.",
+  "priority": "normal",
+  "priority_display": "Normal",
+  "is_read": false,
+  "reference_data": { "device_type_id": 5 },
+  "action_url": "/admin/device-types/5/",
+  "created_at": "2026-02-02T10:30:00Z",
+  "read_at": null,
+  "time_ago": "2h ago"
+}
+```
+
+---
+
+### 7.4 Mark Notification as Read
+
+| Method | Endpoint | Auth Required |
+|--------|----------|---------------|
+| `POST` | `/notifications/{id}/read/` | ✅ Yes |
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "Marked as read",
+  "notification": { /* full notification object */ }
+}
+```
+
+---
+
+### 7.5 Mark All Notifications as Read
+
+| Method | Endpoint | Auth Required |
+|--------|----------|---------------|
+| `POST` | `/notifications/read-all/` | ✅ Yes |
+
+Mark all (or filtered) notifications as read.
+
+**Query Parameters (optional):**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `type` | string | Only mark notifications of this type |
+
+**Request Body (optional):**
+```json
+{
+  "ids": [1, 2, 3]
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "Marked as read",
+  "count": 5
+}
+```
+
+---
+
+### 7.6 Delete Notification
+
+| Method | Endpoint | Auth Required |
+|--------|----------|---------------|
+| `DELETE` | `/notifications/{id}/` | ✅ Yes |
+
+**Success Response (204 No Content)**
+
+---
+
+### 7.7 Bulk Delete Notifications
+
+| Method | Endpoint | Auth Required |
+|--------|----------|---------------|
+| `DELETE` | `/notifications/bulk-delete/` | ✅ Yes |
+
+**Request Options:**
+
+1. **No body** - Deletes all READ notifications (cleanup)
+2. **With IDs** - Delete specific notifications:
+```json
+{
+  "ids": [1, 2, 3]
+}
+```
+3. **Delete all** - Delete ALL notifications (read and unread):
+```json
+{
+  "all": true
+}
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "Deleted",
+  "count": 10
+}
+```
+
+---
+
+### 7.8 Create Notification (Admin)
+
+| Method | Endpoint | Auth Required | Role Required |
+|--------|----------|---------------|---------------|
+| `POST` | `/admin/notifications/create/` | ✅ Yes | `admin` or `owner` |
+
+Create a notification for a specific user.
+
+**Request Body:**
+```json
+{
+  "user_id": 5,
+  "notification_type": "system",
+  "title": "Account Review",
+  "message": "Your account has been reviewed and approved.",
+  "priority": "normal",
+  "action_url": "/profile/"
+}
+```
+
+Or use username:
+```json
+{
+  "username": "johndoe",
+  "notification_type": "warning",
+  "title": "Password Expiring",
+  "message": "Your password will expire in 7 days.",
+  "priority": "high"
+}
+```
+
+**Success Response (201 Created):**
+```json
+{
+  "id": 15,
+  "notification_type": "system",
+  "title": "Account Review",
+  /* ... */
+}
+```
+
+---
+
+### 7.9 Broadcast Notification (Admin)
+
+| Method | Endpoint | Auth Required | Role Required |
+|--------|----------|---------------|---------------|
+| `POST` | `/admin/notifications/broadcast/` | ✅ Yes | `admin` or `owner` |
+
+Send a notification to multiple users at once.
+
+**Request Body:**
+```json
+{
+  "target": "all",
+  "notification_type": "system",
+  "title": "Scheduled Maintenance",
+  "message": "The system will be under maintenance on Sunday from 2-4 AM.",
+  "priority": "high",
+  "action_url": "/announcements/"
+}
+```
+
+**Target Options:**
+
+| Target | Recipients |
+|--------|------------|
+| `all` | All users |
+| `admins` | Admin and Owner users |
+| `users` | Regular users |
+| `viewers` | Viewer-role users |
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "Broadcast sent",
+  "recipients": 25,
+  "target": "all"
+}
+```
+
+---
+
+### 7.10 Notification Data Model
+
+```typescript
+interface Notification {
+  id: number;
+  notification_type: 
+    | 'device_type_pending'
+    | 'device_type_approved'
+    | 'device_type_denied'
+    | 'device_offline'
+    | 'device_online'
+    | 'device_error'
+    | 'system'
+    | 'info'
+    | 'warning'
+    | 'error';
+  notification_type_display: string;      // Human-readable type
+  title: string;
+  message: string;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  priority_display: string;               // Human-readable priority
+  is_read: boolean;
+  reference_data: Record<string, any>;    // Related object IDs, metadata
+  action_url: string | null;              // Link for action button
+  created_at: string;                     // ISO datetime
+  read_at: string | null;                 // ISO datetime when read
+  time_ago: string;                       // Human-readable "2h ago"
+}
+```
+
+---
+
+## 8. Network Topology
 
 Get a visual representation of the smart home network for rendering with graph libraries (e.g., React Flow).
 
@@ -1025,7 +1487,7 @@ Get a visual representation of the smart home network for rendering with graph l
 
 ---
 
-## 8. Role-Based Access Control
+## 9. Role-Based Access Control
 
 HomeForge implements a hierarchical role system.
 
@@ -1055,7 +1517,7 @@ HomeForge implements a hierarchical role system.
 
 ---
 
-## 9. Data Models
+## 10. Data Models
 
 ### User Profile
 
@@ -1203,7 +1665,7 @@ interface TopologyResponse {
 
 ---
 
-## 10. Error Handling
+## 11. Error Handling
 
 ### Error Response Format
 
@@ -1283,7 +1745,7 @@ All errors follow a consistent JSON structure:
 
 ---
 
-## 11. Integration Examples
+## 12. Integration Examples
 
 ### Complete Authentication Flow (JavaScript)
 
@@ -1449,11 +1911,23 @@ function NetworkTopology({ api }) {
 | `PUT` | `/device-types/{id}/` | Update type | ✅ | Admin |
 | `DELETE` | `/device-types/{id}/` | Delete type | ✅ | Admin |
 | `GET` | `/admin/device-types/pending/` | List pending | ✅ | Admin |
+| `GET` | `/admin/device-types/denied/` | List denied | ✅ | Admin |
+| `DELETE` | `/admin/device-types/denied/{id}/` | Delete denied type | ✅ | Admin |
+| `DELETE` | `/admin/device-types/denied/delete/` | Bulk delete denied | ✅ | Admin |
 | `GET` | `/admin/device-types/{id}/` | Get type for editing | ✅ | Admin |
 | `PUT` | `/admin/device-types/{id}/` | Full update type | ✅ | Admin |
 | `PATCH` | `/admin/device-types/{id}/` | Partial update type | ✅ | Admin |
 | `POST` | `/admin/device-types/{id}/approve/` | Approve type | ✅ | Admin |
 | `POST` | `/admin/device-types/{id}/deny/` | Deny type | ✅ | Admin |
+| `GET` | `/notifications/` | List notifications | ✅ | Any |
+| `GET` | `/notifications/unread-count/` | Get unread count | ✅ | Any |
+| `GET` | `/notifications/{id}/` | Get notification | ✅ | Any |
+| `DELETE` | `/notifications/{id}/` | Delete notification | ✅ | Any |
+| `POST` | `/notifications/{id}/read/` | Mark as read | ✅ | Any |
+| `POST` | `/notifications/read-all/` | Mark all as read | ✅ | Any |
+| `DELETE` | `/notifications/bulk-delete/` | Bulk delete | ✅ | Any |
+| `POST` | `/admin/notifications/create/` | Create notification | ✅ | Admin |
+| `POST` | `/admin/notifications/broadcast/` | Broadcast to users | ✅ | Admin |
 | `GET` | `/topology/` | Get network map | ✅ | Any |
 
 ---
@@ -1466,10 +1940,12 @@ function NetworkTopology({ api }) {
 
 3. **Device Controls:** Use `card_template.controls` to dynamically render UI widgets. The `variable_mapping` corresponds to keys in `current_state`.
 
-4. **Real-time Updates:** Currently HTTP-based. For real-time, poll `/topology/` or `/devices/` periodically, or await future WebSocket implementation.
+4. **Real-time Updates:** Currently HTTP-based. For real-time, poll `/notifications/unread-count/` every 30 seconds for notification badges, or await future WebSocket implementation.
 
-5. **Icons:** Device icons use FontAwesome class names (e.g., `fa-lightbulb`). Include FontAwesome in your frontend.
+5. **Notifications:** Use `/notifications/unread-count/` for badge counts. The `by_type` field allows showing different badges for different notification categories.
 
-6. **Accent Color:** Users can personalize their UI with `accent_color`. Use it for theming.
+6. **Icons:** Device icons use FontAwesome class names (e.g., `fa-lightbulb`). Include FontAwesome in your frontend.
 
-7. **Device States:** When updating state via `PATCH /devices/{id}/state/`, only send changed keys. They merge with existing state.
+7. **Accent Color:** Users can personalize their UI with `accent_color`. Use it for theming.
+
+8. **Device States:** When updating state via `PATCH /devices/{id}/state/`, only send changed keys. They merge with existing state.

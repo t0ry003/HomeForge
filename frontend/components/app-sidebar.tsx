@@ -13,7 +13,6 @@ import {
   Home,
   Users,
   Bug,
-  CheckCircle,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -27,12 +26,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { getAvatarUrl, fetchPendingDeviceTypes } from "@/lib/apiClient"
+import { getAvatarUrl } from "@/lib/apiClient"
 import { useUser } from "@/components/user-provider"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user: contextUser } = useUser()
-  const [pendingCount, setPendingCount] = React.useState(0)
   
   // Transform context user to the format expected by NavUser
   const user = React.useMemo(() => {
@@ -46,27 +44,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const role = contextUser?.profile?.role || contextUser?.role;
   const isAdmin = role === 'admin' || role === 'owner';
-
-  // Fetch pending approvals count for admins
-  React.useEffect(() => {
-    if (!isAdmin) return;
-    
-    const loadPendingCount = async () => {
-      try {
-        const res = await fetchPendingDeviceTypes();
-        const items = Array.isArray(res) ? res : (res.results || []);
-        setPendingCount(items.length);
-      } catch (e) {
-        // Silently fail - non-critical
-        console.error('Failed to fetch pending count:', e);
-      }
-    };
-
-    loadPendingCount();
-    // Refresh every 15 seconds for more responsive updates
-    const interval = setInterval(loadPendingCount, 15000);
-    return () => clearInterval(interval);
-  }, [isAdmin]);
 
   const navMain = React.useMemo(() => {
     const items = [
@@ -99,20 +76,17 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         url: "/dashboard/admin",
         icon: Shield,
         // @ts-ignore
-        badge: pendingCount > 0 ? pendingCount : undefined,
-        // @ts-ignore
         items: [
           { title: "Rooms", url: "/dashboard/admin/rooms", icon: Home },
           { title: "Users", url: "/dashboard/admin/users", icon: Users },
           { title: "Device Types", url: "/dashboard/admin/device-types", icon: Cpu },
-          { title: "Approvals", url: "/dashboard/admin/approvals", icon: CheckCircle, badge: pendingCount > 0 ? pendingCount : undefined },
           { title: "Debug", url: "/dashboard/admin/debug", icon: Bug },
         ]
       });
     }
 
     return items;
-  }, [isAdmin, pendingCount]);
+  }, [isAdmin]);
 
   return (
     <Sidebar variant="inset" className="border-r-0 bg-transparent" {...props}>

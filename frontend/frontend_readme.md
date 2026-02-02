@@ -123,8 +123,10 @@ Component → React Query → apiClient.js → Backend API (port 8000)
 │   ├── ui/                     # shadcn/ui primitives (24 components)
 │   ├── devices/                # Device-related components
 │   ├── topology/               # Graph visualization
+│   ├── notifications/          # Notification system
+│   │   └── notification-center.tsx
 │   ├── app-sidebar.tsx         # Main navigation
-│   ├── nav-user.tsx            # User menu
+│   ├── nav-user.tsx            # User menu + notifications
 │   ├── query-provider.tsx      # React Query setup
 │   ├── theme-provider.tsx      # Theme configuration
 │   └── user-provider.tsx       # Auth context
@@ -179,6 +181,35 @@ useEffect(() => {
 | `admin` | Full access + Admin Panel |
 | `user` | Standard dashboard |
 | `viewer` | Read-only |
+
+### Notification System
+
+Real-time notifications with backend API integration:
+
+```
+1. Bell icon in sidebar footer (next to user avatar)
+2. Badge shows unread count (polls every 30 seconds)
+3. Click to open popover with notification list
+4. Mark as read, dismiss, or clear all
+5. Click notification to navigate to relevant page
+```
+
+**Notification Types:**
+
+| Type | Color | Description |
+|------|-------|-------------|
+| `device_type_pending` | Amber | Device type awaiting approval |
+| `device_type_approved` | Green | Device type approved |
+| `device_type_denied` | Red | Device type denied |
+| `device_offline` | Red | Device went offline |
+| `device_online` | Green | Device came online |
+| `device_error` | Orange | Device error |
+| `system` | Blue | System notification |
+| `info` | Blue | Information message |
+| `warning` | Orange | Warning alert |
+| `error` | Red | Error alert |
+
+**Priority Levels:** `low`, `normal`, `high`, `urgent`
 
 ---
 
@@ -238,9 +269,23 @@ Three-step registration wizard:
 
 - **Rooms** — Create, edit, delete rooms
 - **Users** — View users, manage roles
-- **Device Types** — Manage device type definitions
-- **Approvals** — Review and approve/deny submitted device types with live preview
+- **Device Types** — Manage device type definitions with URL filter support (`?filter=pending`)
 - **Debug** — Test device states and UI behavior
+
+### Notification Center
+
+Accessible from the sidebar footer (bell icon next to user avatar):
+
+- **Real-time Updates** — Polls unread count every 30 seconds
+- **Popover UI** — Clean notification list with scroll area
+- **Actions:**
+  - Mark individual as read (click notification)
+  - Mark all as read
+  - Dismiss individual notifications
+  - Clear all read notifications
+- **Navigation** — Click to go to relevant page (e.g., device types approval)
+- **Priority Badges** — High/urgent notifications highlighted
+- **Time Display** — Relative timestamps from API (`time_ago`)
 
 ---
 
@@ -330,7 +375,8 @@ Key optimizations:
 | Component | Purpose |
 |-----------|---------|
 | `AppSidebar` | Main navigation sidebar |
-| `NavUser` | User dropdown menu |
+| `NavUser` | User dropdown menu + notification bell |
+| `NotificationCenter` | Bell icon with popover notification list |
 | `SmartDeviceCard` | Device display card with smart toggle behavior |
 | `SensorWidgets` | Temperature, Humidity, Motion, Light, CO2 displays |
 | `IconPicker` | Icon selection UI |
@@ -409,6 +455,33 @@ await updateDeviceState(deviceId, { relay_1: true, brightness: 75 })
 
 // Delete a device
 await deleteDevice(deviceId)
+```
+
+### Notification API
+
+```javascript
+import { 
+  fetchNotifications,
+  fetchUnreadNotificationCount,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  deleteNotification,
+  bulkDeleteNotifications
+} from '@/lib/apiClient'
+
+// Get notifications (with optional filters)
+const { results, count } = await fetchNotifications({ is_read: false, page: 1 })
+
+// Get unread count for badge
+const { unread_count } = await fetchUnreadNotificationCount()
+
+// Mark as read
+await markNotificationAsRead(notificationId)
+await markAllNotificationsAsRead({ notification_type: 'device_type_pending' })
+
+// Delete notifications
+await deleteNotification(notificationId)
+await bulkDeleteNotifications({ is_read: true })  // Delete all read
 ```
 
 ### Backend URL

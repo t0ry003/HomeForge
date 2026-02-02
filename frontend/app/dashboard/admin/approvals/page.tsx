@@ -1,7 +1,8 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import ReactFlow, {
     useNodesState,
     useEdgesState,
@@ -17,16 +18,18 @@ import 'reactflow/dist/style.css';
 
 import { 
     Cpu, Thermometer, Droplets, Activity, Sun, ToggleLeft, Wind, 
-    CheckCircle2, XCircle, Inbox, RotateCw
+    CheckCircle2, XCircle, Inbox, RotateCw, ExternalLink
 } from 'lucide-react';
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import Link from "next/link";
 
-import { fetchPendingDeviceTypes, denyDeviceType, approveDeviceType } from "@/lib/apiClient";
+import { fetchPendingDeviceTypes, denyDeviceType, approveDeviceType, fetchDeniedDeviceTypes } from "@/lib/apiClient";
 import SmartDeviceCard from "@/components/devices/SmartDeviceCard";
 
 // --- Graph Definitions (Copied from Builder) ---
@@ -111,9 +114,8 @@ const reconstructGraph = (structure: any[]): { nodes: Node[], edges: Edge[] } =>
 
 export default function AdminApprovalsPage() {
     const router = useRouter();
-    const [pendingTypes, setPendingTypes] = useState<any[]>([]);
+    const queryClient = useQueryClient();
     const [selectedType, setSelectedType] = useState<any>(null);
-    const [isLoading, setIsLoading] = useState(true);
     
     // Graph State
     const [nodes, setNodes] = useNodesState([]);
@@ -123,32 +125,75 @@ export default function AdminApprovalsPage() {
     const [denyReason, setDenyReason] = useState("");
     const [isDenyOpen, setIsDenyOpen] = useState(false);
 
-    // Fetch Data
-    const loadPending = useCallback(async () => {
-        setIsLoading(true);
-        try {
+    // Fetch pending types with React Query
+    const { data: pendingTypes = [], isLoading, refetch } = useQuery({
+        queryKey: ['pendingDeviceTypes'],
+        queryFn: async () => {
             const res = await fetchPendingDeviceTypes();
-            // Handle pagination or list
-            const raw = Array.isArray(res) ? res : (res.results || []);
-            setPendingTypes(raw);
-            if (raw.length > 0 && !selectedType) {
-                // Auto-select first if none selected
-                handleSelect(raw[0]);
-            } else if (raw.length === 0) {
-                setSelectedType(null);
-            }
-        } catch (e: any) {
-            toast.error("Failed to load requests", { description: e.message });
-        } finally {
-            setIsLoading(false);
-        }
-    }, [selectedType]);
+            return Array.isArray(res) ? res : (res.results || []);
+        },
+        staleTime: 30000,
+        gcTime: 5 * 60 * 1000,
+    });
 
+    // Fetch denied count for the link badge
+    const { data: deniedCount = 0 } = useQuery({
+        queryKey: ['deniedDeviceTypesCount'],
+        queryFn: async () => {
+            const res = await fetchDeniedDeviceTypes();
+            const items = Array.isArray(res) ? res : (res.results || []);
+            return items.length;
+        },
+        staleTime: 30000,
+        gcTime: 5 * 60 * 1000,
+    });
+
+    // Auto-select first pending type when data loads
     useEffect(() => {
-        loadPending();
-    }, []);
+        if (pendingTypes.length > 0 && !selectedType) {
+            handleSelect(pendingTypes[0]);
+        } else if (pendingTypes.length === 0) {
+            setSelectedType(null);
+        }
+    }, [pendingTypes]);
 
-    const handleSelect = (item: any) => {
+    // Deny mutation
+    const denyMutation = useMutation({
+        mutationFn: ({ id, reason }: { id: string; reason: string }) => 
+            denyDeviceType(id, reason),
+        onSuccess: () => {
+            toast.success("Device Type Denied", {
+                description: "The device type has been rejected and moved to the denied list."
+            });
+            setIsDenyOpen(false);
+            setDenyReason("");
+            queryClient.invalidateQueries({ queryKey: ['pendingDeviceTypes'] });
+            queryClient.invalidateQueries({ queryKey: ['pendingCount'] });
+            queryClient.invalidateQueries({ queryKey: ['deniedDeviceTypes'] });
+            queryClient.invalidateQueries({ queryKey: ['deniedDeviceTypesCount'] });
+        },
+        onError: (e: any) => {
+            toast.error("Denial Failed", { description: e.message });
+        },
+    });
+
+    // Approve mutation
+    const approveMutation = useMutation({
+        mutationFn: (id: string) => approveDeviceType(id),
+        onSuccess: () => {
+            toast.success("Device Type Approved", { 
+                description: `${selectedType?.name} is now available for use.` 
+            });
+            queryClient.invalidateQueries({ queryKey: ['pendingDeviceTypes'] });
+            queryClient.invalidateQueries({ queryKey: ['pendingCount'] });
+            queryClient.invalidateQueries({ queryKey: ['deviceTypes'] });
+        },
+        onError: (e: any) => {
+            toast.error("Approval Failed", { description: e.message });
+        },
+    });
+
+    const handleSelect = useCallback((item: any) => {
         setSelectedType(item);
         if (item.definition?.structure) {
             const { nodes: flatNodes, edges: flatEdges } = reconstructGraph(item.definition.structure);
@@ -158,41 +203,17 @@ export default function AdminApprovalsPage() {
             setNodes([]);
             setEdges([]);
         }
-    };
+    }, [setNodes, setEdges]);
 
-    const handleDeny = async () => {
+    const handleDeny = useCallback(() => {
         if (!selectedType || !denyReason) return;
-        try {
-            await denyDeviceType(selectedType.id, denyReason);
-            toast.success("Device Type Denied");
-            setIsDenyOpen(false);
-            setDenyReason("");
-            handleRemoveFromList(selectedType.id);
-        } catch (e: any) {
-            toast.error("Denial Failed", { description: e.message });
-        }
-    };
+        denyMutation.mutate({ id: selectedType.id, reason: denyReason });
+    }, [selectedType, denyReason, denyMutation]);
 
-    const handleApprove = async () => {
+    const handleApprove = useCallback(() => {
         if (!selectedType) return;
-        try {
-            await approveDeviceType(selectedType.id);
-            toast.success("Device Type Approved", { description: `${selectedType.name} is now available for use.` });
-            handleRemoveFromList(selectedType.id);
-        } catch (e: any) {
-            toast.error("Approval Failed", { description: e.message });
-        }
-    };
-
-    const handleRemoveFromList = (id: string) => {
-        const remaining = pendingTypes.filter(p => p.id !== id);
-        setPendingTypes(remaining);
-        if (remaining.length > 0) {
-            handleSelect(remaining[0]);
-        } else {
-            setSelectedType(null);
-        }
-    };
+        approveMutation.mutate(selectedType.id);
+    }, [selectedType, approveMutation]);
 
     // Mock Device for Preview
     const previewDevice = selectedType ? {
@@ -207,15 +228,28 @@ export default function AdminApprovalsPage() {
     return (
         <div className="flex flex-col h-[calc(100vh-4rem)] gap-4 p-4 md:p-6">
              {/* Header */}
-             <div className="flex items-center justify-between shrink-0">
+             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
                 <div>
                      <h1 className="text-2xl font-bold tracking-tight">Pending Approvals</h1>
                      <p className="text-sm text-muted-foreground">Review and approve device type definitions</p>
                 </div>
-                <Button variant="outline" size="sm" onClick={loadPending} disabled={isLoading}>
-                    <RotateCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                    Refresh
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isLoading}>
+                        <RotateCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                        Refresh
+                    </Button>
+                    <Link href="/dashboard/admin/denied-types">
+                        <Button variant="outline" size="sm" className="border-red-500/30 text-red-600 hover:bg-red-500/10">
+                            <XCircle className="w-4 h-4 mr-2" />
+                            Denied Types
+                            {deniedCount > 0 && (
+                                <Badge variant="secondary" className="ml-2 bg-red-500/10 text-red-600 border-red-500/30 text-[10px] px-1.5 py-0">
+                                    {deniedCount}
+                                </Badge>
+                            )}
+                        </Button>
+                    </Link>
+                </div>
             </div>
 
             {/* Main Content */}

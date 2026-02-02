@@ -277,6 +277,38 @@ export async function deleteDeviceType(id) {
   return true;
 }
 
+// --- Denied Device Types (Admin) ---
+
+export async function fetchDeniedDeviceTypes() {
+  const res = await fetchWithAuth(`${getApiBase()}/admin/device-types/denied/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch denied device types');
+  return res.json();
+}
+
+export async function deleteDeniedDeviceType(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/admin/device-types/denied/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to delete denied device type');
+  return res.json();
+}
+
+export async function bulkDeleteDeniedDeviceTypes(ids = null) {
+  const options = {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  };
+  
+  // If ids provided, send them in body; otherwise delete all
+  if (ids && ids.length > 0) {
+    options.body = JSON.stringify({ ids });
+  }
+  
+  const res = await fetchWithAuth(`${getApiBase()}/admin/device-types/denied/delete/`, options);
+  if (!res.ok) await handleApiError(res, 'Failed to delete denied device types');
+  return res.json();
+}
+
 // --- Admin Device Type Editing ---
 
 export async function fetchAdminDeviceType(id) {
@@ -356,5 +388,75 @@ export async function deleteDevice(id) {
 export async function fetchTopology() {
   const res = await fetchWithAuth(`${getApiBase()}/topology/`);
   if (!res.ok) await handleApiError(res, 'Failed to fetch topology');
+  return res.json();
+}
+
+// ============ Notifications API ============
+
+export async function fetchNotifications(params = {}) {
+  const queryParams = new URLSearchParams();
+  if (params.is_read !== undefined) queryParams.append('is_read', params.is_read);
+  if (params.type) queryParams.append('type', params.type);
+  if (params.priority) queryParams.append('priority', params.priority);
+  
+  const queryString = queryParams.toString();
+  const url = `${getApiBase()}/notifications/${queryString ? `?${queryString}` : ''}`;
+  
+  const res = await fetchWithAuth(url);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch notifications');
+  return res.json();
+}
+
+export async function fetchUnreadNotificationCount() {
+  const res = await fetchWithAuth(`${getApiBase()}/notifications/unread-count/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch unread count');
+  return res.json();
+}
+
+export async function fetchNotification(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/notifications/${id}/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch notification');
+  return res.json();
+}
+
+export async function markNotificationAsRead(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/notifications/${id}/read/`, {
+    method: 'POST',
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to mark notification as read');
+  return res.json();
+}
+
+export async function markAllNotificationsAsRead(params = {}) {
+  const queryParams = new URLSearchParams();
+  if (params.type) queryParams.append('type', params.type);
+  
+  const queryString = queryParams.toString();
+  const url = `${getApiBase()}/notifications/read-all/${queryString ? `?${queryString}` : ''}`;
+  
+  const res = await fetchWithAuth(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: params.ids ? JSON.stringify({ ids: params.ids }) : undefined,
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to mark all as read');
+  return res.json();
+}
+
+export async function deleteNotification(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/notifications/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to delete notification');
+  return true;
+}
+
+export async function bulkDeleteNotifications(params = {}) {
+  const res = await fetchWithAuth(`${getApiBase()}/notifications/bulk-delete/`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to delete notifications');
   return res.json();
 }

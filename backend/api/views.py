@@ -1,34 +1,67 @@
 from rest_framework import generics, permissions, views
 from django.contrib.auth.models import User
 from rest_framework.permissions import AllowAny
-from .serializers import RegisterSerializer, UserSerializer, DeviceSerializer, RoomSerializer, CustomDeviceTypeSerializer
+from .serializers import (
+    RegisterSerializer, UserSerializer, DeviceSerializer, RoomSerializer, 
+    CustomDeviceTypeSerializer, NotificationSerializer, NotificationCreateSerializer
+)
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework import status
 from rest_framework.response import Response
-from .models import Device, Room, CustomDeviceType
+from .models import Device, Room, CustomDeviceType, Notification
 from .permissions import IsAdmin, IsOwner
+from django.core.cache import cache
 
 class CustomDeviceTypeListCreateView(generics.ListCreateAPIView):
     serializer_class = CustomDeviceTypeSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # Admin sees all, Owner sees all?
-        # User requirement: "Device Type Management API (Admin Side)"
+        # Admin sees all, users see only approved (cached)
         if IsAdmin().has_permission(self.request, self):
-             return CustomDeviceType.objects.all()
-        # Users see passed/approved ones
-        return CustomDeviceType.objects.filter(approved=True)
+            return CustomDeviceType.objects.select_related(
+                'card_template'
+            ).prefetch_related(
+                'card_template__controls'
+            ).all()
+        
+        # Cache approved device types for non-admin users (5 minutes)
+        cache_key = 'approved_device_types_qs'
+        cached_ids = cache.get(cache_key)
+        
+        base_qs = CustomDeviceType.objects.select_related(
+            'card_template'
+        ).prefetch_related(
+            'card_template__controls'
+        )
+        
+        if cached_ids is not None:
+            return base_qs.filter(id__in=cached_ids)
+        
+        # Cache the IDs of approved types
+        approved_qs = base_qs.filter(approved=True)
+        approved_ids = list(approved_qs.values_list('id', flat=True))
+        cache.set(cache_key, approved_ids, timeout=300)
+        
+        return approved_qs
 
     def perform_create(self, serializer):
-        # Admin creates approved, users create pending?
+        # Invalidate cache when new type is created
+        cache.delete('approved_device_types_qs')
         is_admin = IsAdmin().has_permission(self.request, self)
         serializer.save(approved=is_admin)
 
 class CustomDeviceTypeDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = CustomDeviceType.objects.all()
     serializer_class = CustomDeviceTypeSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        # Optimized: prefetch related data
+        return CustomDeviceType.objects.select_related(
+            'card_template'
+        ).prefetch_related(
+            'card_template__controls'
+        )
 
     def perform_update(self, serializer):
         if not IsAdmin().has_permission(self.request, self):
@@ -111,8 +144,8 @@ class RoomListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # Allow all authenticated users to see all rooms (Global/Shared view)
-        return Room.objects.all()
+        # Optimized: prefetch devices and select_related user
+        return Room.objects.select_related('user').prefetch_related('devices')
 
     def perform_create(self, serializer):
         # Additional check if needed, but IsAuthenticated is broad. 
@@ -127,8 +160,8 @@ class RoomDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # Allow all authenticated users to see all rooms
-        return Room.objects.all()
+        # Optimized: prefetch devices and select_related user
+        return Room.objects.select_related('user').prefetch_related('devices')
 
     def perform_update(self, serializer):
         if not IsAdmin().has_permission(self.request, self):
@@ -216,20 +249,29 @@ class TopologyView(views.APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get(self, request):
-        import math # Ensure math is imported
+        import math
         user = request.user
 
-        # Fetch Devices (returns empty if none exist - no mock data)
-        devices = Device.objects.all()
+        # Optimized: select_related and only() for required fields
+        devices = Device.objects.select_related(
+            'room', 'device_type'
+        ).only(
+            'id', 'name', 'ip_address', 'status', 'icon', 'current_state',
+            'room__name', 'device_type__name'
+        )
+        
+        # Evaluate queryset once to avoid multiple DB hits
+        device_list = list(devices)
+        device_count = len(device_list)
 
         nodes = []
         edges = []
         
-        # 3. Create Central Server Node (The "Hub")
+        # Create Central Server Node (The "Hub")
         gateway_id = "homeforge-gateway"
         nodes.append({
             "id": gateway_id,
-            "type": "input", # Central input node
+            "type": "input",
             "data": { 
                 "label": "HomeForge Gateway",
                 "ip": "192.168.1.1",
@@ -247,28 +289,27 @@ class TopologyView(views.APIView):
             }
         })
 
-        # 4. Generate Device Nodes (Spokes)
-        # Layout: Radial positioning around the gateway
-        radius = 350 # Distance from center
-        device_count = devices.count()
+        # Pre-compute status colors mapping
+        status_colors = {
+            Device.STATUS_ONLINE: "#10B981",
+            Device.STATUS_OFFLINE: "#EF4444",
+            Device.STATUS_ERROR: "#F59E0B"
+        }
+
+        # Generate Device Nodes using pre-fetched list
+        radius = 350
         
-        for index, device in enumerate(devices):
-            # Calculate position on circle
+        for index, device in enumerate(device_list):
             angle = (2 * math.pi * index) / device_count if device_count > 0 else 0
             x_pos = radius * math.cos(angle)
             y_pos = radius * math.sin(angle)
             
             node_id = str(device.id)
-            
-            # Identify Status Color
-            status_color = "#10B981" if device.status == Device.STATUS_ONLINE else "#EF4444"
-            if device.status == Device.STATUS_ERROR:
-                status_color = "#F59E0B"
+            status_color = status_colors.get(device.status, "#EF4444")
 
-            # Node Data
             nodes.append({
                 "id": node_id,
-                "type": "device", # Custom frontend node type recommended
+                "type": "device",
                 "data": { 
                     "label": device.name,
                     "ip": device.ip_address,
@@ -279,7 +320,6 @@ class TopologyView(views.APIView):
                     "current_state": device.current_state
                 },
                 "position": { "x": x_pos, "y": y_pos },
-                # Fallback style if custom node is not used in frontend
                 "style": {
                     "width": 180,
                     "borderColor": status_color,
@@ -291,12 +331,11 @@ class TopologyView(views.APIView):
                 }
             })
 
-            # 5. Create Connection (Edge)
             edges.append({
                 "id": f"edge-{gateway_id}-{node_id}",
                 "source": gateway_id,
                 "target": node_id,
-                "animated": device.status == Device.STATUS_ONLINE, # Animate only if active
+                "animated": device.status == Device.STATUS_ONLINE,
                 "style": { 
                     "stroke": status_color,
                     "strokeWidth": 2
@@ -314,8 +353,12 @@ class DeviceListCreateView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # Global view of devices
-        return Device.objects.all()
+        # Optimized: select_related for ForeignKeys to avoid N+1 queries
+        return Device.objects.select_related(
+            'room', 'user', 'device_type', 'device_type__card_template'
+        ).prefetch_related(
+            'device_type__card_template__controls'
+        )
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -329,8 +372,12 @@ class DeviceDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        # Allow viewing detail of any device
-        return Device.objects.all()
+        # Optimized: select_related for ForeignKeys
+        return Device.objects.select_related(
+            'room', 'user', 'device_type', 'device_type__card_template'
+        ).prefetch_related(
+            'device_type__card_template__controls'
+        )
 
 
 
@@ -399,12 +446,23 @@ class DeviceTypeProposeView(generics.CreateAPIView):
 
     def perform_create(self, serializer):
         # Force approved=False
-        serializer.save(approved=False)
+        instance = serializer.save(approved=False)
+        
+        # Notify admins about new proposal
+        Notification.notify_admins(
+            notification_type=Notification.TYPE_DEVICE_TYPE_PENDING,
+            title="New Device Type Proposal",
+            message=f"'{instance.name}' has been proposed by {self.request.user.username} and is awaiting approval.",
+            priority=Notification.PRIORITY_NORMAL,
+            reference_data={"device_type_id": instance.id, "proposed_by": self.request.user.username},
+            action_url=f"/admin/device-types/{instance.id}/"
+        )
 
 
 class AdminPendingDeviceTypeListView(generics.ListAPIView):
     """
-    Admin: Get all pending (unapproved) device types with full details.
+    Admin: Get all pending (unapproved, not denied) device types with full details.
+    These are types waiting for review (no rejection_reason set).
     """
     serializer_class = CustomDeviceTypeSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -412,7 +470,90 @@ class AdminPendingDeviceTypeListView(generics.ListAPIView):
     def get_queryset(self):
         if not IsAdmin().has_permission(self.request, self):
             self.permission_denied(self.request, message="Only Admins can view pending types.")
-        return CustomDeviceType.objects.filter(approved=False)
+        # Pending = not approved AND no rejection reason (hasn't been denied yet)
+        return CustomDeviceType.objects.filter(approved=False, rejection_reason__isnull=True)
+
+
+class AdminDeniedDeviceTypeListView(generics.ListAPIView):
+    """
+    Admin: Get all denied device types with full details.
+    These are types that have been reviewed and rejected.
+    """
+    serializer_class = CustomDeviceTypeSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        if not IsAdmin().has_permission(self.request, self):
+            self.permission_denied(self.request, message="Only Admins can view denied types.")
+        # Denied = not approved AND has a rejection reason
+        return CustomDeviceType.objects.filter(approved=False, rejection_reason__isnull=False)
+
+
+class AdminDeniedDeviceTypeDeleteView(views.APIView):
+    """
+    Admin: Delete denied device types.
+    DELETE /admin/device-types/denied/{pk}/ - Delete a single denied type
+    DELETE /admin/device-types/denied/ - Bulk delete denied types
+        - No body: Delete ALL denied types
+        - Body with {"ids": [1, 2, 3]}: Delete specific denied types
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def delete(self, request, pk=None):
+        if not IsAdmin().has_permission(request, self):
+            return Response({"detail": "Only Admins can delete denied types."}, status=status.HTTP_403_FORBIDDEN)
+
+        if pk is not None:
+            # Delete single denied device type
+            try:
+                instance = CustomDeviceType.objects.get(pk=pk, approved=False, rejection_reason__isnull=False)
+            except CustomDeviceType.DoesNotExist:
+                return Response({"detail": "Denied device type not found."}, status=status.HTTP_404_NOT_FOUND)
+            
+            name = instance.name
+            instance.delete()
+            return Response({"status": "Deleted", "message": f"Denied device type '{name}' has been deleted."})
+        
+        else:
+            # Bulk delete
+            ids = request.data.get('ids', None)
+            
+            if ids is not None:
+                # Delete specific denied types by ID
+                if not isinstance(ids, list):
+                    return Response({"detail": "'ids' must be a list of integers."}, status=status.HTTP_400_BAD_REQUEST)
+                
+                denied_types = CustomDeviceType.objects.filter(
+                    pk__in=ids, 
+                    approved=False, 
+                    rejection_reason__isnull=False
+                )
+                count = denied_types.count()
+                
+                if count == 0:
+                    return Response({"detail": "No matching denied device types found."}, status=status.HTTP_404_NOT_FOUND)
+                
+                denied_types.delete()
+                return Response({
+                    "status": "Deleted", 
+                    "message": f"Deleted {count} denied device type(s).",
+                    "deleted_count": count
+                })
+            
+            else:
+                # Delete ALL denied types
+                denied_types = CustomDeviceType.objects.filter(approved=False, rejection_reason__isnull=False)
+                count = denied_types.count()
+                
+                if count == 0:
+                    return Response({"detail": "No denied device types to delete."}, status=status.HTTP_404_NOT_FOUND)
+                
+                denied_types.delete()
+                return Response({
+                    "status": "Deleted", 
+                    "message": f"Deleted all {count} denied device type(s).",
+                    "deleted_count": count
+                })
 
 
 class AdminDeviceTypeReviewView(views.APIView):
@@ -481,6 +622,18 @@ class AdminDeviceTypeReviewView(views.APIView):
             instance.approved = True
             instance.rejection_reason = None # Clear any previous rejection
             instance.save()
+            # Invalidate cache when approval status changes
+            cache.delete('approved_device_types_qs')
+            
+            # Create system notification about new approved device type
+            Notification.objects.create(
+                user=request.user,  # Notify the admin who approved (for record)
+                notification_type=Notification.TYPE_INFO,
+                title="Device Type Approved",
+                message=f"You approved the device type '{instance.name}'.",
+                reference_data={"device_type_id": instance.id}
+            )
+            
             return Response({"status": "Approved", "data": CustomDeviceTypeSerializer(instance).data})
 
         elif action == 'deny':
@@ -491,8 +644,251 @@ class AdminDeviceTypeReviewView(views.APIView):
             instance.approved = False
             instance.rejection_reason = reason
             instance.save()
+            # Invalidate cache when approval status changes
+            cache.delete('approved_device_types_qs')
+            
+            # Create notification about denial
+            Notification.objects.create(
+                user=request.user,  # Notify the admin who denied (for record)
+                notification_type=Notification.TYPE_INFO,
+                title="Device Type Denied",
+                message=f"You denied the device type '{instance.name}'. Reason: {reason}",
+                reference_data={"device_type_id": instance.id, "reason": reason}
+            )
+            
             return Response({"status": "Denied", "data": CustomDeviceTypeSerializer(instance).data})
         
         return Response({"detail": "Invalid action. Use 'approve' or 'deny'."}, status=status.HTTP_400_BAD_REQUEST)
 
 
+# =============================================================================
+# NOTIFICATION VIEWS
+# =============================================================================
+
+class NotificationListView(generics.ListAPIView):
+    """
+    List notifications for the authenticated user.
+    
+    Query Parameters:
+    - is_read: Filter by read status (true/false)
+    - type: Filter by notification type
+    - priority: Filter by priority level
+    """
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        queryset = Notification.objects.filter(user=self.request.user)
+        
+        # Filter by read status
+        is_read = self.request.query_params.get('is_read')
+        if is_read is not None:
+            queryset = queryset.filter(is_read=is_read.lower() == 'true')
+        
+        # Filter by type
+        notification_type = self.request.query_params.get('type')
+        if notification_type:
+            queryset = queryset.filter(notification_type=notification_type)
+        
+        # Filter by priority
+        priority = self.request.query_params.get('priority')
+        if priority:
+            queryset = queryset.filter(priority=priority)
+        
+        return queryset
+
+
+class NotificationUnreadCountView(views.APIView):
+    """
+    Get the count of unread notifications for the authenticated user.
+    Also returns counts by type for badge displays.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        user = request.user
+        base_qs = Notification.objects.filter(user=user, is_read=False)
+        
+        # Get counts by type
+        type_counts = {}
+        for type_choice in Notification.TYPE_CHOICES:
+            type_key = type_choice[0]
+            count = base_qs.filter(notification_type=type_key).count()
+            if count > 0:
+                type_counts[type_key] = count
+        
+        return Response({
+            "unread_count": base_qs.count(),
+            "by_type": type_counts
+        })
+
+
+class NotificationDetailView(generics.RetrieveDestroyAPIView):
+    """
+    Retrieve or delete a single notification.
+    """
+    serializer_class = NotificationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_queryset(self):
+        return Notification.objects.filter(user=self.request.user)
+
+
+class NotificationMarkReadView(views.APIView):
+    """
+    Mark notifications as read.
+    
+    POST /notifications/{id}/read/ - Mark single notification as read
+    POST /notifications/read-all/ - Mark all notifications as read
+    POST /notifications/read-all/?type=device_type_pending - Mark all of a type as read
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request, pk=None):
+        user = request.user
+        
+        if pk is not None:
+            # Mark single notification as read
+            try:
+                notification = Notification.objects.get(pk=pk, user=user)
+            except Notification.DoesNotExist:
+                return Response({"detail": "Notification not found."}, status=status.HTTP_404_NOT_FOUND)
+            
+            notification.mark_as_read()
+            return Response({
+                "status": "Marked as read",
+                "notification": NotificationSerializer(notification).data
+            })
+        
+        else:
+            # Mark multiple notifications as read
+            queryset = Notification.objects.filter(user=user, is_read=False)
+            
+            # Optional: filter by type
+            notification_type = request.query_params.get('type')
+            if notification_type:
+                queryset = queryset.filter(notification_type=notification_type)
+            
+            # Optional: filter by IDs in request body
+            ids = request.data.get('ids')
+            if ids and isinstance(ids, list):
+                queryset = queryset.filter(pk__in=ids)
+            
+            from django.utils import timezone
+            count = queryset.update(is_read=True, read_at=timezone.now())
+            
+            return Response({
+                "status": "Marked as read",
+                "count": count
+            })
+
+
+class NotificationBulkDeleteView(views.APIView):
+    """
+    Delete multiple notifications.
+    
+    DELETE /notifications/bulk-delete/ - Delete notifications
+    - No body: Delete ALL read notifications
+    - Body with {"ids": [1, 2, 3]}: Delete specific notifications
+    - Body with {"all": true}: Delete ALL notifications (read and unread)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def delete(self, request):
+        user = request.user
+        
+        delete_all = request.data.get('all', False)
+        ids = request.data.get('ids')
+        
+        if delete_all:
+            # Delete all notifications
+            count = Notification.objects.filter(user=user).delete()[0]
+        elif ids and isinstance(ids, list):
+            # Delete specific notifications
+            count = Notification.objects.filter(user=user, pk__in=ids).delete()[0]
+        else:
+            # Delete all READ notifications (cleanup)
+            count = Notification.objects.filter(user=user, is_read=True).delete()[0]
+        
+        return Response({
+            "status": "Deleted",
+            "count": count
+        })
+
+
+class AdminNotificationCreateView(generics.CreateAPIView):
+    """
+    Admin: Create a notification for a specific user.
+    """
+    serializer_class = NotificationCreateSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def perform_create(self, serializer):
+        if not IsAdmin().has_permission(self.request, self):
+            self.permission_denied(self.request, message="Only Admins can create notifications for others.")
+        serializer.save()
+
+
+class AdminNotificationBroadcastView(views.APIView):
+    """
+    Admin: Broadcast a notification to multiple users.
+    
+    POST body:
+    - target: "all" | "admins" | "users" | "viewers"
+    - notification_type: Type of notification
+    - title: Notification title
+    - message: Notification message
+    - priority: Priority level (optional)
+    - action_url: Link for action (optional)
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        if not IsAdmin().has_permission(request, self):
+            return Response({"detail": "Only Admins can broadcast notifications."}, status=status.HTTP_403_FORBIDDEN)
+        
+        target = request.data.get('target', 'all')
+        notification_type = request.data.get('notification_type', Notification.TYPE_SYSTEM)
+        title = request.data.get('title')
+        message = request.data.get('message')
+        priority = request.data.get('priority', Notification.PRIORITY_NORMAL)
+        action_url = request.data.get('action_url')
+        reference_data = request.data.get('reference_data', {})
+        
+        if not title or not message:
+            return Response({"detail": "Title and message are required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Determine target users
+        from .models import Profile
+        
+        if target == 'all':
+            users = User.objects.all()
+        elif target == 'admins':
+            users = User.objects.filter(profile__role__in=[Profile.ROLE_ADMIN, Profile.ROLE_OWNER])
+        elif target == 'users':
+            users = User.objects.filter(profile__role=Profile.ROLE_USER)
+        elif target == 'viewers':
+            users = User.objects.filter(profile__role=Profile.ROLE_VIEWER)
+        else:
+            return Response({"detail": "Invalid target. Use: all, admins, users, or viewers."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Create notifications
+        notifications = []
+        for user in users:
+            notifications.append(Notification(
+                user=user,
+                notification_type=notification_type,
+                title=title,
+                message=message,
+                priority=priority,
+                action_url=action_url,
+                reference_data=reference_data
+            ))
+        
+        created = Notification.objects.bulk_create(notifications)
+        
+        return Response({
+            "status": "Broadcast sent",
+            "recipients": len(created),
+            "target": target
+        })

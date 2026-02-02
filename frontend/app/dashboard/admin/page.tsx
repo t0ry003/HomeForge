@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useUser } from "@/components/user-provider"
-import { Users, Home, Cpu, Shield, ArrowRight, Bug, CheckCircle } from "lucide-react"
+import { Users, Home, Cpu, Shield, ArrowRight, Bug } from "lucide-react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 
@@ -12,8 +12,7 @@ export default function AdminPage() {
   const adminModules = [
     { title: "User Management", description: "Manage users, roles, and permissions.", icon: Users, href: "/dashboard/admin/users", color: "text-blue-500", bg: "bg-blue-500/10" },
     { title: "Room Management", description: "Create and configure rooms and spaces.", icon: Home, href: "/dashboard/admin/rooms", color: "text-green-500", bg: "bg-green-500/10" },
-    { title: "Device Types", description: "Define and manage device type definitions.", icon: Cpu, href: "/dashboard/admin/device-types", color: "text-purple-500", bg: "bg-purple-500/10" },
-    { title: "Pending Approvals", description: "Review and approve submitted device types.", icon: CheckCircle, href: "/dashboard/admin/approvals", color: "text-amber-500", bg: "bg-amber-500/10" },
+    { title: "Device Types", description: "Manage device types, approvals, and denied submissions.", icon: Cpu, href: "/dashboard/admin/device-types", color: "text-purple-500", bg: "bg-purple-500/10" },
     { title: "Device Debug", description: "Test device states and debug UI behavior.", icon: Bug, href: "/dashboard/admin/debug", color: "text-orange-500", bg: "bg-orange-500/10" }
   ]
 

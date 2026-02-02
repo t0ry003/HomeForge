@@ -1,6 +1,7 @@
 "use client"
 
 import { usePathname } from "next/navigation"
+import Link from "next/link"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -19,7 +20,9 @@ export function DynamicBreadcrumbs() {
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem className="hidden md:block">
-          <BreadcrumbLink href="/">HomeForge</BreadcrumbLink>
+          <BreadcrumbLink asChild>
+            <Link href="/">HomeForge</Link>
+          </BreadcrumbLink>
         </BreadcrumbItem>
         {segments.map((segment, index) => {
           const isLast = index === segments.length - 1
@@ -35,7 +38,9 @@ export function DynamicBreadcrumbs() {
                 {isLast ? (
                   <BreadcrumbPage>{title}</BreadcrumbPage>
                 ) : (
-                  <BreadcrumbLink href={href}>{title}</BreadcrumbLink>
+                  <BreadcrumbLink asChild>
+                    <Link href={href}>{title}</Link>
+                  </BreadcrumbLink>
                 )}
               </BreadcrumbItem>
             </React.Fragment>

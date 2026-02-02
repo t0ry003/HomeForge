@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from .models import Profile, Device, Room, CustomDeviceType, DeviceCardTemplate, DeviceControl
+from .models import Profile, Device, Room, CustomDeviceType, DeviceCardTemplate, DeviceControl, Notification
 
 
 class DeviceControlSerializer(serializers.ModelSerializer):
@@ -221,3 +221,93 @@ class RegisterSerializer(serializers.ModelSerializer):
         profile.role = role
         profile.save()
         return user
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    """Serializer for Notification model."""
+    
+    # Human-readable type and priority
+    notification_type_display = serializers.CharField(source='get_notification_type_display', read_only=True)
+    priority_display = serializers.CharField(source='get_priority_display', read_only=True)
+    
+    # Time since creation (for display)
+    time_ago = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Notification
+        fields = [
+            'id',
+            'notification_type',
+            'notification_type_display',
+            'title',
+            'message',
+            'priority',
+            'priority_display',
+            'is_read',
+            'reference_data',
+            'action_url',
+            'created_at',
+            'read_at',
+            'time_ago',
+        ]
+        read_only_fields = ['id', 'created_at', 'read_at', 'time_ago']
+    
+    def get_time_ago(self, obj):
+        """Calculate human-readable time since notification was created."""
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        now = timezone.now()
+        diff = now - obj.created_at
+        
+        if diff < timedelta(minutes=1):
+            return "Just now"
+        elif diff < timedelta(hours=1):
+            minutes = int(diff.total_seconds() / 60)
+            return f"{minutes}m ago"
+        elif diff < timedelta(days=1):
+            hours = int(diff.total_seconds() / 3600)
+            return f"{hours}h ago"
+        elif diff < timedelta(days=7):
+            days = diff.days
+            return f"{days}d ago"
+        else:
+            return obj.created_at.strftime("%b %d, %Y")
+
+
+class NotificationCreateSerializer(serializers.ModelSerializer):
+    """Serializer for creating notifications (admin use)."""
+    
+    # Allow specifying user by ID or username
+    user_id = serializers.IntegerField(write_only=True, required=False)
+    username = serializers.CharField(write_only=True, required=False)
+    
+    class Meta:
+        model = Notification
+        fields = [
+            'user_id',
+            'username',
+            'notification_type',
+            'title',
+            'message',
+            'priority',
+            'reference_data',
+            'action_url',
+        ]
+    
+    def validate(self, data):
+        user_id = data.pop('user_id', None)
+        username = data.pop('username', None)
+        
+        if not user_id and not username:
+            raise serializers.ValidationError("Either 'user_id' or 'username' must be provided.")
+        
+        try:
+            if user_id:
+                data['user'] = User.objects.get(pk=user_id)
+            else:
+                data['user'] = User.objects.get(username=username)
+        except User.DoesNotExist:
+            raise serializers.ValidationError("User not found.")
+        
+        return data

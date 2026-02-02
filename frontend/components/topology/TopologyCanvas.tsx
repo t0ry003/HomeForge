@@ -116,7 +116,7 @@ export default function TopologyCanvas({ nodes: initialNodes }: TopologyCanvasPr
   }, [initialNodes, setNodes, setEdges]); 
 
   return (
-    <div className="w-full h-full bg-background overflow-hidden relative">
+    <div className="w-full h-full overflow-hidden relative" style={{ backgroundColor: 'hsl(var(--background))' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -132,8 +132,9 @@ export default function TopologyCanvas({ nodes: initialNodes }: TopologyCanvasPr
         elementsSelectable={true}
         zoomOnScroll={true}
         panOnDrag={true}
+        style={{ backgroundColor: 'hsl(var(--background))' }}
       >
-        <Background color="var(--muted-foreground)" gap={32} size={2} variant={BackgroundVariant.Dots} className="opacity-[0.15]" />
+        <Background color="hsl(var(--muted-foreground))" gap={32} size={2} variant={BackgroundVariant.Dots} className="opacity-[0.15]" />
         <Controls 
           className="!bg-card/90 !border !border-border !shadow-xl !rounded-lg overflow-hidden [&>button]:!bg-transparent [&>button]:!border-0 [&_svg]:!fill-muted-foreground [&>button:hover]:!bg-muted [&>button:hover_svg]:!fill-foreground" 
         />
