@@ -271,9 +271,11 @@ export default function AdminApprovalsPage() {
                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shrink-0">
                                 <div>
                                     <h2 className="text-lg font-bold">{selectedType.name}</h2>
-                                    <p className="text-xs text-muted-foreground">
-                                        by {selectedType.owner || selectedType.created_by?.username || "Unknown"}
-                                    </p>
+                                    {(selectedType.owner || selectedType.created_by?.username) && (
+                                        <p className="text-xs text-muted-foreground">
+                                            by {selectedType.owner || selectedType.created_by?.username}
+                                        </p>
+                                    )}
                                 </div>
                                 <div className="flex gap-2 w-full sm:w-auto">
                                      <Button variant="outline" size="sm" className="flex-1 sm:flex-none border-red-500/30 text-red-600 hover:bg-red-500/10 hover:text-red-600" onClick={() => setIsDenyOpen(true)}>
