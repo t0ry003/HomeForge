@@ -163,6 +163,14 @@ export default function DeviceTypesManagementPage() {
     const [selectedType, setSelectedType] = useState<any>(null);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
     
+    // Sync filter state with URL when searchParams change
+    useEffect(() => {
+        const urlFilter = (searchParams.get('filter') as StatusFilter) || 'all';
+        if (urlFilter !== statusFilter) {
+            setStatusFilter(urlFilter);
+        }
+    }, [searchParams]);
+    
     // Graph State
     const [nodes, setNodes] = useNodesState([]);
     const [edges, setEdges] = useEdgesState([]);
@@ -356,6 +364,27 @@ export default function DeviceTypesManagementPage() {
         },
         onError: (e: any) => {
             toast.error("Bulk Delete Failed", { description: e.message });
+        },
+    });
+
+    // Save name mutation (without approving)
+    const saveNameMutation = useMutation({
+        mutationFn: async ({ id, newName }: { id: number; newName: string }) => {
+            return updateAdminDeviceType(id, { name: newName }, true);
+        },
+        onSuccess: () => {
+            toast.success("Name Updated", { 
+                description: "Device type name has been saved." 
+            });
+            setIsEditingName(false);
+            // Update the selected type with new name
+            if (selectedType) {
+                setSelectedType({ ...selectedType, name: editName });
+            }
+            queryClient.invalidateQueries({ queryKey: ['pendingDeviceTypes'] });
+        },
+        onError: (e: any) => {
+            toast.error("Save Failed", { description: e.message });
         },
     });
 
@@ -585,10 +614,10 @@ export default function DeviceTypesManagementPage() {
                                 <SelectContent>
                                     {allTypes.map((t: any) => (
                                         <SelectItem key={`${t._status}-${t.id}`} value={`${t._status}-${t.id}`}>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 max-w-[250px]">
                                                 <StatusBadge status={t._status} />
-                                                <span className="truncate">{t.name}</span>
-                                                <span className="text-xs text-muted-foreground ml-auto">
+                                                <span className="truncate flex-1 min-w-0">{t.name}</span>
+                                                <span className="text-xs text-muted-foreground shrink-0">
                                                     {t.definition?.structure?.length || 0} comp.
                                                 </span>
                                             </div>
@@ -651,11 +680,11 @@ export default function DeviceTypesManagementPage() {
                                                     />
                                                 )}
                                                 <div 
-                                                    className="flex-1 cursor-pointer"
+                                                    className="flex-1 cursor-pointer min-w-0"
                                                     onClick={() => handleSelect(t)}
                                                 >
                                                     <div className="flex items-center justify-between gap-2">
-                                                        <span className="font-medium text-sm truncate">{t.name}</span>
+                                                        <span className="font-medium text-sm truncate flex-1 min-w-0">{t.name}</span>
                                                         <StatusBadge status={t._status} />
                                                     </div>
                                                     <div className="text-xs text-muted-foreground mt-1.5">
@@ -708,6 +737,19 @@ export default function DeviceTypesManagementPage() {
                                                             placeholder="Enter device name"
                                                         />
                                                         <Button 
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                if (editName.trim() && editName !== selectedType.name) {
+                                                                    saveNameMutation.mutate({ id: selectedType.id, newName: editName.trim() });
+                                                                } else {
+                                                                    setIsEditingName(false);
+                                                                }
+                                                            }}
+                                                            disabled={!editName.trim() || saveNameMutation.isPending}
+                                                        >
+                                                            {saveNameMutation.isPending ? "Saving..." : "Save"}
+                                                        </Button>
+                                                        <Button 
                                                             variant="ghost" 
                                                             size="sm"
                                                             onClick={() => {
@@ -719,15 +761,42 @@ export default function DeviceTypesManagementPage() {
                                                         </Button>
                                                     </div>
                                                 ) : (
-                                                    <h2 className="text-lg font-bold">{selectedType.name}</h2>
+                                                    <h2 className="text-lg font-bold truncate max-w-[300px]">{selectedType.name}</h2>
+                                                )}
+                                                {/* Show who requested it */}
+                                                {selectedType.proposed_by_username && (
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        Requested by{" "}
+                                                        <Link 
+                                                            href={`/dashboard/admin/users?username=${encodeURIComponent(selectedType.proposed_by_username)}`}
+                                                            className="text-primary hover:underline font-medium"
+                                                        >
+                                                            {selectedType.proposed_by_username}
+                                                        </Link>
+                                                        {selectedType.created_at && (
+                                                            <> on {new Date(selectedType.created_at).toLocaleDateString()}</>
+                                                        )}
+                                                    </p>
                                                 )}
                                             </div>
                                         ) : (
-                                            <div>
-                                                <h2 className="text-lg font-bold">{selectedType.name}</h2>
+                                            <div className="min-w-0 flex-1">
+                                                <h2 className="text-lg font-bold truncate">{selectedType.name}</h2>
                                                 {selectedType._status === 'denied' && (
                                                     <p className="text-xs text-muted-foreground">
                                                         Denied on {new Date(selectedType.created_at).toLocaleDateString()}
+                                                    </p>
+                                                )}
+                                                {/* Show who requested it for approved/denied too */}
+                                                {selectedType.proposed_by_username && selectedType._status !== 'denied' && (
+                                                    <p className="text-xs text-muted-foreground">
+                                                        Created by{" "}
+                                                        <Link 
+                                                            href={`/dashboard/admin/users?username=${encodeURIComponent(selectedType.proposed_by_username)}`}
+                                                            className="text-primary hover:underline font-medium"
+                                                        >
+                                                            {selectedType.proposed_by_username}
+                                                        </Link>
                                                     </p>
                                                 )}
                                             </div>
@@ -803,11 +872,14 @@ export default function DeviceTypesManagementPage() {
                             {/* Preview Panels */}
                             <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0 overflow-auto">
                                 {/* Panel 1: Hardware Topology */}
-                                <div className="flex flex-col rounded-lg border bg-card overflow-hidden min-h-[300px]">
+                                <div className="flex flex-col rounded-lg border overflow-hidden min-h-[300px]">
                                     <div className="py-2 px-3 border-b bg-muted/30 shrink-0">
                                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Hardware Topology</span>
                                     </div>
-                                    <div className="flex-1 relative">
+                                    <div 
+                                        className="flex-1 relative [&_.react-flow__pane]:!bg-transparent [&_.react-flow__background]:!bg-transparent" 
+                                        style={{ backgroundColor: 'hsl(var(--background))' }}
+                                    >
                                         <ReactFlowProvider key={`${selectedType._status}-${selectedType.id}`}>
                                             <ReactFlow
                                                 nodes={nodes}
@@ -819,7 +891,7 @@ export default function DeviceTypesManagementPage() {
                                                 nodesDraggable={false}
                                                 nodesConnectable={false}
                                                 elementsSelectable={false}
-                                                className="bg-background"
+                                                style={{ backgroundColor: 'hsl(var(--background))' }}
                                             />
                                         </ReactFlowProvider>
                                     </div>
