@@ -1,11 +1,20 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useMemo } from "react"
+import { useSearchParams } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { MoreHorizontal, Shield, User as UserIcon, Eye, Check } from "lucide-react"
+import { MoreHorizontal, Shield, User as UserIcon, Eye, Check, Search, X } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import {
   Table,
   TableBody,
@@ -41,8 +50,25 @@ import { fetchUsers, updateUserAdmin, deleteUser, getAvatarUrl } from "@/lib/api
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
 export default function UsersPage() {
+  const searchParams = useSearchParams()
   const [userToDelete, setUserToDelete] = useState<number | null>(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [roleFilter, setRoleFilter] = useState<string>("all")
+  const [highlightedUserId, setHighlightedUserId] = useState<number | null>(null)
   const queryClient = useQueryClient()
+
+  // Get user ID from URL params for highlighting
+  useEffect(() => {
+    const userId = searchParams.get('user')
+    const username = searchParams.get('username')
+    if (userId) {
+      setHighlightedUserId(parseInt(userId))
+      // Clear highlight after 3 seconds
+      setTimeout(() => setHighlightedUserId(null), 3000)
+    } else if (username) {
+      setSearchQuery(username)
+    }
+  }, [searchParams])
 
   // Fetch users with React Query
   const { data: users = [], isLoading } = useQuery({
@@ -54,6 +80,21 @@ export default function UsersPage() {
     staleTime: 30000,
     gcTime: 5 * 60 * 1000,
   })
+
+  // Filter users based on search and role
+  const filteredUsers = useMemo(() => {
+    return users.filter((user: any) => {
+      const matchesSearch = searchQuery === "" || 
+        user.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchQuery.toLowerCase())
+      
+      const userRole = user.profile?.role || user.role || 'user'
+      const matchesRole = roleFilter === "all" || userRole === roleFilter
+      
+      return matchesSearch && matchesRole
+    })
+  }, [users, searchQuery, roleFilter])
 
   // Role change mutation
   const roleChangeMutation = useMutation({
@@ -118,6 +159,50 @@ export default function UsersPage() {
         </div>
       </div>
 
+      {/* Search and Filter Controls */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search users..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-9"
+          />
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+              onClick={() => setSearchQuery("")}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
+        <Select value={roleFilter} onValueChange={setRoleFilter}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Filter by role" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="owner">Owner</SelectItem>
+            <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="user">User</SelectItem>
+            <SelectItem value="viewer">Viewer</SelectItem>
+          </SelectContent>
+        </Select>
+        {(searchQuery || roleFilter !== "all") && (
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => { setSearchQuery(""); setRoleFilter("all"); }}
+          >
+            Clear filters
+          </Button>
+        )}
+      </div>
+
       <div className="rounded-md border bg-card overflow-x-auto">
         <Table className="min-w-[600px]">
           <TableHeader>
@@ -145,15 +230,18 @@ export default function UsersPage() {
                   </TableRow>
                 ))}
               </>
-            ) : users.length === 0 ? (
+            ) : filteredUsers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-24 text-center">
-                  No users found.
+                  {users.length === 0 ? "No users found." : "No users match the current filters."}
                 </TableCell>
               </TableRow>
             ) : (
-              users.map((user) => (
-                <TableRow key={user.id}>
+              filteredUsers.map((user: any) => (
+                <TableRow 
+                  key={user.id}
+                  className={highlightedUserId === user.id ? "bg-primary/10 animate-pulse" : ""}
+                >
                   <TableCell>
                       <Avatar className="h-8 w-8">
                             <AvatarImage src={getAvatarUrl(user.profile?.avatar || user.avatar)} alt={user.username} />
