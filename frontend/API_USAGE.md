@@ -603,6 +603,8 @@ Device Types define the hardware specification and UI template for a category of
     },
     "approved": true,
     "rejection_reason": null,
+    "proposed_by": 1,
+    "proposed_by_username": "johndoe",
     "created_at": "2026-01-15T10:30:00Z",
     "card_template": {
       "id": 1,

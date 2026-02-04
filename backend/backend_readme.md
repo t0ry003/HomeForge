@@ -250,7 +250,8 @@ HomeForge is an open-source smart home management system designed for DIY IoT en
                           │  - approved     │       └──────────────────┘
                           │  - rejection_   │               │
                           │    reason       │               │ 1:N
-                          └─────────────────┘               ▼
+                          │  - proposed_by  │               ▼
+                          └─────────────────┘
                                                     ┌──────────────────┐
                                                     │  DeviceControl   │
                                                     │                  │
@@ -305,6 +306,7 @@ Definition of a device category with hardware structure.
 | `definition` | JSONField | Node builder structure |
 | `approved` | BooleanField | Admin approval status |
 | `rejection_reason` | TextField | Denial explanation |
+| `proposed_by` | ForeignKey → User | User who proposed this type |
 | `created_at` | DateTimeField | Creation timestamp |
 
 #### DeviceCardTemplate
