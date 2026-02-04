@@ -66,7 +66,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 type WidgetType = 'TOGGLE' | 'SLIDER' | 'TEMPERATURE' | 'HUMIDITY' | 'MOTION' | 'LIGHT' | 'CO2';
-type WidgetVariant = 'row' | 'square' | 'compact';
+type WidgetVariant = 'row' | 'square';
 type WidgetSize = 'sm' | 'md' | 'lg';
 
 interface Widget {
@@ -175,6 +175,13 @@ function SortableSquareWidget({ widget, isSelected, onSelect }: SortableSquareWi
   };
 
   const colors = getWidgetColors(widget.type);
+  
+  // Size classes for grid spanning
+  const sizeClasses = {
+    sm: '',
+    md: '',
+    lg: 'col-span-2 row-span-2',
+  };
 
   return (
     <div 
@@ -186,7 +193,8 @@ function SortableSquareWidget({ widget, isSelected, onSelect }: SortableSquareWi
         isSelected 
           ? 'ring-2 ring-primary border-primary' 
           : `${colors.border} ${colors.bg} hover:shadow-md`,
-        isDragging && 'shadow-xl ring-2 ring-primary'
+        isDragging && 'shadow-xl ring-2 ring-primary',
+        sizeClasses[widget.size || 'md']
       )}
       onClick={onSelect}
     >
@@ -279,13 +287,21 @@ function SortableRowWidget({ widget, isSelected, onSelect, mappedLabel }: Sortab
     opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 50 : 'auto',
   };
+  
+  // Size classes for row height
+  const sizeClasses = {
+    sm: 'h-12 py-1.5',
+    md: 'h-14 py-2',
+    lg: 'h-20 py-4',
+  };
 
   return (
     <div 
       ref={setNodeRef}
       style={style}
       className={cn(
-        "group relative px-3 py-2 rounded-xl border transition-all cursor-pointer h-14 touch-manipulation",
+        "group relative px-3 rounded-xl border transition-all cursor-pointer touch-manipulation",
+        sizeClasses[widget.size || 'md'],
         isSelected 
           ? 'border-primary ring-2 ring-primary bg-primary/5' 
           : 'border-border bg-card/40 hover:bg-card hover:border-primary/20 hover:shadow-md',
@@ -362,32 +378,108 @@ function convertControlsToWidgets(controls: CardTemplateControl[]): Widget[] {
 }
 
 // Auto-generate widgets from nodes
+// Algorithm:
+// 1. Separate sensors and controls
+// 2. For sensors:
+//    - 1 sensor: row layout, large size (prominent single reading)
+//    - 2 sensors: square layout, medium size (balanced grid)
+//    - 3 sensors: 1 large square + 2 medium squares OR 3 medium squares
+//    - 4+ sensors: square layout, alternate sizes for visual hierarchy
+// 3. For controls (switches):
+//    - 1 control: row layout, large size
+//    - 2-3 controls: row layout, medium size
+//    - 4+ controls: row layout, small size (compact list)
+// 4. Pair related sensors (temp+humidity) with matching sizes
+// 5. Motion sensors always get medium size (binary state doesn't need emphasis)
 function autoGenerateWidgets(nodes: Node[]): Widget[] {
   const mappableNodes = nodes.filter(n => n.data.type !== 'mcu');
   const widgets: Widget[] = [];
   
-  // Separate sensors and controls for layout
-  const sensorNodes = mappableNodes.filter(n => ['temperature', 'humidity', 'motion', 'light', 'co2'].includes(n.data.type));
+  // Separate sensors and controls
+  const sensorTypes = ['temperature', 'humidity', 'motion', 'light', 'co2'];
+  const sensorNodes = mappableNodes.filter(n => sensorTypes.includes(n.data.type));
   const controlNodes = mappableNodes.filter(n => n.data.type === 'switch');
   
-  // Add sensor widgets (prefer square layout for sensors)
+  // Detect related sensor pairs for layout grouping
+  const hasTemp = sensorNodes.some(n => n.data.type === 'temperature');
+  const hasHumidity = sensorNodes.some(n => n.data.type === 'humidity');
+  const hasTempHumidityPair = hasTemp && hasHumidity;
+  
+  // Determine sensor layout strategy based on count
+  const sensorCount = sensorNodes.length;
+  let sensorVariant: WidgetVariant = 'square';
+  let defaultSensorSize: WidgetSize = 'md';
+  
+  if (sensorCount === 1) {
+    // Single sensor: row layout, large for prominence
+    sensorVariant = 'row';
+    defaultSensorSize = 'lg';
+  } else if (sensorCount === 2) {
+    // Two sensors: square grid, medium size
+    sensorVariant = 'square';
+    defaultSensorSize = 'md';
+  } else if (sensorCount >= 3) {
+    // 3+ sensors: square grid, varied sizes
+    sensorVariant = 'square';
+    defaultSensorSize = 'md';
+  }
+  
+  // Add sensor widgets with intelligent sizing
   sensorNodes.forEach((node, index) => {
     const widgetType = NODE_TO_WIDGET_MAP[node.data.type];
     const widgetDef = ALL_WIDGET_TYPES.find(w => w.type === widgetType);
     if (widgetType && widgetDef) {
+      let size: WidgetSize = defaultSensorSize;
+      
+      // Apply smart sizing rules
+      if (sensorCount === 1) {
+        size = 'lg';
+      } else if (sensorCount === 3 && index === 0) {
+        // First sensor gets large size for visual hierarchy
+        size = 'lg';
+      } else if (sensorCount >= 4) {
+        // Alternate sizes for visual rhythm: first large, rest medium
+        // But motion sensors stay medium (binary doesn't need large)
+        if (index === 0 && node.data.type !== 'motion') {
+          size = 'lg';
+        } else {
+          size = 'md';
+        }
+      }
+      
+      // Motion sensors: always medium (binary state)
+      if (node.data.type === 'motion') {
+        size = 'md';
+      }
+      
+      // Temp/Humidity pairs: same size for visual consistency
+      if (hasTempHumidityPair && (node.data.type === 'temperature' || node.data.type === 'humidity')) {
+        size = sensorCount <= 2 ? 'md' : 'md';
+      }
+      
       widgets.push({
         id: `widget-auto-${Date.now()}-${index}`,
         type: widgetType,
         label: node.data.label || widgetDef.defaultLabel,
         variable_mapping: node.id,
-        variant: sensorNodes.length >= 2 ? 'square' : 'row',
-        size: 'md',
+        variant: sensorVariant,
+        size,
         unit: 'unit' in widgetDef ? widgetDef.unit : undefined,
       });
     }
   });
   
-  // Add control widgets (row layout)
+  // Determine control layout strategy based on count
+  const controlCount = controlNodes.length;
+  let controlSize: WidgetSize = 'md';
+  
+  if (controlCount === 1) {
+    controlSize = 'lg';
+  } else if (controlCount >= 4) {
+    controlSize = 'sm';
+  }
+  
+  // Add control widgets (always row layout for easy toggling)
   controlNodes.forEach((node, index) => {
     widgets.push({
       id: `widget-auto-ctrl-${Date.now()}-${index}`,
@@ -395,7 +487,7 @@ function autoGenerateWidgets(nodes: Node[]): Widget[] {
       label: node.data.label || 'Power',
       variable_mapping: node.id,
       variant: 'row',
-      size: 'md',
+      size: controlSize,
     });
   });
   
@@ -743,13 +835,13 @@ export default function DeviceUICreator({ nodes, onBack, onSave, isSubmitting, i
                             )}
                             
                             {/* Row widgets stacked */}
-                            {widgets.filter(w => w.variant !== 'square').length > 0 && (
+                            {widgets.filter(w => w.variant === 'row').length > 0 && (
                               <SortableContext 
-                                items={widgets.filter(w => w.variant !== 'square').map(w => w.id)}
+                                items={widgets.filter(w => w.variant === 'row').map(w => w.id)}
                                 strategy={verticalListSortingStrategy}
                               >
                                 <div className="space-y-2">
-                                  {widgets.filter(w => w.variant !== 'square').map((widget) => (
+                                  {widgets.filter(w => w.variant === 'row').map((widget) => (
                                     <SortableRowWidget
                                       key={widget.id}
                                       widget={widget}
@@ -914,12 +1006,6 @@ export default function DeviceUICreator({ nodes, onBack, onSave, isSubmitting, i
                                       <div className="flex items-center gap-2">
                                           <LayoutGrid className="w-3 h-3" />
                                           <span>Square</span>
-                                      </div>
-                                  </SelectItem>
-                                  <SelectItem value="compact">
-                                      <div className="flex items-center gap-2">
-                                          <span className="w-3 h-3 text-[8px]">─</span>
-                                          <span>Compact</span>
                                       </div>
                                   </SelectItem>
                               </SelectContent>
