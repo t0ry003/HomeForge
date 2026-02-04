@@ -182,9 +182,9 @@ function DeviceDebugCard({ device, onRefresh }: { device: Device; onRefresh: () 
   return (
     <>
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <Card className={`transition-all ${isOpen ? 'ring-2 ring-primary/50' : ''}`}>
-          <CollapsibleTrigger asChild>
-            <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+        <CollapsibleTrigger asChild>
+          <Card className={`transition-all cursor-pointer hover:bg-muted/30 ${isOpen ? 'ring-2 ring-primary/50' : ''}`}>
+            <CardHeader>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={`h-3 w-3 rounded-full ${
@@ -204,10 +204,12 @@ function DeviceDebugCard({ device, onRefresh }: { device: Device; onRefresh: () 
                 </div>
               </div>
             </CardHeader>
-          </CollapsibleTrigger>
+          </Card>
+        </CollapsibleTrigger>
           
           <CollapsibleContent>
-            <CardContent className="space-y-6 border-t pt-4">
+            <Card className="mt-2 border-primary/20">
+            <CardContent className="space-y-6 pt-4">
               {/* Status Control */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium flex items-center gap-2">
@@ -230,12 +232,6 @@ function DeviceDebugCard({ device, onRefresh }: { device: Device; onRefresh: () 
                         <div className="flex items-center gap-2">
                           <div className="h-2 w-2 rounded-full bg-zinc-400" />
                           Offline
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="error">
-                        <div className="flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-amber-500" />
-                          Error
                         </div>
                       </SelectItem>
                     </SelectContent>
@@ -271,16 +267,6 @@ function DeviceDebugCard({ device, onRefresh }: { device: Device; onRefresh: () 
                   >
                     <WifiOff className="h-4 w-4 mr-1" />
                     Set Offline
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    className="border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-600"
-                    onClick={() => { setStatus('error'); updateMutation.mutate({ status: 'error' }); }}
-                    disabled={updateMutation.isPending}
-                  >
-                    <AlertTriangle className="h-4 w-4 mr-1" />
-                    Set Error
                   </Button>
                 </div>
               </div>
@@ -344,8 +330,8 @@ function DeviceDebugCard({ device, onRefresh }: { device: Device; onRefresh: () 
                 </Button>
               </div>
             </CardContent>
+          </Card>
           </CollapsibleContent>
-        </Card>
       </Collapsible>
 
       {/* Delete Confirmation Dialog */}
