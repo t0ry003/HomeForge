@@ -387,7 +387,20 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## 📋 Changelog
 
-### [2026-02-04] - v1.4.0 (Latest)
+### [2026-02-04] - v1.4.1 (Latest)
+- **Added**: `proposed_by` field to CustomDeviceType model to track who submitted device types
+- **Added**: Device type detail view shows proposer username with link to user profile
+- **Added**: Users page search and filter functionality (by name, email, role)
+- **Added**: Users page URL deep linking (`?user=1` or `?username=johndoe`)
+- **Added**: Save name mutation for device types (save without approving)
+- **Changed**: Notification center now clears cache on logout and refetches on login
+- **Changed**: Notifications only fetch when user is logged in
+- **Changed**: Device types page shows "Requested by" / "Created by" with clickable username
+- **Changed**: API version updated to v1.4.0 with `proposed_by` and `proposed_by_username` fields
+- **Fixed**: Notification cache invalidation on user session changes
+- **Fixed**: Device types page text truncation for long names
+
+### [2026-02-04] - v1.4.0
 - **Added**: Smart auto-generate algorithm for Device Builder with intelligent layout rules
 - **Added**: Sensor layout strategy based on count (1=row large, 2=square medium, 3+=grid hierarchy)
 - **Added**: Special sensor rules (motion always medium, temp/humidity pairs match)
