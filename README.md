@@ -387,7 +387,20 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## 📋 Changelog
 
-### [2026-02-02] - v1.3.1 (Latest)
+### [2026-02-04] - v1.4.0 (Latest)
+- **Added**: Smart auto-generate algorithm for Device Builder with intelligent layout rules
+- **Added**: Sensor layout strategy based on count (1=row large, 2=square medium, 3+=grid hierarchy)
+- **Added**: Special sensor rules (motion always medium, temp/humidity pairs match)
+- **Added**: Control sizing strategy based on count (1=large, 2-3=medium, 4+=small)
+- **Changed**: Device Builder widget sizes now work correctly (Small/Medium/Large)
+- **Changed**: Square widgets Large size now spans 2x2 grid cells
+- **Changed**: Row widgets use explicit heights (Small=48px, Medium=56px, Large=80px)
+- **Changed**: Debug panel device cards now fully clickable to expand/collapse
+- **Fixed**: Row widget filter changed from `variant !== 'square'` to explicit `variant === 'row'`
+- **Removed**: Unused "compact" layout variant from Device Builder
+- **Removed**: Error status from Debug panel (per UX feedback)
+
+### [2026-02-02] - v1.3.1
 - **Fixed**: Dashboard "No Devices" flash during API refetches with module-level cache
 - **Fixed**: Notification URL transformation for device type deep linking
 - **Fixed**: DevContainer setup with improved run scripts for backend and frontend
