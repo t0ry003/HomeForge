@@ -1,5 +1,44 @@
 # HomeForge Frontend Changelog
 
+## [2026-02-04] - Device Builder UI Improvements
+
+### Changed
+
+#### Device UI Creator (`app/dashboard/device-builder/DeviceUICreator.tsx`)
+- **Removed Compact Variant**: Removed unused "compact" layout style, keeping only Row and Square
+- **Fixed Size Options**: Small, Medium, and Large sizes now work correctly for both layouts:
+  - **Square widgets**: Large (`lg`) spans 2x2 grid cells
+  - **Row widgets**: Small = 48px, Medium = 56px, Large = 80px height
+- **Fixed Row Widget Filter**: Changed from `variant !== 'square'` to explicit `variant === 'row'`
+
+#### Smart Auto-Generate Algorithm
+Completely rewrote the auto-generate function with intelligent layout rules:
+
+**Sensor Layout Strategy:**
+| Count | Layout | Sizing |
+|-------|--------|--------|
+| 1 sensor | Row | Large (prominent single reading) |
+| 2 sensors | Square grid | Medium (balanced pair) |
+| 3 sensors | Square grid | First Large, others Medium |
+| 4+ sensors | Square grid | First Large (if not motion), others Medium |
+
+**Special Sensor Rules:**
+- Motion sensors always Medium (binary state doesn't need emphasis)
+- Temperature + Humidity pairs get matching sizes for visual consistency
+
+**Control (Switch) Layout Strategy:**
+| Count | Size |
+|-------|------|
+| 1 control | Large |
+| 2-3 controls | Medium |
+| 4+ controls | Small (compact list) |
+
+#### Debug Panel (`app/dashboard/admin/debug/page.tsx`)
+- **Removed Error Status**: Removed "Set Error" quick button and error option from dropdown (per user request)
+- **Expanded Clickable Area**: Entire device card is now clickable to expand/collapse
+
+---
+
 ## [2026-02-02] - Dashboard Loading State & Notification Fixes
 
 ### Changed

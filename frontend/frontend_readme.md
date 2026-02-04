@@ -224,9 +224,17 @@ Interactive canvas for designing device configurations:
 - **Node Connections** — Top handle = output, Bottom = input
 - **Validation** — Single MCU per device
 - **Glassmorphism UI** — Translucent, modern node design
-- **Auto-Generate** — Automatically create UI widgets from topology sensors
+- **Smart Auto-Generate** — Automatically create UI widgets from topology with intelligent sizing:
+  - Single sensors get large row layout for prominence
+  - Multiple sensors use square grid with visual hierarchy
+  - Motion sensors stay medium (binary state)
+  - Temp/Humidity pairs get matching sizes
+  - Control count determines switch sizing
 - **Sensor Widgets** — Temperature, Humidity, Motion, Light, CO2 displays
-- **Flexible Layouts** — Row, Square, or Compact widget styles with 1-2 column grids
+- **Flexible Layouts** — Row or Square widget styles with configurable sizes (Small/Medium/Large)
+- **Size Options** — Small, Medium, Large affect widget dimensions:
+  - Square: Large spans 2x2 grid cells
+  - Row: Small (48px), Medium (56px), Large (80px) height
 
 ### Smart Device Cards
 
@@ -267,10 +275,44 @@ Three-step registration wizard:
 
 ### Admin Panel (`/dashboard/admin`)
 
-- **Rooms** — Create, edit, delete rooms
-- **Users** — View users, manage roles
-- **Device Types** — Manage device type definitions with URL filter support (`?filter=pending`)
-- **Debug** — Test device states and UI behavior
+Admin-only features for system management:
+
+#### Rooms (`/dashboard/admin/rooms`)
+- Create, edit, and delete rooms
+- Assign rooms to device locations
+
+#### Users (`/dashboard/admin/users`)
+- View all registered users
+- Manage user roles (owner, admin, user, viewer)
+
+#### Device Types (`/dashboard/admin/device-types`)
+- View all device type definitions
+- Filter by status: All, Approved, Pending, Denied
+- Deep linking support: `?filter=pending` auto-selects filter
+- Approve or deny pending device type submissions
+- Review hardware topology before approval
+
+#### Approvals (`/dashboard/admin/approvals`)
+- Quick access to pending device types requiring review
+
+#### Debug Panel (`/dashboard/admin/debug`)
+Developer tool for testing device states:
+
+- **Device List**: All registered devices displayed as collapsible cards
+- **Clickable Cards**: Click anywhere on a device card to expand/collapse
+- **Status Control**:
+  - Toggle between Online and Offline states
+  - Quick buttons for instant status changes
+  - Status saved to backend via API
+- **State Editor**:
+  - JSON textarea to modify `current_state`
+  - Validation with error highlighting
+  - Quick toggles: "All ON" / "All OFF" for relay states
+- **Device Deletion**: Delete devices with confirmation dialog
+- **Visual Feedback**:
+  - Status indicator dots (green = online, gray = offline)
+  - Hover states and ring highlights for selected cards
+  - Loading states during API operations
 
 ### Notification Center
 
