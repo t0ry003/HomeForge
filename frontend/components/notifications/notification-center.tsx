@@ -194,12 +194,25 @@ export function NotificationCenter() {
   const queryClient = useQueryClient()
   const [open, setOpen] = React.useState(false)
 
+  // Invalidate notifications when user changes (login/logout)
+  React.useEffect(() => {
+    if (user) {
+      // User just logged in - refetch notifications immediately
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+    } else {
+      // User logged out - clear notification cache
+      queryClient.removeQueries({ queryKey: ['notifications'] })
+    }
+  }, [user?.id, queryClient])
+
   // Fetch unread count for badge
   const { data: unreadData } = useQuery({
     queryKey: ['notifications', 'unread-count'],
     queryFn: fetchUnreadNotificationCount,
     staleTime: 30000,
     refetchInterval: 30000,
+    refetchOnMount: 'always', // Always refetch on mount/page load
+    enabled: !!user, // Only fetch if user is logged in
   })
 
   // Fetch notifications when popover opens
