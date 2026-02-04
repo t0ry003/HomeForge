@@ -109,6 +109,14 @@ class CustomDeviceType(models.Model):
     definition = models.JSONField(default=dict, blank=True)
     approved = models.BooleanField(default=False, db_index=True)
     rejection_reason = models.TextField(blank=True, null=True, help_text="Reason for rejection if denied Admin approval")
+    proposed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='proposed_device_types',
+        help_text="User who proposed this device type"
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

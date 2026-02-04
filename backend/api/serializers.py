@@ -47,11 +47,12 @@ class DeviceCardTemplateSerializer(serializers.ModelSerializer):
 
 class CustomDeviceTypeSerializer(serializers.ModelSerializer):
     card_template = DeviceCardTemplateSerializer(required=False)
+    proposed_by_username = serializers.CharField(source='proposed_by.username', read_only=True)
 
     class Meta:
         model = CustomDeviceType
-        fields = ['id', 'name', 'definition', 'approved', 'rejection_reason', 'created_at', 'card_template']
-        read_only_fields = ['id', 'created_at', 'approved', 'rejection_reason']
+        fields = ['id', 'name', 'definition', 'approved', 'rejection_reason', 'proposed_by', 'proposed_by_username', 'created_at', 'card_template']
+        read_only_fields = ['id', 'created_at', 'approved', 'rejection_reason', 'proposed_by', 'proposed_by_username']
         extra_kwargs = {
             'name': {
                 'error_messages': {
@@ -82,6 +83,11 @@ class CustomDeviceTypeSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         card_template_data = validated_data.pop('card_template', None)
+        
+        # Set proposed_by from request context
+        request = self.context.get('request')
+        if request and hasattr(request, 'user') and request.user.is_authenticated:
+            validated_data['proposed_by'] = request.user
         
         # Create the Device Type
         device_type = CustomDeviceType.objects.create(**validated_data)
