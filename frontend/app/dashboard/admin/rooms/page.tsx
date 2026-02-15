@@ -158,7 +158,7 @@ export default function RoomsPage() {
                 </TableCell>
               </TableRow>
             ) : (
-              rooms.map((room) => (
+              rooms.map((room: any) => (
                 <TableRow key={room.id}>
                   <TableCell className="font-medium">{room.name}</TableCell>
                   <TableCell className="text-right">

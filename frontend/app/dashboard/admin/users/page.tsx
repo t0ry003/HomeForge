@@ -244,7 +244,7 @@ export default function UsersPage() {
                 >
                   <TableCell>
                       <Avatar className="h-8 w-8">
-                            <AvatarImage src={getAvatarUrl(user.profile?.avatar || user.avatar)} alt={user.username} />
+                            <AvatarImage src={getAvatarUrl(user.profile?.avatar || user.avatar) ?? undefined} alt={user.username} />
                             <AvatarFallback>{user.username ? user.username.substring(0,2).toUpperCase() : '??'}</AvatarFallback>
                       </Avatar>
                   </TableCell>

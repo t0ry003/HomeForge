@@ -274,7 +274,7 @@ export default function AdminApprovalsPage() {
                             {pendingTypes.length} pending
                         </div>
                         <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-x-visible pb-2 lg:pb-0">
-                         {pendingTypes.map(t => (
+                         {pendingTypes.map((t: any) => (
                              <div 
                                 key={t.id} 
                                 onClick={() => handleSelect(t)}
