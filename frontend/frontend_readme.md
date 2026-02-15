@@ -252,6 +252,49 @@ Device cards support intelligent behavior:
   - `LIGHT` — Light level (lux) or bright/dark indicator
   - `CO2` — Air quality with quality badges
 
+### Dashboard Grid & Layout (`/dashboard`)
+
+The main dashboard features a customizable drag-and-drop device grid with folder support and persistent layouts:
+
+#### Grouping Modes
+- **All Devices** — Custom drag-and-drop grid with folders (default layout)
+- **Group by Room** — Devices grouped under room headings
+- **Group by Type** — Devices grouped by device type
+- **Group by Status** — Devices sorted into Online / Offline / Error sections
+- **Sort by Name** — Flat alphabetical grid
+- **Edit Layout** — Accessible from the grouping dropdown; switches to All Devices and enters edit mode simultaneously
+
+#### Drag-and-Drop Editing (via `@dnd-kit`)
+- **Whole-card dragging** — Grab from anywhere on a card to drag it (no small handle required)
+- **Hover grip icon** — A `GripVertical` icon fades in on hover (edit mode only), dynamically sized to match the card height (`h-1/3`, clamped `min-h-5` / `max-h-12`)
+- **3-zone drop targets** — Each target card is split into three horizontal zones:
+  - **Left edge (25%)** — Inserts the dragged item before the target; shown with a glowing vertical line centered in the gap between cards
+  - **Center (50%)** — Merges into a folder (device→device or device→folder); target scales up with a pulsing primary ring, drag overlay shrinks toward it (iOS-style)
+  - **Right edge (25%)** — Inserts the dragged item after the target; shown with a glowing vertical line centered in the gap
+- **No auto-shifting** — Grid items stay in place during drag (CSS transforms disabled), preventing the "items jumping around" glitch
+- **Absorb animation** — On merge drop, the target compresses (scale 95%, 60% opacity) for 300ms before the folder is created
+
+#### Device Folders
+- **Creation** — Drag a device onto another device's center zone to create a folder (max 4 devices per folder)
+- **Adding** — Drag a device onto a folder's center zone to add it
+- **Removing** — Remove individual devices from within the folder panel
+- **Renaming** — Inline folder name editing
+- **Dissolving** — Break a folder back into individual devices
+- **Collapsed preview** — 2×2 icon grid with folder name and device count badge
+- **Expanded panel** — Bottom-sheet style on mobile, narrow side panel on desktop with 2-column device grid
+
+#### Layout Persistence
+- **API-backed** — Layouts saved to `PUT /api/dashboard-layout/` with debounced writes (800ms)
+- **Offline fallback** — Falls back to `localStorage` (`homeforge_dashboard_layout`) when API is unavailable
+- **Flush on exit** — Layout is immediately saved when exiting edit mode or when the component unmounts
+- **New device reconciliation** — New devices are automatically appended and saved immediately (bypasses debounce)
+- **Device order** — Grouping preference persisted via `PATCH /api/device-order/`
+
+#### Admin Layout Controls (edit mode toolbar)
+- **Set as Default for All** — Push current layout as shared default (`PUT /api/admin/dashboard-layout/`)
+- **Revert to Admin Default** — Delete personal layout, fall back to admin-set shared layout
+- **Reset Layout** — Reset to flat default with no folders
+
 ### Topology View (`/dashboard/topology`)
 
 Network visualization of connected devices:
@@ -365,7 +408,8 @@ All pages follow consistent responsive patterns:
 |---------|---------------|------|
 | **Non-selectable device cards** | `select-none` class prevents accidental text selection when clicking/dragging | `SmartDeviceCard.tsx` |
 | **Smooth dropdown animations** | GPU-accelerated with `will-change`, opacity fade, `forwards` fill | `globals.css` |
-| **Mobile breadcrumb visibility** | Shows separator + current page on mobile (e.g., "/ Settings") | `dynamic-breadcrumbs.tsx` |
+| **Mobile breadcrumb visibility** | First (Dashboard) + current page always visible on mobile; middle items hidden | `dynamic-breadcrumbs.tsx` |
+| **No redundant breadcrumbs** | Removed static "HomeForge" root breadcrumb — "Dashboard" serves as the root link | `dynamic-breadcrumbs.tsx` |
 
 ### Animation Performance
 

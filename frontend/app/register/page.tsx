@@ -47,7 +47,7 @@ export default function RegisterPage() {
     }
 
     try {
-      await registerUser(formData)
+      await registerUser({ ...formData, role: 'viewer' })
       toast.success("Account created!", {
         description: "You can now log in with your credentials.",
       })

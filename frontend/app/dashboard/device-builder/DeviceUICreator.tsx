@@ -464,7 +464,7 @@ function autoGenerateWidgets(nodes: Node[]): Widget[] {
         variable_mapping: node.id,
         variant: sensorVariant,
         size,
-        unit: 'unit' in widgetDef ? widgetDef.unit : undefined,
+        unit: 'unit' in widgetDef ? (widgetDef as any).unit : undefined,
       });
     }
   });
@@ -534,7 +534,7 @@ export default function DeviceUICreator({ nodes, onBack, onSave, isSubmitting, i
       variable_mapping: '',
       variant: isSensor ? 'square' : 'row',
       size: 'md',
-      unit: 'unit' in def ? def.unit : undefined,
+      unit: 'unit' in def ? (def as any).unit : undefined,
       ...(type === 'SLIDER' && { min: 0, max: 100, step: 1 })
     };
     setWidgets([...widgets, newWidget]);
