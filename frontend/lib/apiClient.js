@@ -49,7 +49,7 @@ async function handleApiError(res, defaultMsg) {
 }
 
 export function getAvatarUrl(path) {
-  if (!path) return null;
+  if (!path) return undefined;
   const backendUrl = getBackendUrl();
   const url = path.startsWith('http') ? path : `${backendUrl}${path}`;
   return `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`;
@@ -458,5 +458,67 @@ export async function bulkDeleteNotifications(params = {}) {
     body: JSON.stringify(params),
   });
   if (!res.ok) await handleApiError(res, 'Failed to delete notifications');
+  return res.json();
+}
+
+// --- Dashboard Layout ---
+
+export async function fetchDashboardLayout() {
+  const res = await fetchWithAuth(`${getApiBase()}/dashboard-layout/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch dashboard layout');
+  return res.json();
+}
+
+export async function saveDashboardLayout(layout, deviceOrder) {
+  const body = { layout };
+  if (deviceOrder) body.device_order = deviceOrder;
+  const res = await fetchWithAuth(`${getApiBase()}/dashboard-layout/`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to save dashboard layout');
+  return res.json();
+}
+
+export async function deleteDashboardLayout() {
+  const res = await fetchWithAuth(`${getApiBase()}/dashboard-layout/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok && res.status !== 204) await handleApiError(res, 'Failed to delete dashboard layout');
+  return true;
+}
+
+export async function fetchSharedDashboardLayout() {
+  const res = await fetchWithAuth(`${getApiBase()}/admin/dashboard-layout/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch shared dashboard layout');
+  return res.json();
+}
+
+export async function saveSharedDashboardLayout(layout) {
+  const res = await fetchWithAuth(`${getApiBase()}/admin/dashboard-layout/`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ layout }),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to save shared dashboard layout');
+  return res.json();
+}
+
+// --- Device Order ---
+
+export async function fetchDeviceOrder() {
+  const res = await fetchWithAuth(`${getApiBase()}/device-order/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch device order');
+  return res.json();
+}
+
+export async function updateDeviceOrder(deviceOrder) {
+  const res = await fetchWithAuth(`${getApiBase()}/device-order/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device_order: deviceOrder }),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to update device order');
   return res.json();
 }
