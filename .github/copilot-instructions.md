@@ -6,6 +6,33 @@ HomeForge is a smart home management application with a Django REST API backend 
 
 ---
 
+## 🤖 MANDATORY AI WORKFLOW - READ THIS FIRST
+
+### Git Commit/Push Workflow - NEVER SKIP STEPS
+
+When user asks to commit/push, **EXECUTE IN EXACT ORDER:**
+
+```
+STEP 1: git branch                    # Verify not on master
+STEP 2: git add <files>               # Stage changes
+STEP 3: git commit -m "type(scope): one-liner message"
+STEP 4: git fetch origin              # ⚠️ CRITICAL - NEVER SKIP
+STEP 5: git rebase origin/master      # ⚠️ CRITICAL - NEVER SKIP
+STEP 6: git push origin <branch>      # Only after rebase
+```
+
+**🛑 DO NOT:**
+- Skip from commit directly to push
+- Forget rebase (this was done wrong on 2026-02-04)
+- Use multi-line commit messages unless specifically requested
+
+**✅ ALWAYS:**
+- Check branch first (`git branch`)
+- Rebase before every push
+- Use one-liner conventional commits: `type(scope): description`
+
+---
+
 ## Commit Best Practices
 
 ### Commit Message Format
