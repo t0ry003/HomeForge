@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useLayoutEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 import { fetchProfile, logout as apiLogout } from "@/lib/apiClient"
 
 // Define available accent colors (OKLCH values for --primary)
@@ -15,12 +16,19 @@ export const ACCENT_COLORS = {
   cyan: "oklch(0.6 0.15 200)",
 }
 
-const UserContext = createContext({
+const UserContext = createContext<{
+  user: any;
+  setUser: (user: any) => void;
+  isLoading: boolean;
+  logout: () => void;
+  updateAccentColor: (color: string) => void;
+  refreshUser: () => Promise<void>;
+}>({
   user: null,
-  setUser: (user: any) => {},
+  setUser: () => {},
   isLoading: true,
   logout: () => {},
-  updateAccentColor: (color: string) => {},
+  updateAccentColor: () => {},
   refreshUser: async () => {},
 })
 
@@ -33,6 +41,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
   const pathname = usePathname()
+  const queryClient = useQueryClient()
 
   // Apply theme immediately before paint to avoid flash
   useLayoutEffect(() => {
@@ -102,10 +111,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }
 
   const logout = () => {
-    apiLogout()
+    // Clear all React Query cache so next user doesn't see stale data
+    queryClient.clear()
     setUser(null)
+    localStorage.removeItem('access')
+    localStorage.removeItem('refresh')
     localStorage.removeItem('homeforge_user')
     localStorage.removeItem('homeforge_accent_color')
+    localStorage.removeItem('homeforge_dashboard_layout')
     router.push("/login")
   }
 

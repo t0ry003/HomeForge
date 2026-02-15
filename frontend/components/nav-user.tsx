@@ -8,7 +8,7 @@ import {
   Bell,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 
 import {
   Avatar,
@@ -45,6 +45,7 @@ export function NavUser({
 }) {
   const { isMobile } = useSidebar()
   const router = useRouter()
+  const queryClient = useQueryClient()
 
   // Fetch unread count for badge display
   const { data: unreadData } = useQuery({
@@ -57,10 +58,13 @@ export function NavUser({
   const unreadCount = unreadData?.unread_count || 0
 
   const handleLogout = () => {
+    // Clear all React Query cache so next user doesn't see stale data
+    queryClient.clear()
     localStorage.removeItem("access")
     localStorage.removeItem("refresh")
     localStorage.removeItem("homeforge_user")
     localStorage.removeItem("homeforge_accent_color")
+    localStorage.removeItem("homeforge_dashboard_layout")
     router.push("/login")
   }
 

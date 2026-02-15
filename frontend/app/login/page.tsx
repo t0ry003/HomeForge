@@ -20,10 +20,12 @@ import {
 import { ModeToggle } from "@/components/mode-toggle"
 import { login } from "@/lib/apiClient"
 import { useUser } from "@/components/user-provider"
+import { useQueryClient } from "@tanstack/react-query"
 
 export default function LoginPage() {
   const router = useRouter()
   const { refreshUser } = useUser()
+  const queryClient = useQueryClient()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState({
     username: "",
@@ -35,6 +37,9 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
+      // Clear stale cache from any previous user session
+      queryClient.clear()
+      localStorage.removeItem('homeforge_dashboard_layout')
       await login({ username: formData.username, password: formData.password })
       await refreshUser() // Refresh user context to apply accent color
       toast.success("Welcome back!", {
