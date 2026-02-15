@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from .models import Profile, Device, Room, CustomDeviceType, DeviceCardTemplate, DeviceControl, Notification
+from .models import Profile, Device, Room, CustomDeviceType, DeviceCardTemplate, DeviceControl, Notification, DashboardLayout
 
 
 class DeviceControlSerializer(serializers.ModelSerializer):
@@ -317,3 +317,139 @@ class NotificationCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("User not found.")
         
         return data
+
+
+class DashboardLayoutSerializer(serializers.Serializer):
+    """
+    Serializer for dashboard layout validation.
+    Validates the layout JSON structure: version, items (devices + folders).
+    Also accepts an optional device_order preference.
+    """
+    layout = serializers.JSONField()
+    device_order = serializers.ChoiceField(
+        choices=DashboardLayout.ORDER_CHOICES,
+        required=False,
+        default=None,
+        help_text="Device grouping/sorting preference.",
+    )
+
+    def _validate_layout_structure(self, layout):
+        """Validate the top-level layout structure."""
+        if not isinstance(layout, dict):
+            raise serializers.ValidationError({"layout": "Layout must be a JSON object."})
+
+        # version must be 1
+        version = layout.get('version')
+        if version != 1:
+            raise serializers.ValidationError({"layout": "layout.version must equal 1."})
+
+        # items must be a non-empty array with <= 100 entries
+        items = layout.get('items')
+        if not isinstance(items, list) or len(items) == 0:
+            raise serializers.ValidationError({"layout": "layout.items must be a non-empty array."})
+        if len(items) > 100:
+            raise serializers.ValidationError({"layout": "layout.items must have at most 100 entries."})
+
+        return items
+
+    def _collect_device_ids_and_validate_items(self, items):
+        """Validate each item and collect all device IDs."""
+        all_device_ids = []
+        folder_ids = set()
+
+        for i, item in enumerate(items):
+            if not isinstance(item, dict):
+                raise serializers.ValidationError(
+                    {"layout": f"items[{i}] must be a JSON object."}
+                )
+
+            item_type = item.get('type')
+            if item_type not in ('device', 'folder'):
+                raise serializers.ValidationError(
+                    {"layout": f"items[{i}].type must be 'device' or 'folder'."}
+                )
+
+            if item_type == 'device':
+                device_id = item.get('deviceId')
+                if not isinstance(device_id, int):
+                    raise serializers.ValidationError(
+                        {"layout": f"items[{i}].deviceId must be an integer."}
+                    )
+                all_device_ids.append(device_id)
+
+            elif item_type == 'folder':
+                # Validate folderId
+                folder_id = item.get('folderId')
+                if not isinstance(folder_id, str) or not folder_id.strip():
+                    raise serializers.ValidationError(
+                        {"layout": f"items[{i}].folderId must be a non-empty string."}
+                    )
+                if folder_id in folder_ids:
+                    raise serializers.ValidationError(
+                        {"layout": f"Duplicate folderId '{folder_id}'."}
+                    )
+                folder_ids.add(folder_id)
+
+                # Validate name
+                name = item.get('name')
+                if not isinstance(name, str) or not name.strip():
+                    raise serializers.ValidationError(
+                        {"layout": f"items[{i}].name must be a non-empty string."}
+                    )
+                if len(name) > 50:
+                    raise serializers.ValidationError(
+                        {"layout": f"items[{i}].name must be at most 50 characters."}
+                    )
+
+                # Validate deviceIds
+                device_ids = item.get('deviceIds')
+                if not isinstance(device_ids, list) or not (2 <= len(device_ids) <= 4):
+                    raise serializers.ValidationError(
+                        {"layout": f"items[{i}].deviceIds must be an array of 2-4 integers."}
+                    )
+                for j, did in enumerate(device_ids):
+                    if not isinstance(did, int):
+                        raise serializers.ValidationError(
+                            {"layout": f"items[{i}].deviceIds[{j}] must be an integer."}
+                        )
+                all_device_ids.extend(device_ids)
+
+        return all_device_ids
+
+    def _check_duplicate_device_ids(self, all_device_ids):
+        """Ensure no device ID appears more than once."""
+        seen = set()
+        for did in all_device_ids:
+            if did in seen:
+                raise serializers.ValidationError(
+                    {"layout": f"Duplicate deviceId {did}. Each device may appear at most once."}
+                )
+            seen.add(did)
+
+    def _check_devices_exist(self, all_device_ids, user, skip_ownership=False):
+        """Ensure all referenced device IDs exist and are accessible to the user."""
+        if not all_device_ids:
+            return
+        qs = Device.objects.filter(id__in=all_device_ids)
+        if not skip_ownership:
+            qs = qs.filter(user=user)
+        existing_ids = set(qs.values_list('id', flat=True))
+        missing = set(all_device_ids) - existing_ids
+        if missing:
+            raise serializers.ValidationError(
+                {"layout": f"Device IDs not found or not accessible: {sorted(missing)}"}
+            )
+
+    def validate_layout(self, value):
+        """Full layout validation pipeline."""
+        items = self._validate_layout_structure(value)
+        all_device_ids = self._collect_device_ids_and_validate_items(items)
+        self._check_duplicate_device_ids(all_device_ids)
+
+        # Device existence check requires user from context
+        user = self.context.get('user')
+        skip_ownership = self.context.get('skip_ownership', False)
+        if user:
+            self._check_devices_exist(all_device_ids, user, skip_ownership=skip_ownership)
+
+        return value

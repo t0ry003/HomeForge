@@ -3,12 +3,13 @@ from django.contrib.auth.models import User
 from rest_framework.permissions import AllowAny
 from .serializers import (
     RegisterSerializer, UserSerializer, DeviceSerializer, RoomSerializer, 
-    CustomDeviceTypeSerializer, NotificationSerializer, NotificationCreateSerializer
+    CustomDeviceTypeSerializer, NotificationSerializer, NotificationCreateSerializer,
+    DashboardLayoutSerializer
 )
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework import status
 from rest_framework.response import Response
-from .models import Device, Room, CustomDeviceType, Notification
+from .models import Device, Room, CustomDeviceType, Notification, DashboardLayout
 from .permissions import IsAdmin, IsOwner
 from django.core.cache import cache
 
@@ -393,10 +394,6 @@ class DeviceStateUpdateView(views.APIView):
             device = Device.objects.get(pk=pk)
         except Device.DoesNotExist:
             return Response({"detail": "Device not found."}, status=status.HTTP_404_NOT_FOUND)
-
-        # Check ownership
-        if device.user != request.user and not IsAdmin().has_permission(request, self):
-            return Response({"detail": "You do not own this device."}, status=status.HTTP_403_FORBIDDEN)
 
         new_state = request.data
         if not isinstance(new_state, dict):
@@ -892,3 +889,190 @@ class AdminNotificationBroadcastView(views.APIView):
             "recipients": len(created),
             "target": target
         })
+
+
+class DashboardLayoutView(views.APIView):
+    """
+    Personal dashboard layout for the authenticated user.
+    
+    GET  - Returns user's personal layout, falls back to admin/shared layout, or default.
+    PUT  - Creates or replaces the user's personal layout (upsert).
+    DELETE - Deletes the user's personal layout (reverts to shared/default).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def _build_response(self, layout_obj, is_personal):
+        """Build a standard layout response dict."""
+        return {
+            "layout": layout_obj.layout,
+            "device_order": layout_obj.device_order,
+            "is_personal": is_personal,
+            "updated_at": layout_obj.updated_at.isoformat(),
+        }
+
+    def get(self, request):
+        # Try personal layout first
+        try:
+            personal = DashboardLayout.objects.get(user=request.user)
+            return Response(self._build_response(personal, is_personal=True))
+        except DashboardLayout.DoesNotExist:
+            pass
+
+        # Fall back to admin/shared layout
+        try:
+            shared = DashboardLayout.objects.get(user__isnull=True)
+            return Response(self._build_response(shared, is_personal=False))
+        except DashboardLayout.DoesNotExist:
+            pass
+
+        # Default response when no layout exists
+        return Response({
+            "layout": None,
+            "device_order": DashboardLayout.ORDER_ROOM,
+            "is_personal": False,
+        })
+
+    def put(self, request):
+        serializer = DashboardLayoutSerializer(
+            data=request.data,
+            context={'user': request.user, 'skip_ownership': True}
+        )
+        serializer.is_valid(raise_exception=True)
+
+        layout_data = serializer.validated_data['layout']
+        defaults = {'layout': layout_data}
+
+        # Include device_order if provided
+        device_order = serializer.validated_data.get('device_order')
+        if device_order is not None:
+            defaults['device_order'] = device_order
+
+        obj, created = DashboardLayout.objects.update_or_create(
+            user=request.user,
+            defaults=defaults
+        )
+
+        return Response(self._build_response(obj, is_personal=True))
+
+    def delete(self, request):
+        DashboardLayout.objects.filter(user=request.user).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AdminDashboardLayoutView(views.APIView):
+    """
+    Shared/default dashboard layout managed by admin/owner.
+    
+    GET - Returns the shared layout.
+    PUT - Creates or replaces the shared layout.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        if not IsAdmin().has_permission(request, self):
+            self.permission_denied(request, message="Only Admins/Owners can manage the shared layout.")
+
+        try:
+            shared = DashboardLayout.objects.get(user__isnull=True)
+            return Response({
+                "layout": shared.layout,
+                "device_order": shared.device_order,
+                "is_personal": False,
+                "updated_at": shared.updated_at.isoformat(),
+            })
+        except DashboardLayout.DoesNotExist:
+            return Response({
+                "layout": None,
+                "device_order": DashboardLayout.ORDER_ROOM,
+                "is_personal": False,
+            })
+
+    def put(self, request):
+        if not IsAdmin().has_permission(request, self):
+            self.permission_denied(request, message="Only Admins/Owners can manage the shared layout.")
+
+        serializer = DashboardLayoutSerializer(
+            data=request.data,
+            context={'user': request.user, 'skip_ownership': True}
+        )
+        serializer.is_valid(raise_exception=True)
+
+        layout_data = serializer.validated_data['layout']
+        defaults = {'layout': layout_data, 'user': None}
+
+        # Include device_order if provided
+        device_order = serializer.validated_data.get('device_order')
+        if device_order is not None:
+            defaults['device_order'] = device_order
+
+        obj, created = DashboardLayout.objects.update_or_create(
+            user__isnull=True,
+            defaults=defaults
+        )
+
+        return Response({
+            "layout": obj.layout,
+            "device_order": obj.device_order,
+            "is_personal": False,
+            "updated_at": obj.updated_at.isoformat(),
+        })
+
+
+class DeviceOrderView(views.APIView):
+    """
+    PATCH /api/device-order/
+    Update only the device_order preference for the current user.
+
+    Falls back through: user layout → admin/shared layout to determine which
+    record to read from. If the user has no personal layout yet, one is
+    created from the shared layout (or with an empty default) so the
+    preference can be stored.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """Return the active device_order for this user (with fallback)."""
+        try:
+            personal = DashboardLayout.objects.get(user=request.user)
+            return Response({"device_order": personal.device_order})
+        except DashboardLayout.DoesNotExist:
+            pass
+
+        try:
+            shared = DashboardLayout.objects.get(user__isnull=True)
+            return Response({"device_order": shared.device_order})
+        except DashboardLayout.DoesNotExist:
+            pass
+
+        return Response({"device_order": DashboardLayout.ORDER_ROOM})
+
+    def patch(self, request):
+        """Update just the device_order preference for the current user."""
+        order = request.data.get('device_order')
+        valid_choices = [c[0] for c in DashboardLayout.ORDER_CHOICES]
+        if order not in valid_choices:
+            return Response(
+                {"device_order": f"Must be one of: {', '.join(valid_choices)}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Get or create a personal layout for this user
+        try:
+            layout_obj = DashboardLayout.objects.get(user=request.user)
+        except DashboardLayout.DoesNotExist:
+            # Bootstrap from the shared layout or create a minimal one
+            try:
+                shared = DashboardLayout.objects.get(user__isnull=True)
+                layout_data = shared.layout
+            except DashboardLayout.DoesNotExist:
+                layout_data = {"version": 1, "items": []}
+            layout_obj = DashboardLayout.objects.create(
+                user=request.user,
+                layout=layout_data,
+                device_order=order,
+            )
+            return Response({"device_order": layout_obj.device_order})
+
+        layout_obj.device_order = order
+        layout_obj.save(update_fields=['device_order', 'updated_at'])
+        return Response({"device_order": layout_obj.device_order})

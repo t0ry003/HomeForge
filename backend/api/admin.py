@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from django.contrib import admin
-from .models import Profile, Device, Room, CustomDeviceType, DeviceCardTemplate, DeviceControl
+from .models import Profile, Device, Room, CustomDeviceType, DeviceCardTemplate, DeviceControl, DashboardLayout
 
 @admin.register(Device)
 class DeviceAdmin(admin.ModelAdmin):
@@ -30,3 +30,13 @@ class ProfileAdmin(admin.ModelAdmin):
 	list_display = ('user', 'role')
 	readonly_fields = ()
 
+
+@admin.register(DashboardLayout)
+class DashboardLayoutAdmin(admin.ModelAdmin):
+    list_display = ('user', 'is_personal', 'updated_at')
+    readonly_fields = ('updated_at',)
+
+    def is_personal(self, obj):
+        return obj.user is not None
+    is_personal.boolean = True
+    is_personal.short_description = 'Personal'

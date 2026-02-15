@@ -314,6 +314,22 @@ class Notification(models.Model):
     def __str__(self):
         status = "Read" if self.is_read else "Unread"
         return f"[{status}] {self.title} - {self.user.username}"
+
+    @property
+    def time_ago(self):
+        """Human-readable time since creation."""
+        from django.utils import timezone
+        from datetime import timedelta
+        diff = timezone.now() - self.created_at
+        if diff < timedelta(minutes=1):
+            return "Just now"
+        elif diff < timedelta(hours=1):
+            return f"{int(diff.total_seconds() / 60)}m ago"
+        elif diff < timedelta(days=1):
+            return f"{int(diff.total_seconds() / 3600)}h ago"
+        elif diff < timedelta(days=7):
+            return f"{diff.days}d ago"
+        return self.created_at.strftime("%b %d, %Y")
     
     def mark_as_read(self):
         """Mark this notification as read."""
@@ -364,3 +380,64 @@ class Notification(models.Model):
             ))
         
         return cls.objects.bulk_create(notifications)
+
+
+class DashboardLayout(models.Model):
+    """
+    Stores dashboard grid layout for a user (personal) or system-wide (shared).
+    When user is NULL, this is the shared/default layout visible to all users
+    who don't have a personal layout.
+    """
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        unique=True,
+        related_name='dashboard_layout',
+        help_text="Owner of this layout. NULL = shared/default layout."
+    )
+    ORDER_ROOM = 'room'
+    ORDER_TYPE = 'type'
+    ORDER_STATUS = 'status'
+    ORDER_NAME = 'name'
+    ORDER_CUSTOM = 'custom'
+
+    ORDER_CHOICES = [
+        (ORDER_ROOM, 'Group by Room'),
+        (ORDER_TYPE, 'Group by Device Type'),
+        (ORDER_STATUS, 'Group by Status'),
+        (ORDER_NAME, 'Alphabetical by Name'),
+        (ORDER_CUSTOM, 'Custom Order'),
+    ]
+
+    layout = models.JSONField(
+        help_text="Dashboard layout JSON: {version, items[]}"
+    )
+    device_order = models.CharField(
+        max_length=20,
+        choices=ORDER_CHOICES,
+        default=ORDER_ROOM,
+        help_text="Device grouping/sorting preference for the dashboard."
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        constraints = [
+            # Ensure only one shared layout (user=NULL) exists
+            models.UniqueConstraint(
+                fields=['user'],
+                condition=models.Q(user__isnull=True),
+                name='unique_shared_layout',
+            ),
+        ]
+
+    def __str__(self):
+        if self.user:
+            return f"Layout for {self.user.username}"
+        return "Shared Layout"
+
+    @property
+    def is_personal(self):
+        return self.user is not None

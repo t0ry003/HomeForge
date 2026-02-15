@@ -25,6 +25,10 @@ from .views import (
     NotificationBulkDeleteView,
     AdminNotificationCreateView,
     AdminNotificationBroadcastView,
+    # Dashboard Layout Views
+    DashboardLayoutView,
+    AdminDashboardLayoutView,
+    DeviceOrderView,
 )
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -68,4 +72,9 @@ urlpatterns = [
     # Admin Notification Endpoints
     path('admin/notifications/create/', AdminNotificationCreateView.as_view(), name='admin-notification-create'),
     path('admin/notifications/broadcast/', AdminNotificationBroadcastView.as_view(), name='admin-notification-broadcast'),
+    
+    # Dashboard Layout Endpoints
+    path('dashboard-layout/', DashboardLayoutView.as_view(), name='dashboard-layout'),
+    path('admin/dashboard-layout/', AdminDashboardLayoutView.as_view(), name='admin-dashboard-layout'),
+    path('device-order/', DeviceOrderView.as_view(), name='device-order'),
 ]
