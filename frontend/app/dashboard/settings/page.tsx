@@ -51,7 +51,7 @@ export default function SettingsPage() {
       })
       const avatarPath = user.profile?.avatar || user.avatar;
       if (avatarPath) {
-        setAvatarPreview(getAvatarUrl(avatarPath))
+        setAvatarPreview(getAvatarUrl(avatarPath) ?? null)
       }
     }
   }, [user])

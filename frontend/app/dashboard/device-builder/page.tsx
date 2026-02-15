@@ -792,7 +792,7 @@ const DeviceBuilderContent = () => {
               connectionLineStyle={connectionLineStyle}
               selectionOnDrag
             >
-              <Background color="var(--muted-foreground)" gap={24} size={1} variant="dots" className="opacity-20" />
+              <Background color="var(--muted-foreground)" gap={24} size={1} variant={"dots" as any} className="opacity-20" />
               <Controls 
                 className="!bg-card/80 !border-border !shadow-xl !rounded-lg overflow-hidden [&>button]:!bg-transparent [&>button]:!border-0 [&>button]:!fill-muted-foreground [&>button:hover]:!bg-muted [&>button:hover]:!fill-foreground" 
               />
