@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { ReactFlow, Background, Controls, NodeTypes, BackgroundVariant, useNodesState, useEdgesState } from '@xyflow/react';
+import { ReactFlow, Background, Controls, NodeTypes, BackgroundVariant, useNodesState, useEdgesState, Node, Edge } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import TopologyBuilderNode from './nodes/TopologyBuilderNode';
 
@@ -20,8 +20,8 @@ interface TopologyCanvasProps {
 }
 
 export default function TopologyCanvas({ nodes: initialNodes }: TopologyCanvasProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   
   // Track selection manually to preserve it during refreshes
   // We use a ref to hold the latest selection state

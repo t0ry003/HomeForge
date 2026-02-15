@@ -22,7 +22,8 @@ const typeColors: Record<string, string> = {
   opendash: 'text-indigo-600 dark:text-indigo-400 bg-indigo-500/10',
 };
 
-export default function GlassDeviceNode({ data, selected }: NodeProps<Node<DeviceData>>) {
+export default function GlassDeviceNode({ data: _data, selected }: NodeProps<Node<DeviceData>>) {
+  const data = _data as any;
   const Icon = iconMap[data.device_type as keyof typeof iconMap] || Smartphone;
   const isOnline = data.is_online;
   const isRoot = data.device_type === 'opendash' || data.device_type === 'gateway';

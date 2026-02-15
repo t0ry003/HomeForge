@@ -76,7 +76,8 @@ const resolveType = (type: string = '', id: string = '') => {
   return TYPE_CONFIG.default;
 };
 
-export default memo(({ id, data, selected }: NodeProps<Node>) => {
+export default memo(({ id, data: _data, selected }: NodeProps<Node>) => {
+  const data = _data as any;
   const config = resolveType(data.device_type || data.type, id);
   
   // Use custom icon if provided, else component default

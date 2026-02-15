@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import ELK from 'elkjs/lib/elk.bundled';
 import { Edge, Node, Position, useNodesState, useEdgesState } from '@xyflow/react';
 
-let elkInstance: ELK | null = null;
+let elkInstance: InstanceType<typeof ELK> | null = null;
 
 const getElk = () => {
   if (!elkInstance) {
@@ -22,8 +22,8 @@ export interface DeviceData {
 }
 
 export const useTopologyLayout = (devices: DeviceData[]) => {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
 
   useEffect(() => {
     if (!devices.length) return;
@@ -71,7 +71,7 @@ export const useTopologyLayout = (devices: DeviceData[]) => {
         data: { ...n.data }
       }));
 
-      const flowEdges: Edge[] = (layoutedGraph.edges || []).map(e => ({
+      const flowEdges: Edge[] = (layoutedGraph.edges || []).map((e: any) => ({
         id: e.id,
         source: (e as any).sources[0],
         target: (e as any).targets[0],

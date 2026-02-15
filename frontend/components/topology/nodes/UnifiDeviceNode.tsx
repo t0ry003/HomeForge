@@ -31,7 +31,8 @@ const iconMap: Record<string, typeof Router> = {
   iot: Cast
 };
 
-export default function UnifiDeviceNode({ data, selected }: NodeProps<Node<DeviceData>>) {
+export default function UnifiDeviceNode({ data: _data, selected }: NodeProps<Node<DeviceData>>) {
+  const data = _data as any;
   // Heuristic for icon selection based on name or type
   let Icon = iconMap[data.device_type as keyof typeof iconMap];
   
