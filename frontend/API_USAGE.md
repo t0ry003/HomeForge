@@ -1,9 +1,9 @@
 # HomeForge API Guide
 
-> **Version:** 1.4.0  
+> **Version:** 1.6.0  
 > **Base URL:** `http://localhost:8000/api/`  
 > **Authentication:** JWT (JSON Web Tokens)  
-> **Last Updated:** February 2, 2026
+> **Last Updated:** February 15, 2026
 
 A comprehensive API reference for the HomeForge smart home management platform. This guide is designed for frontend developers and AI agents to build complete user interfaces.
 
@@ -56,10 +56,11 @@ When making backend changes, ensure you update:
 6. [Device Types](#6-device-types)
 7. [Notifications](#7-notifications)
 8. [Network Topology](#8-network-topology)
-9. [Role-Based Access Control](#9-role-based-access-control)
-10. [Data Models](#10-data-models)
-11. [Error Handling](#11-error-handling)
-12. [Integration Examples](#12-integration-examples)
+9. [Dashboard Layout](#9-dashboard-layout)
+10. [Role-Based Access Control](#10-role-based-access-control)
+11. [Data Models](#11-data-models)
+12. [Error Handling](#12-error-handling)
+13. [Integration Examples](#13-integration-examples)
 
 ---
 
@@ -1489,7 +1490,248 @@ Get a visual representation of the smart home network for rendering with graph l
 
 ---
 
-## 9. Role-Based Access Control
+## 9. Dashboard Layout
+
+Persist and sync the dashboard grid layout (device card order and folder groupings) across devices.
+
+### Layout JSON Schema
+
+```json
+{
+  "version": 1,
+  "items": [
+    { "type": "device", "deviceId": 5 },
+    {
+      "type": "folder",
+      "folderId": "folder-m1kx2j-a3b7",
+      "name": "Living Room",
+      "deviceIds": [1, 3]
+    },
+    { "type": "device", "deviceId": 8 }
+  ]
+}
+```
+
+**Rules:**
+- `version` is always `1` (for future migrations)
+- `items` is an ordered array — render order matches array index
+- A device ID may appear at most once across all items (standalone + inside folders)
+- Folders must contain 2–4 device IDs
+- `folderId` is a client-generated unique string (not a DB primary key)
+- Maximum 100 items per layout
+
+---
+
+### 9.1 Get Dashboard Layout
+
+| Method | Endpoint | Auth Required |
+|--------|----------|---------------|
+| `GET` | `/dashboard-layout/` | ✅ Yes |
+
+Returns the authenticated user's personal layout. Falls back to the shared layout if no personal layout exists. Returns `layout: null` if neither exists.
+
+**Success Response (200 OK — personal layout):**
+```json
+{
+  "layout": {
+    "version": 1,
+    "items": [
+      { "type": "device", "deviceId": 5 },
+      {
+        "type": "folder",
+        "folderId": "folder-abc-123",
+        "name": "Living Room",
+        "deviceIds": [1, 3]
+      }
+    ]
+  },
+  "device_order": "room",
+  "is_personal": true,
+  "updated_at": "2026-02-15T10:30:00+00:00"
+}
+```
+
+**Success Response (200 OK — no layout):**
+```json
+{
+  "layout": null,
+  "device_order": "room",
+  "is_personal": false
+}
+```
+
+**Logic:**
+1. Try user's personal layout → return with `is_personal: true`
+2. Else try shared layout → return with `is_personal: false`
+3. Else return `layout: null`
+
+---
+
+### 9.2 Save Dashboard Layout
+
+| Method | Endpoint | Auth Required |
+|--------|----------|---------------|
+| `PUT` | `/dashboard-layout/` | ✅ Yes |
+
+Creates or replaces the authenticated user's personal layout (upsert).
+
+**Request Body:**
+```json
+{
+  "layout": {
+    "version": 1,
+    "items": [
+      { "type": "device", "deviceId": 5 },
+      {
+        "type": "folder",
+        "folderId": "folder-abc-123",
+        "name": "Living Room",
+        "deviceIds": [1, 3]
+      }
+    ]
+  },
+  "device_order": "type"
+}
+```
+
+> The `device_order` field is optional. If omitted, the existing value is preserved (or defaults to `"room"` on first save).
+
+**Success Response (200 OK):**
+```json
+{
+  "layout": { /* saved layout */ },
+  "device_order": "type",
+  "is_personal": true,
+  "updated_at": "2026-02-15T10:30:00+00:00"
+}
+```
+
+**Validation (400 Bad Request):**
+- `layout.version` must equal `1`
+- `layout.items` must be a non-empty array with ≤ 100 entries
+- Every `type: "device"` item must have an integer `deviceId`
+- Every `type: "folder"` item must have `folderId` (string), `name` (string, ≤ 50 chars), `deviceIds` (array of 2–4 integers)
+- All referenced device IDs must exist and be accessible to the user
+- No device ID may appear more than once across all items
+- All `folderId` values must be unique within the layout
+
+**Error Example:**
+```json
+{
+  "layout": ["Duplicate deviceId 5. Each device may appear at most once."]
+}
+```
+
+---
+
+### 9.3 Delete Dashboard Layout
+
+| Method | Endpoint | Auth Required |
+|--------|----------|---------------|
+| `DELETE` | `/dashboard-layout/` | ✅ Yes |
+
+Deletes the user's personal layout, reverting them to the shared layout (if one exists) or no layout.
+
+**Success Response:** `204 No Content`
+
+Idempotent — returns `204` even if no personal layout exists.
+
+---
+
+### 9.4 Get Shared Dashboard Layout (Admin)
+
+| Method | Endpoint | Auth Required | Role Required |
+|--------|----------|---------------|---------------|
+| `GET` | `/admin/dashboard-layout/` | ✅ Yes | `admin` or `owner` |
+
+Returns the shared/default layout.
+
+**Success Response (200 OK):**
+```json
+{
+  "layout": { /* shared layout or null */ },
+  "is_personal": false,
+  "updated_at": "2026-02-15T10:30:00+00:00"
+}
+```
+
+---
+
+### 9.5 Save Shared Dashboard Layout (Admin)
+
+| Method | Endpoint | Auth Required | Role Required |
+|--------|----------|---------------|---------------|
+| `PUT` | `/admin/dashboard-layout/` | ✅ Yes | `admin` or `owner` |
+
+Creates or replaces the shared layout visible to all users without a personal layout.
+
+**Request/Response:** Same format as endpoint 9.2, with `"is_personal": false`.
+
+**Validation:** Same rules as endpoint 9.2, except device IDs are checked for existence globally (not restricted to the admin's own devices).
+
+---
+
+### 9.6 Get Device Order Preference
+
+| Method | Endpoint | Auth Required |
+|--------|----------|---------------|
+| `GET` | `/device-order/` | ✅ Yes |
+
+Returns the active `device_order` preference for the current user, following the fallback chain: personal layout → shared/admin layout → default (`"room"`).
+
+**Success Response (200 OK):**
+```json
+{
+  "device_order": "type"
+}
+```
+
+---
+
+### 9.7 Update Device Order Preference
+
+| Method | Endpoint | Auth Required |
+|--------|----------|---------------|
+| `PATCH` | `/device-order/` | ✅ Yes |
+
+Updates only the `device_order` preference for the current user without modifying the layout. If the user has no personal layout yet, one is automatically bootstrapped from the shared layout (or created with empty items).
+
+**Request Body:**
+```json
+{
+  "device_order": "status"
+}
+```
+
+**Allowed values:** `"room"` | `"type"` | `"status"` | `"name"` | `"custom"`
+
+| Value | Description |
+|-------|-------------|
+| `room` | Group devices by room (default) |
+| `type` | Group devices by device type |
+| `status` | Group devices by status (online/offline/error) |
+| `name` | Alphabetical order by device name |
+| `custom` | Custom order as defined in the layout items array |
+
+**Success Response (200 OK):**
+```json
+{
+  "device_order": "status"
+}
+```
+
+**Error Response (400 Bad Request):**
+```json
+{
+  "device_order": "Must be one of: room, type, status, name, custom"
+}
+```
+
+**Fallback chain:** user personal → admin/shared → `"room"` (system default)
+
+---
+
+## 10. Role-Based Access Control
 
 HomeForge implements a hierarchical role system.
 
@@ -1519,7 +1761,7 @@ HomeForge implements a hierarchical role system.
 
 ---
 
-## 10. Data Models
+## 11. Data Models
 
 ### User Profile
 
@@ -1624,8 +1866,44 @@ interface CustomDeviceType {
   definition: DeviceTypeDefinition;       // Hardware structure
   approved: boolean;
   rejection_reason: string | null;        // Set when denied
+  proposed_by: number | null;             // User ID who proposed the type
+  proposed_by_username: string | null;    // Username of proposer
   created_at: string;                     // ISO datetime
   card_template: DeviceCardTemplate | null;
+}
+```
+
+### Dashboard Layout
+
+```typescript
+interface DashboardLayoutItem {
+  type: 'device';
+  deviceId: number;
+}
+
+interface DashboardLayoutFolder {
+  type: 'folder';
+  folderId: string;                       // Client-generated unique ID
+  name: string;                           // Max 50 characters
+  deviceIds: number[];                    // 2-4 device IDs
+}
+
+interface DashboardLayoutData {
+  version: 1;
+  items: Array<DashboardLayoutItem | DashboardLayoutFolder>;
+}
+
+type DeviceOrder = 'room' | 'type' | 'status' | 'name' | 'custom';
+
+interface DashboardLayoutResponse {
+  layout: DashboardLayoutData | null;
+  device_order: DeviceOrder;              // Grouping/sorting preference
+  is_personal: boolean;
+  updated_at?: string;                    // ISO datetime
+}
+
+interface DeviceOrderResponse {
+  device_order: DeviceOrder;
 }
 ```
 
@@ -1667,7 +1945,7 @@ interface TopologyResponse {
 
 ---
 
-## 11. Error Handling
+## 12. Error Handling
 
 ### Error Response Format
 
@@ -1747,7 +2025,7 @@ All errors follow a consistent JSON structure:
 
 ---
 
-## 12. Integration Examples
+## 13. Integration Examples
 
 ### Complete Authentication Flow (JavaScript)
 
@@ -1930,6 +2208,13 @@ function NetworkTopology({ api }) {
 | `DELETE` | `/notifications/bulk-delete/` | Bulk delete | ✅ | Any |
 | `POST` | `/admin/notifications/create/` | Create notification | ✅ | Admin |
 | `POST` | `/admin/notifications/broadcast/` | Broadcast to users | ✅ | Admin |
+| `GET` | `/dashboard-layout/` | Get dashboard layout | ✅ | Any |
+| `PUT` | `/dashboard-layout/` | Save dashboard layout | ✅ | Any |
+| `DELETE` | `/dashboard-layout/` | Delete personal layout | ✅ | Any |
+| `GET` | `/admin/dashboard-layout/` | Get shared layout | ✅ | Admin |
+| `PUT` | `/admin/dashboard-layout/` | Save shared layout | ✅ | Admin |
+| `GET` | `/device-order/` | Get device order pref | ✅ | Any |
+| `PATCH` | `/device-order/` | Update device order pref | ✅ | Any |
 | `GET` | `/topology/` | Get network map | ✅ | Any |
 
 ---
@@ -1951,3 +2236,5 @@ function NetworkTopology({ api }) {
 7. **Accent Color:** Users can personalize their UI with `accent_color`. Use it for theming.
 
 8. **Device States:** When updating state via `PATCH /devices/{id}/state/`, only send changed keys. They merge with existing state.
+
+9. **Dashboard Layout:** The frontend currently uses `localStorage` (`homeforge_dashboard_layout` key). Once the API is live, read/write via `/dashboard-layout/` instead. The frontend performs client-side reconciliation for added/removed devices — the backend only validates on save. Folder IDs are opaque client-generated strings; the backend stores them as-is. Use `device_order` to persist the user's preferred device grouping (`room`, `type`, `status`, `name`, `custom`). To update only the sort preference without re-saving the layout, use `PATCH /device-order/`.

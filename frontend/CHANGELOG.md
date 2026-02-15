@@ -1,5 +1,344 @@
 # HomeForge Frontend Changelog
 
+## [2026-02-15] - Grid Alignment Fix for Variable-Height Cards
+
+### Changed
+
+#### Grid `items-start` Alignment (`components/devices/DraggableDeviceGrid.tsx`)
+- **Description**: Added `items-start` to the grid container to prevent shorter cards from stretching to match the tallest card in their row
+- **Problem**: CSS grid's default `align-items: stretch` made every cell in a row the same height as the tallest card, causing the grip overlay and drop indicator lines to extend beyond the bottom of shorter cards
+- **Fix**: `items-start` makes each grid cell wrap tightly to its content height, so all overlays (grip icon, drop lines, merge ring) match the actual card dimensions
+- **Impact**: Drop lines and grip icons now correctly respect the visual boundaries of small single-toggle cards, medium cards, and tall multi-widget cards alike
+
+---
+
+## [2026-02-15] - Dynamic Grip Icon & Centered Drop Lines
+
+### Changed
+
+#### Dynamic Grip Icon (`components/devices/DraggableDeviceGrid.tsx`)
+- **Description**: Grip icon now scales dynamically with the card — uses `h-1/3` of the card height (clamped between `min-h-5` and `max-h-12`) with `aspect-square` to stay proportional on small, tall, and wide cards alike
+
+#### Centered Drop Lines (`components/devices/DraggableDeviceGrid.tsx`)
+- **Description**: Moved the left/right reorder indicator lines from the card edge (`-3px`) to the center of the gap between cards (`-10px`), so the glowing line sits halfway between adjacent cards rather than hugging one side
+
+---
+
+## [2026-02-15] - 3-Zone Drop Targets for Device Grid
+
+### Changed
+
+#### 3-Zone Drop System (`components/devices/DraggableDeviceGrid.tsx`)
+- **Description**: Replaced the single-target drop behavior with a 3-zone system per card: drag to the **left edge** (25%) to insert before, to the **center** (50%) to merge into a folder, or to the **right edge** (25%) to insert after
+- **Left/Right zones**: Display a glowing primary-colored vertical line on the corresponding edge of the target card, indicating where the item will be placed
+- **Middle zone**: Shows an iOS-style pulsing scale-up ring when merge is possible (device→device or device→open folder), with the drag overlay shrinking toward the target
+- **No auto-shifting**: Disabled `rectSortingStrategy` CSS transforms on non-dragged items — cards now stay in their original positions during drag instead of shifting around, eliminating the "goes left/right" glitch entirely
+- **Pointer tracking**: Uses a `pointermove` listener with cached element lookups (`getBoundingClientRect`) to continuously compute which zone the cursor is in, with ref-based deduplication to minimize re-renders
+- **Reorder logic**: Correctly computes the target splice index based on zone + relative position of source/target, handling all edge cases (adjacent items, first/last position, no-op drops)
+
+#### Responsive Grip Icon (`components/devices/DraggableDeviceGrid.tsx`)
+- **Description**: Reduced the hover grip icon from `h-8 w-8` to `h-5 w-5` with lower opacity (40% instead of 60%) and subtler background tint, so it adapts better to cards of varying sizes
+- **Hidden during drag**: The grip overlay is only shown when no drag is in progress, preventing visual clutter during active reordering
+
+#### Drop Animation & Absorb Effect
+- **Merge absorb**: On merge drop, the target card compresses (scale 95%, 60% opacity) for 300ms before the folder is created, providing smooth visual feedback
+- **Drag overlay**: Shrinks to 75% scale when hovering over a merge-eligible center zone, stays full-size with shadow for left/right reorder zones
+
+---
+
+## [2026-02-15] - iOS-Style Drag & Merge for Device Grid
+
+### Changed
+
+#### Whole-Card Drag (`components/devices/DraggableDeviceGrid.tsx`)
+- **Description**: Removed the small corner drag-handle icon. In edit mode, the entire device card is now the drag surface — grab from anywhere on the card to drag it
+- **Hover indicator**: A large centered `GripVertical` icon fades in over the card on hover (edit mode only), with a subtle background tint
+- **Impact**: Much more intuitive — matches how iOS/Android home screen icon dragging works
+
+#### iOS-Style Merge Animation (`components/devices/DraggableDeviceGrid.tsx`)
+- **Description**: Completely reworked the folder-merge interaction to eliminate the "left/right jump" glitch
+- **Merge target**: Pulsing scale-up (110%) with a glowing primary-color ring and shadow — clearly shows "this card will absorb the dragged card"
+- **Drag overlay**: Shrinks to 75% opacity/scale when hovering over a merge target, visually converging into the target (like iOS folder creation)
+- **Absorb animation**: On drop, the target briefly compresses (scale 95% + fade) then the folder is created after a 300ms delay, preventing the jarring instant-swap
+- **Dragged item hidden**: The source card is fully hidden (opacity 0) during drag instead of 40% ghost, so there's no confusing duplicate
+
+---
+
+## [2026-02-15] - Move Edit Layout into Grouping Dropdown
+
+### Changed
+
+#### Edit Layout Entry Point (`app/dashboard/page.tsx`)
+- **Description**: Moved the "Edit Layout" action from a standalone always-visible button into the grouping dropdown, below a separator after "Sort by Name"
+- **Behavior**: Selecting "Edit Layout" in the dropdown switches to "All Devices" view and enters edit mode simultaneously; switching to any other grouping mode auto-exits edit mode
+- **Impact**: Cleaner toolbar — the edit button no longer takes up space when users don't need it
+
+#### Toolbar Cleanup (`components/devices/DraggableDeviceGrid.tsx`)
+- **Description**: Removed the standalone "Edit Layout / Done" toggle button. The "Done" button now only renders when already in edit mode. Removed unused `Pencil` import
+- **Impact**: Edit-mode tools (Done, Reset Layout, Revert to Admin Default, Set as Default for All) still appear in the toolbar during editing
+
+---
+
+## [2026-02-15] - Fix React Query Cache Leak Between User Sessions
+
+### Changed
+
+#### Logout Cache Clearing (`components/nav-user.tsx`)
+- **Description**: Added `queryClient.clear()` on logout so the next user doesn't see stale cached data (dashboard layout, devices, notifications, etc.)
+- **Also clears**: `homeforge_dashboard_layout` localStorage key (offline layout cache)
+- **Impact**: Switching accounts no longer requires a hard refresh to see the correct data
+
+#### UserProvider Logout (`components/user-provider.tsx`)
+- **Description**: Added `queryClient.clear()` inside `logout()` and aligned localStorage cleanup (now also removes `access`, `refresh`, `homeforge_dashboard_layout`)
+- **Impact**: Any code path using `UserProvider.logout()` also clears the cache
+
+#### Login Cache Reset (`app/login/page.tsx`)
+- **Description**: Added `queryClient.clear()` and `localStorage.removeItem('homeforge_dashboard_layout')` before calling `login()`, ensuring stale data from a previous session is purged before fetching the new user's data
+- **Impact**: Even if a user navigates directly to `/login` without logging out first, old cache is cleared
+
+---
+
+## [2026-02-15] - Persisted Device Order / Grouping Preference
+
+### Added
+
+#### Device Order API Integration (`lib/apiClient.js`)
+- **`fetchDeviceOrder()`**: `GET /device-order/` — fetches the user's persisted grouping preference (cascade: personal → admin → default `"room"`)
+- **`updateDeviceOrder(order)`**: `PATCH /device-order/` — persists the grouping preference without re-saving the layout
+- **Updated `saveDashboardLayout(layout, deviceOrder)`**: Now optionally sends `device_order` alongside the layout on `PUT /dashboard-layout/`
+
+#### Persisted Grouping in Hook (`hooks/useDashboardLayout.ts`)
+- **`deviceOrder` state**: Initialized from `device_order` in the API layout response, defaults to `'custom'`
+- **`setDeviceOrder(order)` function**: Updates local state immediately and fires `PATCH /device-order/` to persist
+- **Exported `DeviceOrder` type**: `'room' | 'type' | 'status' | 'name' | 'custom'`
+
+#### New Grouping Modes in Dashboard (`app/dashboard/page.tsx`)
+- **"Group by Status"**: Groups devices into Online / Offline / Error sections
+- **"Sort by Name"**: Alphabetical flat grid ordered by device name
+- **Persisted selection**: The dropdown now reads from and writes to the API — when a user picks "Group by Room", that preference survives page refresh
+- **`custom` ↔ `all` mapping**: `device_order: 'custom'` corresponds to the drag-and-drop grid ("All Devices"), other values show the grouped view
+
+### Changed
+- **Dashboard `viewMode`**: No longer a local `useState` — derived from `deviceOrder` returned by the layout hook, so the grouping choice is persisted per-user via the API
+- **Removed unused `useState` import** from dashboard page
+
+---
+
+## [2026-02-15] - Fix Layout Persistence, Reset Options & Folder UI
+
+### Fixed
+
+#### Layout Persistence Bug (`hooks/useDashboardLayout.ts`)
+- **Root cause**: `scheduleSave` depended on `useMutation` return which changed every render, preventing the debounce timer from ever firing and causing non-admin users' layouts to revert to the shared admin layout on refresh
+- **Fix**: Replaced `useMutation` with a direct `saveDashboardLayout()` call inside the debounced callback, using a stable `useCallback` that only depends on `queryClient`
+- **Removed `invalidateQueries`**: API save now uses `queryClient.setQueryData()` instead of re-fetching, preventing race conditions that overwrote local state
+- **Flush on "Done"**: When the user exits edit mode, any pending debounced save is flushed immediately — the 800ms timer is cancelled and `saveDashboardLayout()` fires synchronously so the API write completes before a possible page refresh
+- **Flush on unmount**: Cleanup effect now fires a `saveDashboardLayout()` (fire-and-forget) if a pending save exists when the component unmounts
+- **Prevent spurious init save**: The init effect now stamps `prevDeviceIdsRef` with the current device IDs so the reconcile effect doesn't re-fire on the same render cycle, preventing an unnecessary layout save right after initialization
+- **Set `staleTime: Infinity`** and `refetchOnMount: false` so the query never auto-refetches behind the user's back
+
+### Added
+
+#### Separate Reset & Revert Buttons
+- **"Reset Layout" button**: Resets to a flat default layout (no folders) and saves it as the user's personal layout
+- **"Revert to Admin Default" button**: Deletes the user's personal layout and fetches the admin's shared layout from `GET /api/admin/dashboard-layout/`
+- **New `revertToShared()` function** in `useDashboardLayout` hook
+- Wired through `DraggableDeviceGrid` → `dashboard/page.tsx` via new `onRevertToShared` prop
+
+### Changed
+
+#### Folder Preview Grid (`components/devices/DeviceFolder.tsx`)
+- **Removed constraining wrapper**: Eliminated the `p-4 pb-2` wrapper div and `aspect-square max-h-28` that caused icons to be squeezed to the top-left
+- **Grid fills card**: Preview grid now uses `grid grid-cols-2 gap-1.5 p-3 flex-1` directly, with `aspect-square` on each cell so tiles fill the card proportionally
+- **Larger icons**: Bumped preview icons from `w-6 h-6` to `w-7 h-7`
+
+#### Folder Expanded Popup (`components/devices/DeviceFolder.tsx`)
+- **Redesigned overlay**: Narrower panel (`sm:max-w-lg`), bottom-sheet style on mobile with rounded top corners and drag indicator
+- **Darker backdrop**: `bg-black/50 backdrop-blur-md` for better contrast
+- **Compact header**: Icon in a rounded background pill, inline rename, smaller close button
+- **2-column grid always**: Device cards in `grid-cols-2 gap-3` for a tidier layout
+- **Smaller remove buttons**: Repositioned to top-right corner with `-top-1.5 -right-1.5` and smaller icon
+
+---
+
+## [2026-02-15] - Dashboard Layout API Integration & Admin Shared Layout
+
+### Changed
+
+#### Dashboard Layout Hook (`hooks/useDashboardLayout.ts`)
+- **API-first persistence**: Rewrote hook to fetch layout from `GET /api/dashboard-layout/` via React Query on mount, replacing localStorage-only storage
+- **Debounced API save**: Layout changes are debounced (800ms) before `PUT /api/dashboard-layout/`, with localStorage used as an immediate offline cache
+- **Fallback chain**: API → localStorage → default layout, so the dashboard works even when the backend is unreachable
+- **Reset via API**: `resetLayout()` now calls `DELETE /api/dashboard-layout/` to remove the user's personal layout, reverting to the shared/default
+- **New `isSaving` return value**: Exposes `saveMutation.isPending` for UI feedback
+
+#### DraggableDeviceGrid (`components/devices/DraggableDeviceGrid.tsx`)
+- **New props**: `isAdmin`, `isSaving`, `onSetAsShared`
+- **Saving indicator**: Shows a spinner with "Saving…" text in the toolbar when a save is in flight
+- **"Set as Default for All" button**: Visible to admins in edit mode — pushes the current layout as the shared default via `PUT /api/admin/dashboard-layout/`
+
+#### Dashboard Page (`app/dashboard/page.tsx`)
+- **Admin detection**: Reads `user.profile.role` / `user.role` to determine admin status
+- **Shared layout handler**: `handleSetAsShared` calls `saveSharedDashboardLayout()` with a success/error toast
+- **Passes new props**: `isAdmin`, `isSaving`, `onSetAsShared` forwarded to `DraggableDeviceGrid`
+
+### Added
+
+#### API Client (`lib/apiClient.js`)
+- **`fetchDashboardLayout()`**: `GET /api/dashboard-layout/` — fetches user's layout (falls back to shared)
+- **`saveDashboardLayout(layout)`**: `PUT /api/dashboard-layout/` — saves user's personal layout
+- **`deleteDashboardLayout()`**: `DELETE /api/dashboard-layout/` — removes personal layout
+- **`fetchSharedDashboardLayout()`**: `GET /api/admin/dashboard-layout/` — fetches shared layout (admin)
+- **`saveSharedDashboardLayout(layout)`**: `PUT /api/admin/dashboard-layout/` — saves shared layout (admin)
+
+---
+
+## [2026-02-15] - Dashboard Drag-and-Drop Grid with Folders
+
+### Added
+
+#### Dashboard Grid Data Model (`lib/dashboard-grid.ts`)
+- **New file**: Data model and localStorage persistence layer for customisable dashboard layouts
+- **Types**: `GridDeviceItem`, `GridFolderItem`, `GridItem`, `DashboardLayout` — supports standalone devices and folders containing 2–4 devices
+- **Persistence helpers**: `loadLayout()`, `saveLayout()`, `clearLayout()` using localStorage key `homeforge_dashboard_layout`
+- **Reconciliation**: `reconcileLayout()` handles device additions/removals without losing folder structure
+- **Default builder**: `buildDefaultLayout()` creates a flat device list when no layout exists
+
+#### Dashboard Layout Hook (`hooks/useDashboardLayout.ts`)
+- **New file**: React hook managing grid layout state with auto-reconciliation on device list changes
+- **CRUD operations**: `moveItem`, `createFolder`, `addToFolder`, `removeFromFolder`, `renameFolder`, `dissolveFolder`, `resetLayout`
+- **Edit mode**: `editMode` / `setEditMode` toggle for drag-and-drop UI
+- **Auto-save**: persists to localStorage on every state change
+
+#### DeviceFolder Component (`components/devices/DeviceFolder.tsx`)
+- **New file**: Apple/Google Home-style folder tile component
+- **Collapsed view**: 2×2 icon preview grid with status indicator dots, folder name with device count badge
+- **Expanded view**: Framer Motion overlay with spring animation, full `SmartDeviceCard` rendering in 1–2 column grid
+- **Inline rename**: Double-click folder name to rename; input field in expanded header
+- **Edit mode**: Wiggle animation with ungroup button
+- **Remove from folder**: Per-card remove button inside expanded overlay
+
+#### DraggableDeviceGrid Component (`components/devices/DraggableDeviceGrid.tsx`)
+- **New file**: Main drag-and-drop grid powered by `@dnd-kit/core` + `@dnd-kit/sortable`
+- **Drag-to-create folder**: Drag one device onto another device to auto-create a named folder
+- **Drag-to-add**: Drag a device onto an existing folder (max 4 devices per folder)
+- **Reorder**: Drag items to reposition in the grid
+- **Edit toolbar**: "Edit Layout" / "Done" toggle button, "Reset Layout" button, hint bar with instructions
+- **Drag overlay**: Ghost card follows cursor during drag with `DragOverlay`
+- **Drop target highlight**: Blue ring on valid drop targets
+
+#### Context Menu Component (`components/ui/context-menu.tsx`)
+- **New shadcn/ui component**: Installed via `npx shadcn@latest add context-menu` for future right-click menus on grid items
+
+#### Backend API Spec (`API_USAGE.md`)
+- **New section 9**: Dashboard Layout API with 5 endpoints:
+  - `GET /dashboard-layout/` — get user's layout (falls back to shared)
+  - `PUT /dashboard-layout/` — save user's personal layout
+  - `DELETE /dashboard-layout/` — reset to shared layout
+  - `GET /admin/dashboard-layout/` — get shared layout (admin)
+  - `PUT /admin/dashboard-layout/` — set shared layout (admin)
+- **Data model**: TypeScript interfaces + suggested Django model
+- **Validation**: device existence, uniqueness, folder size limits (2–4), max 100 items
+- Updated Table of Contents, Quick Reference table, and section numbering
+
+### Changed
+
+#### Dashboard Page (`app/dashboard/page.tsx`)
+- **Grid integration**: "All Devices" view now uses `DraggableDeviceGrid` with folder support instead of flat card grid
+- **Layout hook**: Added `useDashboardLayout(deviceIds)` call with memoised device ID list
+- **Fallback**: Room and Type group views retain legacy `SmartDeviceCard` grid with `animationIndex`
+
+### Fixed (Pre-existing Type Errors)
+
+#### User Provider (`components/user-provider.tsx`)
+- **Root cause fix**: `createContext({user: null, ...})` inferred `null` literal type, causing `Property X on type 'never'` errors across the entire codebase. Added explicit generic type parameter `createContext<{user: any; setUser: ...; isLoading: ...}>()`
+
+#### `getAvatarUrl()` (`lib/apiClient.js`)
+- Changed return value from `null` to `undefined` when no path provided, making it compatible with DOM attributes that expect `string | undefined`
+
+#### App Sidebar (`components/app-sidebar.tsx`)
+- Added `?? ""` fallback for `getAvatarUrl()` result to satisfy `NavUser` prop type
+
+#### Topology Components
+- `components/topology/TopologyCanvas.tsx`: Added `Node`/`Edge` generic parameters to `useNodesState<Node>([])`/`useEdgesState<Edge>([])` to fix `never[]` inference
+- `components/topology/nodes/BuilderStyleNode.tsx`: Cast `data` as `any` to avoid `unknown` property access errors
+- `components/topology/nodes/TopologyBuilderNode.tsx`: Same `data as any` cast
+- `components/topology/nodes/GlassDeviceNode.tsx`: Same `data as any` cast to fix `'opendash'` not in union comparison
+- `components/topology/nodes/UnifiDeviceNode.tsx`: Same `data as any` cast (proactive)
+
+#### useTopologyLayout (both copies)
+- `app/hooks/useTopologyLayout.ts` & `hooks/useTopologyLayout.ts`: Fixed `ELK` type to `InstanceType<typeof ELK>`, added `Node`/`Edge` generics, typed `.map(e =>` as `(e: any) =>`
+
+#### Other Pre-existing Fixes
+- `app/dashboard/admin/approvals/page.tsx`: `t` → `(t: any)` in map callback
+- `app/dashboard/admin/rooms/page.tsx`: `room` → `(room: any)` in map callback
+- `app/dashboard/admin/users/page.tsx`: `getAvatarUrl()` result `?? undefined`
+- `app/dashboard/device-builder/DeviceUICreator.tsx`: Cast `.unit` as `(... as any).unit`
+- `app/dashboard/device-builder/page.tsx`: `variant="dots"` → `variant={"dots" as any}`
+- `app/dashboard/layout.tsx`: Removed invalid `user` prop from `<AppSidebar />`
+- `app/register/page.tsx`: Added missing `role: 'viewer'` to `registerUser()` call
+- `app/dashboard/settings/page.tsx`: `getAvatarUrl(...)` → `getAvatarUrl(...) ?? null` for `setAvatarPreview`
+- `components/devices/SmartDeviceCard.tsx`: `widgetVariant` cast as `'row' | 'square'`
+- `components/ui/sonner.tsx`: Cast `toastOptions` as `any` to allow `onClick` property
+
+---
+
+## [2026-02-15] - Dynamic Skeleton Count & Jelly Entrance Animation
+
+### Changed
+
+#### Dashboard Page (`app/dashboard/page.tsx`)
+- **Dynamic Skeleton Count**: Skeleton grid now uses the cached device count from the previous load, so the number of placeholder cards matches the real device count. On first-ever load, falls back to a responsive estimate based on viewport width (~2 rows worth of cards)
+- **Module-Level `cachedDeviceCount`**: Upgraded from a boolean cache to also store the last-known device count for skeleton sizing
+- **Jelly Entrance on Device Cards**: All three view modes (`all`, `room`, `type`) now pass an `animationIndex` to `SmartDeviceCard`, giving each card a staggered macOS-style jelly bounce-in on mount
+
+#### SmartDeviceCard (`components/devices/SmartDeviceCard.tsx`)
+- **New `animationIndex` Prop**: Optional prop that, when provided, applies a `jelly-in` animation with a 60ms stagger per card. Creates an elastic scale-bounce entrance every time the dashboard opens
+- **Animation Composability**: The jelly animation coexists with existing hover/active transitions without conflict
+
+#### DeviceCardSkeleton (`components/devices/DeviceCardSkeleton.tsx`)
+- **Responsive Fallback**: New `useResponsiveSkeletonCount` hook estimates skeleton count based on viewport breakpoints (matching the grid's `sm:2 md:3 lg:4 xl:5` columns × 2 rows) when no cached count is available
+- **Priority: Cached Count > Responsive Estimate**: Uses `cachedDeviceCount` when available, responsive estimate otherwise
+
+### Added
+
+#### Globals CSS (`app/globals.css`)
+- **Jelly-In Keyframe**: Added `@keyframes jelly-in` — a multi-step elastic bounce animation (scale 0.3 → 1.06 → 0.95 → 1.02 → 0.99 → 1) that mimics macOS dock icon bounce behavior
+
+---
+
+## [2026-02-15] - Dashboard Skeleton Loading Animation
+
+### Changed
+
+#### Dashboard Page (`app/dashboard/page.tsx`)
+- **Replaced Basic Skeleton Cards**: Swapped the 4 plain circle-skeleton cards with a new `DeviceCardSkeletonGrid` component that renders 8 realistic skeleton cards matching the SmartDeviceCard layout
+- **Responsive Grid**: Skeleton grid now uses the same responsive breakpoints as the real device grid (`1/2/3/4/5` columns)
+
+### Added
+
+#### DeviceCardSkeleton (`components/devices/DeviceCardSkeleton.tsx`)
+- **Realistic Card Shape**: Skeleton mirrors the SmartDeviceCard structure — left accent border, header with title and badge placeholders, icon area, toggle row, and slider row
+- **Staggered Fade-In**: Each card animates in with a 100ms stagger for a smooth wave-like entrance
+- **Shimmer Effect**: A subtle moving shimmer overlay sweeps across each card (per-card staggered delay)
+- **DeviceCardSkeletonGrid**: Wrapper component renders 8 skeleton cards in the standard device grid layout
+
+#### Globals CSS (`app/globals.css`)
+- **Shimmer Keyframe**: Added `@keyframes shimmer` for the translating gradient overlay used in skeleton cards
+
+---
+
+## [2026-02-15] - Breadcrumb Fix
+
+### Changed
+
+#### Dynamic Breadcrumbs (`components/dynamic-breadcrumbs.tsx`)
+- **Removed Redundant "HomeForge" Breadcrumb**: Removed the static "HomeForge" root breadcrumb that linked to `/`, since "Dashboard" already links to `/dashboard` and both led to the same page
+- **Updated Separator Logic**: Separators now only appear between items, not before the first
+- **Updated Mobile Visibility**: First and last breadcrumb items are always visible; middle items hidden on mobile
+
+---
+
 ## [2026-02-04] - Device Builder UI Improvements
 
 ### Changed
