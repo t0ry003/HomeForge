@@ -47,6 +47,7 @@ interface SmartDeviceCardProps {
   deviceType: any;
   roomName?: string;
   readOnly?: boolean;
+  animationIndex?: number;
 }
 
 // Check if this is a simple single-toggle device (ONLY has one toggle, nothing else)
@@ -61,7 +62,7 @@ function getToggleControls(controls: Control[]): Control[] {
   return controls.filter(c => c.widget_type === 'TOGGLE');
 }
 
-export default function SmartDeviceCard({ device, deviceType, roomName, readOnly = false }: SmartDeviceCardProps) {
+export default function SmartDeviceCard({ device, deviceType, roomName, readOnly = false, animationIndex }: SmartDeviceCardProps) {
   const [currentState, setCurrentState] = useState<any>(device.current_state || {});
   const [isOnline, setIsOnline] = useState(device.status === 'online' || device.is_online);
   const queryClient = useQueryClient();
@@ -136,7 +137,7 @@ export default function SmartDeviceCard({ device, deviceType, roomName, readOnly
   const renderWidget = (control: Control, index: number) => {
     const value = currentState[control.variable_mapping];
     const isDisabled = !isOnline || readOnly;
-    const widgetVariant = control.variant || 'row';
+    const widgetVariant = (control.variant || 'row') as 'row' | 'square';
 
     switch(control.widget_type) {
       case 'TOGGLE':
@@ -338,8 +339,10 @@ export default function SmartDeviceCard({ device, deviceType, roomName, readOnly
           ? 'border-l-4 border-l-green-500 border-t-border border-r-border border-b-border shadow-[0_0_20px_-5px_rgba(34,197,94,0.15)] hover:shadow-[0_0_25px_-5px_rgba(34,197,94,0.25)] bg-card' 
           : 'border-l-4 border-l-zinc-400 dark:border-l-zinc-600 border-t-border/50 border-r-border/50 border-b-border/50 bg-muted/30 saturate-50 hover:saturate-100',
         isTappable && 'cursor-pointer active:scale-[0.98]',
-        isTappable && isPoweredOn && 'shadow-[0_0_20px_-3px_rgba(245,158,11,0.4)]'
+        isTappable && isPoweredOn && 'shadow-[0_0_20px_-3px_rgba(245,158,11,0.4)]',
+        animationIndex !== undefined && 'animate-[jelly-in_0.5s_cubic-bezier(0.2,0.6,0.35,1)_both]'
       )}
+      style={animationIndex !== undefined ? { animationDelay: `${animationIndex * 60}ms` } : undefined}
       onClick={isTappable ? handleCardTap : undefined}
     >
       {/* Offline overlay */}

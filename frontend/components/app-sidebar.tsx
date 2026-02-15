@@ -38,7 +38,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     return {
       name: `${contextUser.first_name} ${contextUser.last_name}`,
       email: contextUser.email,
-      avatar: getAvatarUrl(contextUser.profile?.avatar || contextUser.avatar),
+      avatar: getAvatarUrl(contextUser.profile?.avatar || contextUser.avatar) ?? "",
     }
   }, [contextUser])
 

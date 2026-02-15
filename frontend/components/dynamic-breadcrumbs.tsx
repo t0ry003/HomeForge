@@ -19,11 +19,6 @@ export function DynamicBreadcrumbs() {
   return (
     <Breadcrumb>
       <BreadcrumbList>
-        <BreadcrumbItem className="hidden md:block">
-          <BreadcrumbLink asChild>
-            <Link href="/">HomeForge</Link>
-          </BreadcrumbLink>
-        </BreadcrumbItem>
         {segments.map((segment, index) => {
           const isLast = index === segments.length - 1
           const isFirst = index === 0
@@ -32,9 +27,11 @@ export function DynamicBreadcrumbs() {
 
           return (
             <React.Fragment key={href}>
-              {/* Show separator: always on desktop, on mobile only before the last item */}
-              <BreadcrumbSeparator className={isLast && !isFirst ? "block" : "hidden md:block"} />
-              <BreadcrumbItem className={isLast ? "block" : "hidden md:block"}>
+              {/* Show separator between items, but not before the first */}
+              {!isFirst && (
+                <BreadcrumbSeparator className={isLast ? "block" : "hidden md:block"} />
+              )}
+              <BreadcrumbItem className={isLast || isFirst ? "block" : "hidden md:block"}>
                 {isLast ? (
                   <BreadcrumbPage>{title}</BreadcrumbPage>
                 ) : (
