@@ -163,7 +163,7 @@ HomeForge is an open-source smart home management system designed for DIY IoT en
 |------|-------------|
 | `owner` | Full system control, superuser access, Django admin |
 | `admin` | Manage users, rooms, device types, approve proposals |
-| `user` | Manage own devices, propose device types |
+| `user` | Manage own devices, propose device types, control any device |
 | `viewer` | Read-only access to dashboard |
 
 ### 3. Room Management
@@ -208,6 +208,16 @@ HomeForge is an open-source smart home management system designed for DIY IoT en
 - **Auto-notifications**: Triggered on device type proposals/reviews
 - **Flexible References**: JSON field for related object IDs
 - **Rich Node Data**: IP, room, type, icon, current state
+
+### 9. Dashboard Layout Sync
+
+- **Personal Layouts**: Per-user dashboard grid persistence
+- **Shared/Default Layout**: Admin-managed fallback for all users
+- **Folder Grouping**: 2-4 devices in Apple/Google Home style folders
+- **Cross-device Sync**: Replaces localStorage with backend persistence
+- **Strict Validation**: Duplicate checks, existence verification, schema validation
+- **Upsert Semantics**: PUT creates or replaces in one call
+- **Device Order Preference**: Persisted grouping/sorting choice (`room`, `type`, `status`, `name`, `custom`) with user → admin → default fallback
 
 ---
 
@@ -382,6 +392,16 @@ User notification for alerts and system messages.
 | `warning` | Warning message |
 | `error` | Error message |
 
+#### DashboardLayout
+Persists the dashboard grid layout per user or as a shared default.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `user` | OneToOne → User (nullable) | Owner of layout. NULL = shared layout |
+| `layout` | JSONField | Layout JSON (`{version, items[]}`) |
+| `device_order` | CharField(20) | Device grouping preference: `room` (default), `type`, `status`, `name`, `custom` |
+| `updated_at` | DateTimeField | Last modification timestamp |
+
 ---
 
 ## Authentication System
@@ -446,10 +466,9 @@ HomeForge uses a **schema-less state model** inspired by Home Assistant, enablin
 │   (React)    │───────────────────────────────►│   (Django)   │
 └──────────────┘                                └──────┬───────┘
                                                        │
-                                                       │ 1. Validate ownership
-                                                       │ 2. Merge with current_state
-                                                       │ 3. Set status = "online"
-                                                       │ 4. Call sync_with_hardware()
+                                                       │ 1. Merge with current_state
+                                                       │ 2. Set status = "online"
+                                                       │ 3. Call sync_with_hardware()
                                                        ▼
                                                 ┌──────────────┐
                                                 │  PostgreSQL  │
@@ -816,6 +835,9 @@ This project is open source. See LICENSE file for details.
 - `0016_add_extended_widget_types` - Widget types and display fields
 - `0017_add_performance_indexes` - Database indexes
 - `0018_add_notification_model` - Notification system
+- `0019_add_proposed_by_to_customdevicetype` - Device type proposer tracking
+- `0020_add_dashboard_layout` - Dashboard layout persistence
+- `0021_add_device_order_to_dashboard_layout` - Device order preference field
 
 ---
 

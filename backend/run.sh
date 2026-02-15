@@ -1,3 +1,6 @@
+echo "🔧 Upgrading PIP ..."
+pip install --upgrade pip
+
 echo "📦 Installing dependencies..."
 pip install -r requirements.txt
 
