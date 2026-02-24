@@ -274,8 +274,8 @@ class TopologyView(views.APIView):
             "id": gateway_id,
             "type": "input",
             "data": { 
-                "label": "HomeForge Gateway",
-                "ip": "192.168.1.1",
+                "label": "MQTT Broker",
+                "ip": "HomeForge Hub",
                 "status": "online",
                 "type": "server",
                 "room": "Server Room"
@@ -308,27 +308,34 @@ class TopologyView(views.APIView):
             node_id = str(device.id)
             status_color = status_colors.get(device.status, "#EF4444")
 
+            # Determine label style based on binding status
+            is_bound = bool(device.mac_address)
+            border_style = "solid" if is_bound else "dashed"
+
             nodes.append({
                 "id": node_id,
                 "type": "device",
                 "data": { 
                     "label": device.name,
                     "ip": device.ip_address,
+                    "mac": device.mac_address,
                     "status": device.status,
                     "room": device.room.name if device.room else "Unassigned",
                     "device_type": device.device_type.name if device.device_type else "Unknown",
                     "icon": device.icon,
-                    "current_state": device.current_state
+                    "current_state": device.current_state,
+                    "is_bound": is_bound
                 },
                 "position": { "x": x_pos, "y": y_pos },
                 "style": {
                     "width": 180,
                     "borderColor": status_color,
-                    "borderWidth": "1px",
-                    "borderStyle": "solid",
+                    "borderWidth": "2px" if is_bound else "1px",
+                    "borderStyle": border_style,
                     "padding": "10px",
                     "borderRadius": "5px",
-                    "background": "white"
+                    "background": "white",
+                    "opacity": 1.0 if device.status == Device.STATUS_ONLINE else 0.6
                 }
             })
 
@@ -362,7 +369,76 @@ class DeviceListCreateView(generics.ListCreateAPIView):
         )
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        """
+        Create device and attempt auto-configuration based on IP.
+        """
+        device = serializer.save(user=self.request.user)
+        
+        # Trigger auto-configuration in background (or simpler: immediately here)
+        # We try to hit http://<device_ip>/config to set the MQTT server
+        self.configure_device(device)
+
+    def configure_device(self, device):
+        """
+        Send configuration to the device's HTTP server.
+        """
+        import requests
+        import logging
+        from django.conf import settings
+        import socket
+        logger = logging.getLogger(__name__)
+
+        try:
+            # Determine our own IP (the MQTT broker IP)
+            mqtt_broker_ip = getattr(settings, 'MQTT_BROKER_HOST', None)
+
+            if not mqtt_broker_ip:
+                # Use request.get_host() to find the address user accessed the API from (usually the host machine)
+                host_header = self.request.get_host()
+                host_ip = host_header.split(':')[0]
+                
+                # If accessed via a real IP (e.g. 192.168.0.x), use it.
+                if host_ip and host_ip != "localhost" and host_ip != "127.0.0.1":
+                    mqtt_broker_ip = host_ip
+                else:
+                    # Fallback if accessed via localhost (which won't work for external device)
+                    # Try to get the real local IP via socket (outbound connection check)
+                    try:
+                        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                        # Connecting to the DEVICE IP ensures we get the interface facing the device
+                        target_ip = device.ip_address if device.ip_address else "8.8.8.8"
+                        s.connect((target_ip, 80))
+                        detected_ip = s.getsockname()[0]
+                        s.close()
+                        
+                        # If detecting from Docker container, check for private subnet mismatch
+                        if detected_ip.startswith("172.") and target_ip.startswith("192.168."):
+                            logger.warning(
+                                f"Auto-detected internal Docker IP {detected_ip} but device is at {target_ip}. "
+                                "Skipping auto-configuration to prevent breaking connectivity. "
+                                "Set MQTT_BROKER_HOST env var to your LAN IP to fix this."
+                            )
+                            mqtt_broker_ip = None # Do NOT use this IP
+                        else:
+                            mqtt_broker_ip = detected_ip
+                    except Exception:
+                        pass
+
+            if not mqtt_broker_ip:
+                logger.warning(f"Could not determine MQTT Broker IP for device {device.name}")
+                return
+
+            url = f"http://{device.ip_address}/config"
+            payload = {"mqtt_server": mqtt_broker_ip}
+            
+            logger.info(f"Configuring device {device.name} at {device.ip_address} with MQTT Broker: {mqtt_broker_ip}")
+            
+            # Short timeout because device might not be online yet
+            requests.post(url, json=payload, timeout=2)
+            
+        except Exception as e:
+            logger.warning(f"Failed to auto-configure device {device.name}: {e}")
+
 
 class DeviceDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
@@ -399,35 +475,64 @@ class DeviceStateUpdateView(views.APIView):
         if not isinstance(new_state, dict):
              return Response({"detail": "State must be a JSON object."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Merge new state into existing state
-        current = device.current_state
-        current.update(new_state)
-        # Note: If we need deep merge later, we can implement it. For now, top-level keys update.
+        # Instead of updating DB immediately, we send the command to the hardware.
+        # The hardware will report back (via MQTT) when the state actually changes.
+        # This fulfills the requirement: "platform should say it's on only when the esp device performed the task"
         
-        device.current_state = current
-        
-        # SIMULATION LOGIC:
-        # If the backend successfully receives a command, we assume the device is reachable/active for now.
-        # This mocks the behavior of a successful acknowledgment.
-        device.status = Device.STATUS_ONLINE
-        
-        device.save()
-
         # Future Hook: Sync with hardware
         self.sync_with_hardware(device, new_state)
 
+        # Prepare optimistic state for the frontend to render immediately
+        # while waiting for the hardware confirmation.
+        # This prevents UI glitches/reverting when toggling rapidly.
+        current_state = device.current_state or {}
+        optimistic_state = {**current_state, **new_state}
+
         return Response({
-            "status": "State updated", 
+            "status": "Command sent", 
+            "detail": "State will update when device confirms.",
             "device_status": device.status,
-            "current_state": device.current_state
-        })
+            "current_state": optimistic_state
+        }, status=status.HTTP_202_ACCEPTED)
 
     def sync_with_hardware(self, device, state_changes):
         """
-        Placeholder for future MQTT/API logic.
+        Send command via MQTT.
+        If MAC is known, use it. Otherwise attempt to control via IP binding (less reliable).
         """
         import logging
         logger = logging.getLogger(__name__)
+
+        try:
+            from .mqtt_client import mqtt_client
+            
+            identifier = device.mac_address
+            # If MAC is missing, we can't control it reliably as per the new firmware protocol.
+            # However, the user might not have waited for the device to "check in".
+            # For now, we only support MAC-based pub if it's stored.
+            
+            if identifier:
+                # Compatibility Layer: ensure single-relay devices receive 'relay_1' command
+                # regardless of UI variable name.
+                payload = state_changes.copy()
+                
+                # Check if payload has boolean values but misses 'relay_1' or 'switch-*' keys
+                has_relay_key = any(k == "relay_1" or k.startswith("switch-") for k in payload.keys())
+                
+                if not has_relay_key:
+                    # Find first boolean value in payload to use as relay state
+                    for k, v in payload.items():
+                        if isinstance(v, bool) or (isinstance(v, str) and v.lower() in ['true', 'false', 'on', 'off']):
+                            payload["relay_1"] = v
+                            break
+
+                mqtt_client.publish(identifier, payload)
+            else:
+                # Log warning: Device hasn't checked in yet to establish MAC binding
+                logger.warning(f"Cannot control device {device.name} (ID: {device.id}) - No MAC address bound yet.")
+                
+        except Exception as e:
+            logger.error(f"Failed to publish MQTT command: {e}")
         logger.info(f"HARDWARE SYNC: Device {device.id} ({device.ip_address}) -> {state_changes}")
         # Logic to publish to MQTT topic would go here
         # topic = f"homeforge/devices/{device.id}/set"

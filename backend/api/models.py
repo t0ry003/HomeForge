@@ -85,12 +85,14 @@ class Device(models.Model):
 
     name = models.CharField(max_length=100)
     ip_address = models.GenericIPAddressField(protocol='IPv4')
+    mac_address = models.CharField(max_length=17, blank=True, null=True, unique=True, help_text="MAC Address (automatic from device)")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=STATUS_OFFLINE, db_index=True)
     icon = models.CharField(max_length=50, default='fa-cube', blank=True, help_text="FontAwesome icon class (e.g., fa-lightbulb)")
     device_type = models.ForeignKey('CustomDeviceType', on_delete=models.CASCADE, related_name='devices')
     room = models.ForeignKey(Room, on_delete=models.SET_NULL, null=True, blank=True, related_name='devices')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='devices', db_index=True)
     current_state = models.JSONField(default=dict, blank=True, help_text="Current state of device controls (e.g., {'relay_1': True})")
+    updated_at = models.DateTimeField(auto_now=True, help_text="Last time the device reported state")
 
     class Meta:
         ordering = ['-id']

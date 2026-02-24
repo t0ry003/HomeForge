@@ -6,6 +6,7 @@ import {
   Cpu, 
   Power,
   SlidersHorizontal,
+  Loader2,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -64,13 +65,106 @@ function getToggleControls(controls: Control[]): Control[] {
 
 export default function SmartDeviceCard({ device, deviceType, roomName, readOnly = false, animationIndex }: SmartDeviceCardProps) {
   const [currentState, setCurrentState] = useState<any>(device.current_state || {});
+  // Use a local online state that can be optimistic
   const [isOnline, setIsOnline] = useState(device.status === 'online' || device.is_online);
+  // Track if we are in a local optimistic state (either debouncing or mutating)
+  const [isDebouncing, setIsDebouncing] = useState(false);
+  // Track if we are waiting for a refetch after mutation
+  const [isRefetching, setIsRefetching] = useState(false);
+  
   const queryClient = useQueryClient();
   
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, newState }: { id: string; newState: any }) => {
+      // Direct call, no artificial delays
+      return updateDeviceState(id, newState);
+    },
+    onMutate: async ({ id, newState }) => {
+        // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+        await queryClient.cancelQueries({ queryKey: ['devices'] });
+        await queryClient.cancelQueries({ queryKey: ['device', id] });
+
+        // Snapshot the previous value
+        const previousDevice = queryClient.getQueryData(['device', id]);
+        
+        // Optimistically update the CACHE (not just local state)
+        // This ensures if the user navigates away and back, it's still snappy
+        queryClient.setQueryData(['device', id], (old: any) => ({
+             ...old,
+             current_state: newState
+        }));
+        
+        return { previousDevice };
+    },
+    // We intentionally do NOT use onSuccess to overwrite local state
+    // because that causes the "revert" glitch if the server state lags behind user clicks.
+    // We let the cache invalidation handle eventual consistency.
+    onError: (err, newTodo, context: any) => {
+        // Rollback to previous state on ERROR only
+        if (context?.previousDevice) {
+             queryClient.setQueryData(['device', context.previousDevice.id], context.previousDevice);
+             setCurrentState(context.previousDevice.current_state);
+        }
+        setIsRefetching(false);
+        toast.error("Failed to sync device state");
+    },
+    onSettled: () => {
+        // Mark that we are now waiting for the backend to reflect the change
+        setIsRefetching(true);
+        // Ensure invalidation happens strictly after state setting
+        // We use a slight delay for visual consistency so the user sees "processing"
+        setTimeout(() => {
+             queryClient.invalidateQueries({ queryKey: ['devices'] });
+        }, 300);
+        
+        // Safety timeout: stop the loading state after 5 seconds if the backend is stuck
+        // This prevents infinite loading spinners
+        setTimeout(() => {
+           setIsRefetching(false);
+        }, 5000);
+    }
+  });
+
+  // Calculate if we are in a syncing state
+  // We include isRefetching, but we clear it aggressively in the useEffect when data matches
+  const isSyncing = isDebouncing || updateMutation.isPending || isRefetching;
+
+  // Sync with prop updates - BUT ONLY if we are not currently managing a local update
+  // This prevents the "flash" where incorrect server state overwrites our optimistic UI
+  // However, if the server state matches our optimistic state, we should accept it to "settle" the sync 
   useEffect(() => {
-    setCurrentState(device.current_state || {});
-    setIsOnline(device.status === 'online' || device.is_online);
-  }, [device]);
+    // Always sync critical status flags regardless of state syncing
+    const serverOnline = device.status === 'online' || device.is_online;
+    if (serverOnline !== isOnline) {
+        setIsOnline(serverOnline);
+    }
+
+    // If not syncing, always accept server state
+    if (!isSyncing) {
+      setCurrentState(device.current_state || {});
+      return;
+    }
+
+    // If syncing, we usually ignore server state to avoid "jumping"
+    // BUT if the server state has "caught up" to what we wanted, we can stop ignoring it
+    // This handles the "force send" scenario where the update has arrived
+    const serverState = device.current_state || {};
+    
+    // We only care if the keys we modified match what is in the server state
+    // AND if the server actually has those keys (to avoid empty state matches)
+    const matchesOptimistic = Object.keys(currentState).length > 0 && Object.keys(currentState).every(key => 
+        // Use loose equality for numbers/strings just in case
+        String(currentState[key]) === String(serverState[key])
+    );
+
+    // Only clear the loading state if we are actually waiting for a refetch
+    // This effectively "locks" the loading state until the backend response matches our optimistic state
+    if (matchesOptimistic && isRefetching) {
+        // The server caught up! We can "resync" and stop ignoring it
+        setCurrentState(serverState);
+        setIsRefetching(false);
+    }
+  }, [device, isSyncing, currentState, isRefetching]);
 
   const Icon = (device.icon ? getIconComponent(device.icon) : null) || Cpu;
   const cardTemplate = deviceType?.card_template;
@@ -79,18 +173,6 @@ export default function SmartDeviceCard({ device, deviceType, roomName, readOnly
 
   const singleToggle = isSingleToggleDevice(controls);
   const toggleControls = getToggleControls(controls);
-
-  const updateMutation = useMutation({
-    mutationFn: async ({ id, newState }: { id: string; newState: any }) => {
-      return updateDeviceState(id, newState);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['devices'] });
-    },
-    onError: () => {
-      toast.error("Failed to sync device state");
-    }
-  });
 
   const mutateRef = useRef(updateMutation.mutate);
   useEffect(() => { mutateRef.current = updateMutation.mutate; });
@@ -104,39 +186,53 @@ export default function SmartDeviceCard({ device, deviceType, roomName, readOnly
   }, []);
 
   const handleStateChange = useCallback(async (variable: string, value: any, isImmediate = false) => {
+    // 1. Optimistic Update (Immediate UI change)
     const newState = { ...currentState, [variable]: value };
     setCurrentState(newState);
     
     if (readOnly) return;
-
-    if (isImmediate) {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      updateMutation.mutate({ id: device.id, newState });
-    } else {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      timerRef.current = setTimeout(() => {
-        mutateRef.current({ id: device.id, newState });
-      }, 500);
-    }
-  }, [currentState, readOnly, device.id, updateMutation]);
+    
+    // Clear any existing timer to debounce
+    if (timerRef.current) clearTimeout(timerRef.current);
+    
+    // Start local optimistic phase
+    setIsDebouncing(true);
+    
+    // 2. Debounced API Call
+    // If "immediate" (like a toggle click), use a very short 50ms debounce
+    // This feels instant but prevents accidental double-execution
+    // If "slider" (dragging), use standard 500ms debounce
+    const delay = isImmediate ? 50 : 500;
+    
+    timerRef.current = setTimeout(() => {
+      // Trigger mutation first so isPending becomes true roughly when we clear debouncing
+      mutateRef.current({ id: device.id, newState });
+      // Clear debouncing flag slightly later to ensure overlap so isSyncing never flickers false
+      // This prevents the "gap" where neither debouncing nor pending is true
+      setTimeout(() => setIsDebouncing(false), 50);
+    }, delay);
+    
+  }, [currentState, readOnly, device.id]);
 
   // Handle card tap for single-toggle devices
   const handleCardTap = useCallback(() => {
-    if (!isOnline || readOnly || !singleToggle) return;
+    // Prevent interaction while syncing
+    if (!isOnline || readOnly || !singleToggle || isSyncing) return;
     
     const toggle = toggleControls[0];
     const currentValue = !!currentState[toggle.variable_mapping];
     handleStateChange(toggle.variable_mapping, !currentValue, true);
-  }, [isOnline, readOnly, singleToggle, toggleControls, currentState, handleStateChange]);
+  }, [isOnline, readOnly, singleToggle, toggleControls, currentState, handleStateChange, isSyncing]);
 
   // Determine if card should show "tap to toggle" behavior
-  const isTappable = singleToggle && isOnline && !readOnly;
+  const isTappable = singleToggle && isOnline && !readOnly && !isSyncing;
   const isPoweredOn = singleToggle && !!currentState[toggleControls[0]?.variable_mapping];
 
   // Render individual widget based on type
   const renderWidget = (control: Control, index: number) => {
     const value = currentState[control.variable_mapping];
-    const isDisabled = !isOnline || readOnly;
+    // Disable interactions while syncing to prevent race conditions
+    const isDisabled = !isOnline || readOnly || isSyncing;
     const widgetVariant = (control.variant || 'row') as 'row' | 'square';
 
     switch(control.widget_type) {
@@ -158,10 +254,16 @@ export default function SmartDeviceCard({ device, deviceType, roomName, readOnly
                 "relative flex flex-col items-center justify-center p-2 rounded-xl border transition-all aspect-square overflow-hidden cursor-pointer",
                 toggleBg, toggleBorder,
                 isDisabled ? 'opacity-50' : 'hover:shadow-md active:scale-95',
-                isOn && 'shadow-[0_0_12px_-3px_rgba(34,197,94,0.3)]'
+                isOn && 'shadow-[0_0_12px_-3px_rgba(34,197,94,0.3)]',
+                isSyncing && "animate-pulse border-primary/50"
               )}
               onClick={() => !isDisabled && handleStateChange(control.variable_mapping, !isOn, true)}
             >
+                {isSyncing && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/20 backdrop-blur-[1px] z-10">
+                        <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                    </div>
+                )}
               <Power className={cn("w-5 h-5 mb-1", toggleColor)} />
               <span className={cn("text-lg font-bold leading-none", toggleColor)}>
                 {isOn ? 'ON' : 'OFF'}
@@ -345,6 +447,15 @@ export default function SmartDeviceCard({ device, deviceType, roomName, readOnly
       style={animationIndex !== undefined ? { animationDelay: `${animationIndex * 60}ms` } : undefined}
       onClick={isTappable ? handleCardTap : undefined}
     >
+      {/* Syncing Overlay - blurry loading state */}
+      {isSyncing && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/10 backdrop-blur-[2px] transition-all duration-300">
+           <div className="bg-background/80 p-2 rounded-full shadow-lg ring-1 ring-border/20">
+              <Loader2 className="w-5 h-5 animate-spin text-primary" />
+           </div>
+        </div>
+      )}
+
       {/* Offline overlay */}
       {!isOnline && (
         <div className="absolute inset-0 bg-background/40 backdrop-blur-[1px] z-10 pointer-events-none" />

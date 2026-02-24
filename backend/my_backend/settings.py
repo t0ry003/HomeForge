@@ -184,3 +184,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_CREDENTIALS = True
+
+# MQTT Broker config
+MQTT_BROKER_HOST = os.environ.get('MQTT_BROKER_HOST', None)
+
+
+CORS_ALLOW_CREDENTIALS = True

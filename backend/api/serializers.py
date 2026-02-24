@@ -147,6 +147,19 @@ class DeviceSerializer(serializers.ModelSerializer):
         model = Device
         fields = ['id', 'name', 'ip_address', 'status', 'icon', 'device_type', 'device_type_name', 'room', 'room_name', 'room_id', 'current_state']
 
+    def validate_ip_address(self, value):
+        """
+        Check that the IP address is unique across all devices.
+        """
+        qs = Device.objects.filter(ip_address=value)
+        # Exclude current device if updating
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+            
+        if qs.exists():
+            raise serializers.ValidationError(f"A device with IP address {value} already exists.")
+        return value
+
     def validate_device_type(self, value):
         if not value.approved:
              raise serializers.ValidationError("Device type must be approved.")

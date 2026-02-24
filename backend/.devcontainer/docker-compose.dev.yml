@@ -1,5 +1,8 @@
 services:
   backend:
+    ports:
+      - "1883:1883"
+      - "8000:8000"
     command: sleep infinity
   frontend:
     command: sleep infinity
