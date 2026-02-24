@@ -69,6 +69,15 @@
 | React Context | Global client state |
 | Sonner | Toast notifications |
 
+### Optimistic UI Patterns
+
+**Critical for Smart Home Operations:** The device controls (`SmartDeviceCard.tsx`) implement a specialized optimistic UI pattern to ensure responsiveness while handling inherent network latency.
+
+- **Immediate Feedback:** UI updates instantly on interaction (toggles, sliders).
+- **Smart Locking:** During server synchronization, the UI "locks" to the optimistic state, ignoring stale data from concurrent refetches until the server confirms the new state.
+- **Visual Sync:** A blurry overlay indicates processing, persisting until the backend state matches the frontend intent (or timeouts safely).
+- **Safety:** Rapid-fire interactions are prevented during sync to avoid race conditions.
+
 ---
 
 ## Architecture

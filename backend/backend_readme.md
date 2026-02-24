@@ -87,11 +87,12 @@ HomeForge is an open-source smart home management system designed for DIY IoT en
 │  └──────────┘  └──────────┘  └──────────┘  └────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
                                 │
-                                │ Future: MQTT/ESPHome
+                                │ MQTT & HTTP
                                 ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                      IOT HARDWARE LAYER                          │
 │         ESP32 / ESP8266 / Raspberry Pi / DIY Devices            │
+│  (Supports Auto-Discovery via mDNS & Dynamic Key Mapping)       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -218,6 +219,14 @@ HomeForge is an open-source smart home management system designed for DIY IoT en
 - **Strict Validation**: Duplicate checks, existence verification, schema validation
 - **Upsert Semantics**: PUT creates or replaces in one call
 - **Device Order Preference**: Persisted grouping/sorting choice (`room`, `type`, `status`, `name`, `custom`) with user → admin → default fallback
+
+### 10. Device Control & State Management
+
+- **Optimistic UI Updates**: API returns *predicted* new state immediately (HTTP 202) for instant UI feedback.
+- **Async Hardware Sync**: Background MQTT process confirms actual device state later.
+- **Dynamic Key Mapping**: Automatically maps standard keys (`relay_1`) to dynamic widget IDs (`switch-177...`).
+- **State Persistence**: Firmware saves state to NVS (flash) to restore ON/OFF status after power loss.
+- **Auto-Discovery**: Devices self-report capabilities and IP/MAC via mDNS and MQTT.
 
 ---
 

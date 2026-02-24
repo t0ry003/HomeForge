@@ -1,5 +1,19 @@
 # HomeForge Frontend Changelog
 
+## [2026-02-24] - Smart Device Card Synchronization & UX Improvements
+
+### Changed
+
+#### Robust Optimistic UI for Device Toggles (`components/devices/SmartDeviceCard.tsx`)
+- **Description**: Implemented a "smart sync" mechanism that locks the UI state during server mutations to prevent "jumping" (state flickering) caused by stale prop updates
+- **Behavior**: Clicking a toggle now immediately updates the local UI and shows a blurry loading overlay. This state persists until the server returns a confirmed state that *matches* the optimistic update
+- **Safety**: Added a 5-second timeout to clear the loading state if the backend fails to respond, preventing infinite spinners
+- **Visuals**: Replaced the subtle loading indicators with a full-card backdrop blur and centered spinner for clearer "processing" feedback
+- **Interaction**: Disabled all card interactions (taps, sliders) while a sync is in progress to prevent race conditions from rapid-fire clicks
+- **Latency**: Reduced toggle debounce time from 300ms to 50ms for a more instant "force send" feel while still catching accidental double-clicks
+
+---
+
 ## [2026-02-15] - Grid Alignment Fix for Variable-Height Cards
 
 ### Changed

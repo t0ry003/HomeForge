@@ -535,7 +535,8 @@ Devices represent IoT hardware in the smart home (lights, thermostats, sensors, 
 
 ### 5.6 Update Device State (Control Device)
 
-Send control commands to a device. This endpoint simulates hardware control by updating the device's operational state.
+Send control commands to a device. This endpoint simulates hardware control by sending commands via MQTT.
+To improve UI responsiveness, this endpoint now returns an **optimistic state** immediately.
 
 | Method | Endpoint | Auth Required |
 |--------|----------|---------------|
@@ -551,14 +552,15 @@ Send control commands to a device. This endpoint simulates hardware control by u
 ```
 
 **Behavior:**
-1. Merges provided key-value pairs with existing `current_state`
-2. Sets device `status` to `online` (simulating successful command receipt)
-3. Triggers hardware sync hook (logging for future MQTT integration)
+1. **Queues Command:** Sends the requested state change to the device via MQTT.
+2. **Optimistic Response:** Immediately returns the *predicted* new state (merging request with current state) without waiting for device confirmation.
+3. **Async Confirmation:** The physical device will report its new state asynchronously, which validates the change in the database.
 
-**Success Response (200 OK):**
+**Success Response (202 Accepted):**
 ```json
 {
-  "status": "State updated",
+  "status": "Command sent",
+  "detail": "State will update when device confirms.",
   "device_status": "online",
   "current_state": {
     "relay_1": true,
@@ -567,6 +569,9 @@ Send control commands to a device. This endpoint simulates hardware control by u
   }
 }
 ```
+
+**Note on Dynamic Keys:**
+If the device controls use dynamic keys (e.g., `switch-177...`), you can send either the dynamic key OR the standard key `relay_1`. The server automatically maps `relay_1` to the correct dynamic key for single-relay devices.
 
 **Error Responses:**
 - `404 Not Found`: Device not found
