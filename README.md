@@ -41,9 +41,10 @@ Unlike commercial solutions, HomeForge gives you complete control over your devi
 ### 🎛️ Device Management
 - **Universal Device Support** — Register any IoT device with flexible JSON state
 - **Visual Device Builder** — Design custom device configurations via drag-and-drop
-- **Real-time Control** — Toggle switches, sliders, and gauges with instant feedback
+- **Real-time Control** — Toggle switches, sliders, and gauges with instant "Smart Sync" feedback
 - **Custom Device Types** — Propose and approve new device categories
 - **Enhanced Device Cards** — Visual status indicators with offline overlay and disabled controls
+- **Advanced Drag & Drop** — iOS-style organization with 3-zone drop targets (insert/merge)
 
 ### 🗺️ Network Topology
 - **Interactive Visualization** — React Flow-powered network graph
@@ -386,6 +387,22 @@ This project is open source and available under the [MIT License](LICENSE).
 ---
 
 ## 📋 Changelog
+
+### [2026-02-24] - v1.6.1
+- **Added**: "Smart Sync" optimistic UI for device toggles with server state verification
+- **Added**: 3-zone drop system for device grid (left/right insert, center merge)
+- **Added**: iOS-style folder creation with merge animation and absorb effect
+- **Changed**: Device card interactions disabled during sync state to preventing race conditions
+- **Changed**: Grid alignment to `items-start` prevents height stretching of smaller cards
+- **Fixed**: Drag-and-drop glitches with new dynamic grip icon and centered drop targets
+
+### [2026-02-15] - v1.6.0
+- **Added**: 3-zone drop system for device grid organization
+- **Added**: iOS-style folder creation with visual absorb animation
+- **Changed**: API Guide updated to v1.6.0
+- **Changed**: Edit Layout mode moved to grouping dropdown menu
+- **Fixed**: React Query cache leak between user sessions on logout
+- **Fixed**: Grid alignment issues with variable height cards
 
 ### [2026-02-04] - v1.4.1 (Latest)
 - **Added**: `proposed_by` field to CustomDeviceType model to track who submitted device types
