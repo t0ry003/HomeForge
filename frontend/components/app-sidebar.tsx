@@ -3,12 +3,12 @@
 
 import * as React from "react"
 import { usePathname } from "next/navigation"
+import Image from "next/image"
 import {
   LayoutDashboard,
   Settings,
   Cpu,
   Network,
-  Hammer,
   Shield,
   Home,
   Users,
@@ -98,12 +98,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild className="hover:bg-primary/10 transition-colors duration-300 group">
               <a href="#">
-                <div className="relative flex aspect-square size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground transition-all duration-300 overflow-hidden">
-                  {/* Animated Glow Effect */}
-                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
-                  
-                  {/* Logo Placeholder - Replace with SVG */}
-                  <Hammer className="size-6 relative z-10 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" />
+                <div className="flex aspect-square size-12 items-center justify-center">
+                  <Image 
+                    src="/logos/homeforge-v2-color.svg" 
+                    alt="HomeForge Logo" 
+                    width={48} 
+                    height={48} 
+                    className="size-12 object-contain dark:block hidden"
+                    priority
+                  />
+                  <div 
+                    className="size-12 dark:hidden block bg-primary"
+                    style={{
+                      maskImage: 'url("/logos/homeforge-v2-bw.svg")',
+                      maskSize: 'contain',
+                      maskRepeat: 'no-repeat',
+                      maskPosition: 'center',
+                      WebkitMaskImage: 'url("/logos/homeforge-v2-bw.svg")',
+                      WebkitMaskRepeat: 'no-repeat',
+                      WebkitMaskPosition: 'center',
+                      WebkitMaskSize: 'contain',
+                    }}
+                  />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight ml-2">
                   <span className="truncate font-bold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">HomeForge</span>
