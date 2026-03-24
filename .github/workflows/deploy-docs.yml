@@ -2,11 +2,10 @@ name: Deploy Docusaurus
 
 on:
   push:
-    branches:
-      - main
+    branches: [main, master]
     paths:
       - 'website/**' # Only triggers when wiki files change
-
+  workflow_dispatch:
 permissions:
   contents: write
 
