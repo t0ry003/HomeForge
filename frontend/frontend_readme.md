@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../logos/favicon/favicon.svg" width="140" alt="HomeForge Logo">
+</p>
+
 # HomeForge Frontend
 
 > A modern smart home management platform built with Next.js, React, and TypeScript.

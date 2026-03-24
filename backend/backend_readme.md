@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../logos/favicon/favicon.svg" width="140" alt="HomeForge Logo">
+</p>
+
 # HomeForge Backend
 
 > **Smart Home Management Platform - Backend Service**

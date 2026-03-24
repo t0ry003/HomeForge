@@ -1,22 +1,23 @@
-<!-- <p align="center">
-  <img src="https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/home.svg" width="80" height="80" alt="HomeForge Logo">
-</p> -->
+<p align="center">
+  <img src="logos/favicon/favicon.svg" width="160" alt="HomeForge Logo">
+</p>
 
 <h1 align="center">HomeForge</h1>
 
 <p align="center">
   <strong>🏠 Open-Source Smart Home Management Platform for DIY IoT Enthusiasts</strong>
 </p>
-
-<p align="center">
+<center>
   <a href="#features">Features</a> •
   <a href="#quick-start">Quick Start</a> •
   <a href="#architecture">Architecture</a> •
   <a href="#documentation">Documentation</a> •
   <a href="#contributing">Contributing</a>
-</p>
+</center>
 
-<p align="center">
+
+
+<center>
   <img src="https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Django-5.x-green?logo=django&logoColor=white" alt="Django">
   <img src="https://img.shields.io/badge/Next.js-16+-black?logo=next.js&logoColor=white" alt="Next.js">
@@ -24,7 +25,8 @@
   <img src="https://img.shields.io/badge/TypeScript-5+-blue?logo=typescript&logoColor=white" alt="TypeScript">
   <img src="https://img.shields.io/badge/PostgreSQL-15-blue?logo=postgresql&logoColor=white" alt="PostgreSQL">
   <img src="https://img.shields.io/badge/Docker-Ready-blue?logo=docker&logoColor=white" alt="Docker">
-</p>
+</center>
+
 
 ---
 
@@ -194,7 +196,7 @@ HomeForge/
                                │ Future: MQTT / ESPHome
                                ▼
 ┌─────────────────────────────────────────────────────────────────────┐
-│                        IOT HARDWARE LAYER                            │
+│                        IOT HARDWARE LAYER                           │
 │            ESP32 / ESP8266 / Raspberry Pi / DIY Devices             │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -240,8 +242,9 @@ HomeForge/
 
 | Document | Description |
 |----------|-------------|
-| [Backend README](backend/BACKEND_README.md) | Backend architecture, models, and setup |
+| [Backend README](backend/backend_readme.md) | Backend architecture, models, and setup |
 | [Frontend README](frontend/frontend_readme.md) | Frontend architecture, components, and patterns |
+| [Wiki Website](website/README.md) | Docusaurus documentation site and deployment |
 | [API Guide](backend/API_GUIDE.md) | Complete API reference with examples |
 | [Frontend API Usage](frontend/API_USAGE.md) | Frontend apiClient.js usage guide |
 | [Copilot Instructions](.github/copilot-instructions.md) | AI coding guidelines and conventions |
@@ -387,6 +390,13 @@ This project is open source and available under the [MIT License](LICENSE).
 ---
 
 ## 📋 Changelog
+
+### [2026-03-24] - v1.7.0
+- **Added**: HomeForge Docusaurus wiki scaffold in `website/` with Overview, Backend, Frontend, and API Usage starter pages
+- **Added**: GitHub Actions workflow for docs deployment at `.github/workflows/deploy-docs.yml`
+- **Changed**: Root, backend, frontend, and website README files updated with HomeForge logo branding
+- **Changed**: Docusaurus branding assets switched to HomeForge favicon/logo and social card images
+- **Changed**: Frontend metadata and sidebar branding updated to use HomeForge logo pack under `frontend/public/logos/`
 
 ### [2026-02-24] - v1.6.1
 - **Added**: "Smart Sync" optimistic UI for device toggles with server state verification
