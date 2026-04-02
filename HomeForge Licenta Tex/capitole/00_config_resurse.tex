@@ -1,0 +1,19 @@
+% Configurari centralizate pentru resurse (figuri, cod, referinte)
+\graphicspath{{figuri/}}
+
+% Macro pentru includere rapida de figuri cu stil consistent
+\newcommand{\figura}[4][0.9\textwidth]{%
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=#1]{#2}
+    \caption{#3}
+    \label{fig:#4}
+  \end{figure}
+}
+
+% Macro pentru includere rapida de cod sursa extern cu minted
+% Sintaxa: \codsursa[optiuni-minted]{limbaj}{caption}{fisier}
+\newcommand{\codsursa}[4][]{%
+  \paragraph{#3}
+  \inputminted[#1]{#2}{#4}
+}

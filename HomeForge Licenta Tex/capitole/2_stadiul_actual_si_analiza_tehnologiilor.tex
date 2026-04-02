@@ -1,0 +1,17 @@
+\chapter{Stadiul Actual și Analiza Tehnologiilor}
+
+\section{Concepte fundamentale IoT și protocolul MQTT}
+Sistemele IoT moderne necesită protocoale de comunicație optimizate pentru lățimi de bandă reduse și consum minim de energie. Spre deosebire de HTTP, care utilizează un model cerere-răspuns (request-response) adesea prea greoi pentru microcontrolere, protocolul MQTT (Message Queuing Telemetry Transport) a devenit standardul \textit{de facto} în domeniu \cite{mqtt_standard_iot}. MQTT funcționează pe baza unui model de tip publicare-abonare (publish/subscribe), mediat de un server central numit broker. Această arhitectură asincronă este ideală pentru platforma HomeForge, permițând nodurilor hardware (precum ESP32) să trimită date (telemetrie) și să primească comenzi în timp real, cu o latență minimă.
+
+\section{Analiza platformelor Smart Home existente}
+Ecosistemul open-source actual oferă soluții mature pentru automatizarea casnică, printre cele mai notabile numărându-se Home Assistant și OpenHAB \cite{opensource_smarthome_platforms}. Aceste platforme excelează prin numărul vast de integrări disponibile. Cu toate acestea, complexitatea lor ridicată și arhitectura monolitică pot intimida utilizatorii la început de drum și limitează flexibilitatea dezvoltatorilor care doresc să înțeleagă funcționarea sistemului la un nivel fundamental. HomeForge se diferențiază prin faptul că nu încearcă să înlocuiască aceste giganturi, ci oferă o arhitectură curată, orientată spre educație și dezvoltare personalizată de tip DIY, fără un surplus de funcționalități neutilizate.
+
+\section{Justificarea stivei tehnologice}
+Pentru a asigura o dezvoltare modulară, performantă și ușor de întreținut, platforma HomeForge a fost construită utilizând o suită de tehnologii moderne, decuplate:
+
+\begin{itemize}
+    \item \textbf{Backend și Baze de Date:} S-a optat pentru limbajul Python și framework-ul Django, împreună cu Django REST Framework (DRF), pentru a asigura crearea rapidă și sigură a unui API robust. Persistența datelor relaționale (utilizatori, camere, tipuri de dispozitive) este asigurată de PostgreSQL.
+    \item \textbf{Frontend web:} Interfața grafică a fost dezvoltată folosind ecosistemul React, prin intermediul framework-ului Next.js. Această alegere facilitează randarea rapidă a componentelor, o gestionare eficientă a stărilor aplicației și o experiență de utilizare fluidă \cite{react_nextjs_ui}.
+    \item \textbf{Hardware și Edge Computing:} Nodurile senzorilor și actuatoarelor sunt implementate pe microcontrolere ESP32, recunoscute pentru raportul excelent cost-performanță și conectivitatea Wi-Fi integrată.
+    \item \textbf{Orchestrare:} Pentru a garanta un proces de instalare (self-hosting) simplu și izolat, întregul sistem este containerizat folosind Docker și Docker Compose \cite{docker_iot_edge}, eliminând discrepanțele dintre mediile de dezvoltare și producție.
+\end{itemize}

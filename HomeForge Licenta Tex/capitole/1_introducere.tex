@@ -1,0 +1,27 @@
+\chapter{Introducere}
+
+\section{Contextul actual al tehnologiilor IoT}
+În ultimul deceniu, conceptul de Internet of Things (IoT) a evoluat de la o paradigmă teoretică la o infrastructură omniprezentă, transformând radical modul în care interacționăm cu mediul înconjurător \cite{iot_smart_home_review}. Domeniul caselor inteligente (Smart Home) reprezintă una dintre cele mai vizibile și adoptate aplicații ale IoT. Aceste ecosisteme facilitează automatizarea, monitorizarea și controlul centralizat al echipamentelor, având ca scop final optimizarea resurselor și sporirea confortului utilizatorilor \cite{iot_energy_efficiency}. 
+
+\section{Limitări ale soluțiilor comerciale}
+În ciuda progreselor tehnologice, piața actuală de echipamente Smart Home este dominată de soluții proprietare care prezintă dezavantaje majore pentru utilizatorii avansați. Principala provocare este fenomenul de „vendor lock-in”, prin care producătorii restricționează interoperabilitatea dispozitivelor cu alte platforme \cite{vendor_lockin_iot}. Mai mult, majoritatea sistemelor comerciale sunt puternic dependente de infrastructuri Cloud. Această abordare generează probleme de latență, vulnerabilități privind confidențialitatea datelor \cite{dorri2017privacy} și pierderea totală a funcționalității sistemului local în absența unei conexiuni la internet.
+
+\section{Motivația și prezentarea platformei HomeForge}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.4\textwidth]{HomeForge-v2-color.png}
+    \caption{Logo-ul platformei HomeForge}
+    \label{fig:homeforge-logo}
+\end{figure}
+
+Pentru a adresa aceste limitări, prezenta lucrare propune HomeForge, o platformă open-source și self-hosted destinată managementului ecosistemelor Smart Home. HomeForge este concepută cu un accent puternic pe procesarea locală (Edge Computing) și pe eliminarea dependenței de servicii externe, oferind utilizatorului control absolut asupra datelor și hardware-ului. Pe lângă utilitatea practică, platforma servește drept un laborator personal de testare pentru pasionații de electronica de tip Do-It-Yourself (DIY). Sistemul facilitează exersarea conceptelor avansate de comunicație IoT, în special protocolul MQTT \cite{mqtt_performance}, a dezvoltării firmware pe microcontrolere (ESP32) și a arhitecturilor software moderne full-stack.
+
+\section{Obiectivele lucrării}
+Obiectivul principal al acestei lucrări este proiectarea, implementarea și validarea platformei HomeForge. Pentru atingerea acestui scop, au fost definite următoarele obiective specifice:
+\begin{itemize}
+    \item Proiectarea unei arhitecturi decuplate de tip Client-Server-Hardware, capabilă să integreze dispozitive IoT eterogene.
+    \item Dezvoltarea unui backend robust bazat pe Python și Django REST Framework.
+    \item Implementarea unei interfețe grafice web interactive folosind Next.js și React.
+    \item Configurarea nodurilor hardware bazate pe ESP32 pentru demonstrarea comunicării bidirecționale prin protocolul MQTT.
+\end{itemize}

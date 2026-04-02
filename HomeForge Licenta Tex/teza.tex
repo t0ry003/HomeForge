@@ -1,0 +1,80 @@
+\documentclass[12pt, a4paper, oneside, romanian]{teza-upb}
+
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+
+\usepackage{babel}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{setspace}
+\usepackage[
+  bookmarks,
+  bookmarksopen=true,
+  pdftitle={HomeForge. Platforma pentru automatizare rezidentiala si experimentare IoT},
+  linktocpage]{hyperref}
+\usepackage{minted}
+\usepackage{csquotes}
+\usepackage[backend=biber,style=ieee]{biblatex}
+\addbibresource{referinte/referinte.bib}
+
+\singlespacing
+
+\setminted{
+  linenos,
+  breaklines,
+  fontsize=\scriptsize,
+  frame=leftline,
+  framesep=2mm, 
+  tabsize=2,
+  encoding=utf8
+}
+
+\input{capitole/00_config_resurse}
+
+\begin{document}
+
+\author{Olteanu Rares - Cristian}
+\title{HomeForge. Platforma pentru automatizare rezidentiala si experimentare IoT}
+
+\facultatea{Universitatea Nationala de Stiinta si Tehnologie POLITEHNICA Bucuresti}
+\tiplucrare{licenta}
+\domeniu{Electronica, Telecomunicatii si Tehnologia Informatiei}
+\catedra{Telecomunicatii}
+\campus{Leu}
+\program{RST}
+\titlulobtinut{Inginer}
+\director{Boicescu Laurentiu}
+\logostanga{logo/unstpb_logo.png}
+\logodreapta{logo/ETTI-LOGO-A-1.png}
+
+\submissionmonth{Iunie}
+\submissionyear{2026}
+
+\beforepreface
+\listoffigures
+\listoftables
+\abbreviations{
+  API = Application Programming Interface\\
+  DRF = Django REST Framework\\
+  JWT = JSON Web Token\\
+  UI = User Interface\\
+  UX = User Experience\\
+  CRUD = Create, Read, Update, Delete\\
+  MQTT = Message Queuing Telemetry Transport
+}
+\afterpreface
+
+\include{capitole/1_introducere}
+\include{capitole/2_arhitectura}
+% \include{capitole/3_backend}
+% \include{capitole/4_frontend}
+% \include{capitole/5_integrare_api}
+% \include{capitole/6_rulare_testare_deployment}
+% \include{capitole/7_concluzii}
+
+\nocite{*}
+\printbibliography[heading=bibintoc,title={Bibliografie}]
+
+\include{capitole/A_anexa_comenzi}
+
+\end{document}
