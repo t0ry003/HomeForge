@@ -11,3 +11,25 @@ yarn-debug.log*
 yarn-error.log*
 
 .DS_Store
+
+# LaTeX / minted build artifacts
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.log
+*.lot
+*.out
+*.run.xml
+*.synctex.gz
+*.toc
+*.xdv
+*.bbl-SAVE-ERROR
+*.bcf-SAVE-ERROR
+_minted-*/
+
+# Generated thesis PDF
+HomeForge Licenta Tex/teza.pdf
