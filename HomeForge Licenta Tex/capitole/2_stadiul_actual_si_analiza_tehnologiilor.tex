@@ -7,10 +7,41 @@ Pentru a rezolva această problemă, standardul industriei a devenit protocolul 
 
 \begin{figure}[htbp]
     \centering
-    \includesvg[width=0.7\textwidth]{MQTT_vs_REST.svg}
+    \includegraphics[width=0.7\textwidth]{figuri/MQTT_vs_REST.pdf}
     \caption{Comparație arhitecturală între modelul tradițional HTTP și modelul MQTT (Publish-Subscribe)}
     \label{fig:mqtt_vs_http}
 \end{figure}
+
+\section{Comparație tehnică: MQTT versus HTTP/REST în ecosistemul IoT}
+
+Alegerea protocolului de comunicație dictează performanța generală, consumul de energie și scalabilitatea unui sistem de tip Smart Home. Tradițional, arhitectura web se bazează pe protocolul HTTP și stilul arhitectural REST (\textit{Representational State Transfer}). Deși REST excelează în comunicarea dintre servere și aplicații web complexe datorită compatibilității universale și simplității de integrare, acesta devine ineficient când este coborât la nivelul microcontrolerelor limitate fizic.
+
+HTTP utilizează un model sincron de tip \textit{Request-Response} (Cerere-Răspuns). Aceasta înseamnă că pentru fiecare mesaj trimis, clientul trebuie să inițieze o conexiune TCP completă, să trimită un pachet cu un antet (\textit{header}) de mari dimensiuni și să aștepte un răspuns. În plus, protocolul nu suportă nativ comunicarea bidirecțională; un server HTTP nu poate „împinge” proactiv date către un senzor fără ca senzorul să le fi cerut în prealabil (\textit{polling}) \cite{mqtt_vs_http_iot_perf}.
+
+Pe de altă parte, protocolul MQTT rezolvă aceste limitări printr-o arhitectură asincronă de tip \textit{Publish-Subscribe}. Odată ce un dispozitiv hardware stabilește o conexiune cu Broker-ul MQTT, această conexiune este menținută deschisă (\textit{persistent session}). Dimensiunea antetului MQTT este extrem de mică (minim 2 bytes, comparativ cu sute de bytes la HTTP), ceea ce reduce drastic timpul de răspuns, consumul lățimii de bandă și, cel mai important pentru rețelele de senzori, consumul de energie al bateriei.
+
+Pentru platforma HomeForge, s-a adoptat o arhitectură hibridă. MQTT este utilizat la nivelul de bază, pentru comunicarea rapidă și bidirecțională dintre server și nodurile ESP32, în timp ce API-ul REST este folosit de interfața web (Next.js) pentru preluarea datelor agregate și gestionarea profilurilor de utilizator. Diferențele fundamentale sunt sintetizate în Tabelul \ref{tab:mqtt_vs_rest}.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Analiza comparativă între protocoalele MQTT și HTTP/REST pentru aplicații IoT}
+    \vspace{0.4\baselineskip}
+    \label{tab:mqtt_vs_rest}
+    {\setstretch{1.0}
+    \footnotesize
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{5.8cm}|>{\raggedright\arraybackslash}p{5.8cm}|}
+        \hline
+        \textbf{Caracteristică} & \textbf{MQTT (Message Queuing Telemetry Transport)} & \textbf{HTTP / REST (Representational State Transfer)} \\ \hline
+        \textbf{Arhitectură model} & Asincron, Publish-Subscribe (mediat de un Broker). & Sincron, Client-Server (Request-Response). \\ \hline
+        \textbf{Dimensiune antet (Overhead)} & Foarte mic (începând de la 2 bytes). & Mare (sute de bytes, include cookies, tipuri de conținut etc.). \\ \hline
+        \textbf{Conexiune TCP} & Persistentă (\textit{stateful}). Conexiunea rămâne deschisă pentru mesaje multiple. & Independentă (\textit{stateless}). Se creează și se închide o conexiune la fiecare cerere. \\ \hline
+        \textbf{Calitatea Serviciului (QoS)} & Nativ (3 niveluri de QoS, garantează livrarea mesajului). & Lipsă nativă a conceptului de QoS. Depinde de logica aplicației. \\ \hline
+        \textbf{Comunicație bidirecțională} & Suportată nativ. Broker-ul poate împinge comenzi către senzori instantaneu. & Nu este suportată nativ (necesită tehnici ineficiente de tip \textit{polling} sau trecerea la WebSockets). \\ \hline
+        \textbf{Caz de utilizare ideal} & Rețele de senzori, microcontrolere cu resurse limitate (ESP32), telemetrie în timp real. & API-uri web, gestionarea conturilor, transmiterea unor calupuri mari de date (documente). \\ \hline
+    \end{tabular}
+    }
+\end{table}
 
 \section{Analiza platformelor existente și nișa HomeForge}
 Ecosistemul open-source actual este dominat de soluții extrem de mature, precum Home Assistant sau OpenHAB. Aceste platforme sunt veritabile „sisteme de operare” pentru case inteligente, având mii de integrări posibile. 

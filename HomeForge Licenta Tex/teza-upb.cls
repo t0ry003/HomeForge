@@ -17,7 +17,7 @@
 %     by the LaTex report style at 11 point.
 
 % Class description
-\RequirePackage[utf8x]{inputenc}
+\RequirePackage[utf8]{inputenc}
 \NeedsTeXFormat{LaTeX2e}
 \def\fileversion{1.0}
 \def\filedate{03/04/2011}
@@ -192,7 +192,8 @@
 
 
 % Add period after section numbers in table of contents.
-\def\numberline#1{\advance\hangindent\@tempdima \hbox to\@tempdima{#1.\hfil}}
+% Keep this hyperref-safe to avoid bookmark PDF string warnings.
+\def\numberline#1{#1.\space}
 
 \newcommand{\l@unnumberedsection}[2]{\pagebreak[3]% \vskip 1em plus 1bp
 \parindent \z@ \rightskip \@pnumwidth 
@@ -647,7 +648,7 @@ Absolvent: {\@author}
 {\egroup\end@float}
 
 % Redefine appendix to print Appendix []. ... page # in table of contents.
-\newcommand{\appnumberline}[1]{\advance\hangindent\@tempdima \hbox{Anexa #1. }}
+\newcommand{\appnumberline}[1]{Anexa #1.\space}
 \renewcommand\appendix{\par
  \setcounter{chapter}{0}
  \setcounter{section}{0}

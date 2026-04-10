@@ -18,6 +18,15 @@
 \usepackage[backend=biber,style=ieee]{biblatex}
 \addbibresource{referinte/referinte.bib}
 
+\makeatletter
+\pdfstringdefDisableCommands{%
+  \def\numberline#1{#1.\space}%
+}
+\providecommand*{\toclevel@unnumberedsection}{1}
+\makeatother
+
+\setlength{\emergencystretch}{2em}
+
 \singlespacing
 
 \setminted{
@@ -29,6 +38,8 @@
   tabsize=2,
   encoding=utf8
 }
+
+\svgsetup{inkscapelatex=true,inkscapeexe=inkscape,inkscapepath=build/svg-inkscape/}
 
 \input{capitole/00_config_resurse}
 

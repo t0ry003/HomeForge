@@ -16,8 +16,10 @@ import re
 from pathlib import Path
 from typing import Iterable
 
-CITE_RE = re.compile(r"\\(?:cite[a-zA-Z*]*|nocite)\s*(?:\[[^\]]*\]\s*)*\{([^}]*)\}")
-ENTRY_RE = re.compile(r"^@(?P<type>[A-Za-z]+)\s*\{\s*(?P<key>[^,\s]+)\s*,", re.M)
+CITE_RE = re.compile(
+    r"\\(?:cite[a-zA-Z*]*|nocite)\s*(?:\[[^\]]*\]\s*)*\{([^}]*)\}")
+ENTRY_RE = re.compile(
+    r"^@(?P<type>[A-Za-z]+)\s*\{\s*(?P<key>[^,\s]+)\s*,", re.M)
 
 
 def iter_tex_files(root: Path) -> Iterable[Path]:
@@ -44,16 +46,21 @@ def parse_bib_entries(bib_text: str) -> list[tuple[str, str]]:
     entries: list[tuple[str, str]] = []
     for index, match in enumerate(matches):
         start = match.start()
-        end = matches[index + 1].start() if index + 1 < len(matches) else len(bib_text)
-        entries.append((match.group("key"), bib_text[start:end].rstrip() + "\n\n"))
+        end = matches[index + 1].start() if index + \
+            1 < len(matches) else len(bib_text)
+        entries.append(
+            (match.group("key"), bib_text[start:end].rstrip() + "\n\n"))
     return entries
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--tex-root", type=Path, required=True, help="Root folder containing TeX sources")
-    parser.add_argument("--bib", type=Path, required=True, help="Input .bib file")
-    parser.add_argument("--prune", type=Path, help="Write a pruned .bib with only cited entries")
+    parser.add_argument("--tex-root", type=Path, required=True,
+                        help="Root folder containing TeX sources")
+    parser.add_argument("--bib", type=Path, required=True,
+                        help="Input .bib file")
+    parser.add_argument("--prune", type=Path,
+                        help="Write a pruned .bib with only cited entries")
     args = parser.parse_args()
 
     cited = collect_cited_keys(args.tex_root)
@@ -70,9 +77,11 @@ def main() -> int:
         print("No unused bibliography keys found.")
 
     if args.prune:
-        used_entries = [entry_text for key, entry_text in entries if key in cited]
+        used_entries = [entry_text for key,
+                        entry_text in entries if key in cited]
         args.prune.parent.mkdir(parents=True, exist_ok=True)
-        args.prune.write_text("".join(used_entries).rstrip() + "\n", encoding="utf-8")
+        args.prune.write_text(
+            "".join(used_entries).rstrip() + "\n", encoding="utf-8")
         print(f"Pruned bibliography written to {args.prune}")
 
     return 0
