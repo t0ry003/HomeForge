@@ -5,6 +5,7 @@
 
 \usepackage{babel}
 \usepackage{graphicx}
+\usepackage{svg}
 \usepackage{xcolor}
 \usepackage{setspace}
 \usepackage[
@@ -12,7 +13,7 @@
   bookmarksopen=true,
   pdftitle={HomeForge. Platforma pentru automatizare rezidentiala si experimentare IoT},
   linktocpage]{hyperref}
-\usepackage{minted}
+\usepackage[outputdir=build]{minted}
 \usepackage{csquotes}
 \usepackage[backend=biber,style=ieee]{biblatex}
 \addbibresource{referinte/referinte.bib}
@@ -72,7 +73,7 @@
 % \include{capitole/6_rulare_testare_deployment}
 % \include{capitole/7_concluzii}
 
-\nocite{*}
+% \nocite{*}
 \printbibliography[heading=bibintoc,title={Bibliografie}]
 
 \include{capitole/A_anexa_comenzi}

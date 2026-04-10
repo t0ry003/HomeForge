@@ -1,4 +1,9 @@
 {
+  "[latex]": {
+    "editor.wordWrap": "on",
+    "editor.wordWrapColumn": 120,
+    "editor.rulers": [120]
+  },
   "latex-workshop.latex.tools": [
     {
       "name": "latexmk (minted+biber)",
@@ -9,6 +14,8 @@
         "-interaction=nonstopmode",
         "-file-line-error",
         "-synctex=1",
+        "-outdir=build",
+        "-auxdir=build",
         "%DOC%"
       ]
     }

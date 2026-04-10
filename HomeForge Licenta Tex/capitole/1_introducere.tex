@@ -1,13 +1,28 @@
 \chapter{Introducere}
 
 \section{Contextul actual al tehnologiilor IoT}
-În ultimul deceniu, conceptul de Internet of Things (IoT) a evoluat de la o paradigmă teoretică la o infrastructură omniprezentă, transformând radical modul în care interacționăm cu mediul înconjurător \cite{iot_smart_home_review}. Domeniul caselor inteligente (Smart Home) reprezintă una dintre cele mai vizibile și adoptate aplicații ale IoT. Aceste ecosisteme facilitează automatizarea, monitorizarea și controlul centralizat al echipamentelor, având ca scop final optimizarea resurselor și sporirea confortului utilizatorilor \cite{iot_energy_efficiency}. 
+În ultimul deceniu, conceptul de Internet of Things (IoT) a evoluat de la o paradigmă teoretică la o infrastructură omniprezentă, transformând radical modul în care interacționăm cu mediul înconjurător \cite{iot_smart_home_review}. Domeniul caselor inteligente (Smart Home) reprezintă una dintre cele mai vizibile și adoptate aplicații ale IoT. Aceste ecosisteme facilitează automatizarea, monitorizarea și controlul centralizat al echipamentelor, având ca scop final optimizarea resurselor și sporirea confortului utilizatorilor \cite{iot_energy_efficiency}.
 
 \section{Limitări ale soluțiilor comerciale}
 În ciuda progreselor tehnologice, piața actuală de echipamente Smart Home este dominată de soluții proprietare care prezintă dezavantaje majore pentru utilizatorii avansați. Principala provocare este fenomenul de „vendor lock-in”, prin care producătorii restricționează interoperabilitatea dispozitivelor cu alte platforme \cite{vendor_lockin_iot}. Mai mult, majoritatea sistemelor comerciale sunt puternic dependente de infrastructuri Cloud. Această abordare generează probleme de latență, vulnerabilități privind confidențialitatea datelor \cite{dorri2017privacy} și pierderea totală a funcționalității sistemului local în absența unei conexiuni la internet.
 
-\section{Motivația și prezentarea platformei HomeForge}
+\section{Motivația și viziunea platformei HomeForge}
+Pentru a înțelege clar necesitatea unei platforme precum HomeForge, trebuie mai întâi să definim conceptul de casă inteligentă (\textit{Smart Home}). Conform cercetărilor recente, un Smart Home înseamnă mult mai mult decât o simplă rețea de dispozitive conectate la internet. Acesta reprezintă un mediu echipat cu inteligență ambientală (\textit{ambient intelligence}), capabil să anticipeze nevoile utilizatorului și să integreze automatizări, securitate și management energetic într-un mod natural și invizibil \cite{marikyan_smarthome_2019}.
 
+Deși aceasta este viziunea ideală, pasionații de tehnologie, inginerii la început de drum și comunitatea de creatori (\textit{makers}) se lovesc de o problemă majoră. Pe de o parte, soluțiile comerciale funcționează ca niște „cutii negre” (\textit{black boxes}). Ele ascund complexitatea tehnică, forțează utilizatorul să rămână în ecosistemul aceluiași producător (fenomenul de \textit{vendor lock-in}) și se bazează masiv pe servere externe (\textit{Cloud}). Această dependență de Cloud aduce probleme de întârziere a comenzilor (\textit{latență}) și riscuri legate de confidențialitatea datelor \cite{edge_computing_iot_2020}. 
+
+Pe de altă parte, platformele \textit{open-source} deja consacrate, deși sunt extrem de capabile, au devenit foarte complexe. Ele ascund prea mult din procesele de bază, ceea ce îi împiedică pe cei care vor să învețe (\textit{să construiască sisteme DIY - Do-It-Yourself}) să înțeleagă exact cum circulă datele de la senzor până la interfața de pe ecran.
+
+Din această nevoie a apărut \textbf{HomeForge}. Platforma nu își propune să fie un produs comercial de masă, ci un „atelier digital” (\textit{forge}) pentru dezvoltatori. HomeForge face ca procesul de creare a unui ecosistem Smart Home să fie transparent, flexibil și educativ, bazându-se pe următoarele direcții cheie:
+
+\begin{itemize}
+    \item \textbf{Flexibilitate Hardware (\textit{Hardware Agnostic}):} Sistemul nu te obligă să folosești un anumit tip de placă sau senzor. Folosind protocolul standardizat MQTT pentru comunicare, orice dispozitiv construit de la zero (cum ar fi un microcontroler ESP32 programat în C++) se poate conecta instantaneu la server, atâta timp cât trimite datele într-un format text standard (\textit{JSON}).
+    \item \textbf{Interfață Vizuală Personalizabilă (\textit{Dynamic UI}):} Prin modulul \textit{Visual Device Builder}, creat cu tehnologiile React și Next.js, utilizatorii nu mai sunt limitați la ecrane predefinite. Ei își pot construi și aranja propriile butoane, grafice sau slidere direct din browser, legându-le vizual de funcțiile hardware-ului lor.
+    \item \textbf{Control Local și Securitate (\textit{Edge Computing}):} Întreaga aplicație – de la serverul backend scris în Django, la baza de date PostgreSQL – rulează pe propriul echipament al utilizatorului (\textit{self-hosted}). Prin eliminarea conexiunii obligatorii la Cloud, automatizările din casă funcționează instantaneu chiar și atunci când pică internetul, iar datele private nu părăsesc niciodată rețeaua locală.
+    \item \textbf{Spațiu de Învățare (\textit{Full-Stack Sandbox}):} Dincolo de a fi o aplicație utilă în casă, HomeForge este un mediu sigur pentru învățare. Utilizatorul trece prin toate etapele dezvoltării software moderne: scrierea codului direct pe microcontroler, transmiterea datelor prin rețea, stocarea lor într-o bază de date relațională și afișarea lor într-o interfață web reactivă.
+\end{itemize}
+
+Prin această abordare, HomeForge rezolvă problema automatizărilor pentru proiectele personale de electronică și redă utilizatorului controlul total asupra tehnologiei din propria casă.
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.4\textwidth]{HomeForge-v2-color.png}

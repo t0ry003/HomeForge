@@ -1,17 +1,41 @@
 \chapter{Stadiul Actual și Analiza Tehnologiilor}
 
-\section{Concepte fundamentale IoT și protocolul MQTT}
-Sistemele IoT moderne necesită protocoale de comunicație optimizate pentru lățimi de bandă reduse și consum minim de energie. Spre deosebire de HTTP, care utilizează un model cerere-răspuns (request-response) adesea prea greoi pentru microcontrolere, protocolul MQTT (Message Queuing Telemetry Transport) a devenit standardul \textit{de facto} în domeniu \cite{mqtt_standard_iot}. MQTT funcționează pe baza unui model de tip publicare-abonare (publish/subscribe), mediat de un server central numit broker. Această arhitectură asincronă este ideală pentru platforma HomeForge, permițând nodurilor hardware (precum ESP32) să trimită date (telemetrie) și să primească comenzi în timp real, cu o latență minimă.
+\section{Concepte fundamentale IoT: De la HTTP la MQTT}
+Orice sistem IoT modern depinde de modul în care dispozitivele comunică între ele. Tradițional, aplicațiile web folosesc protocolul HTTP, bazat pe un model de tip cerere-răspuns (\textit{request-response}). Pentru o casă inteligentă, acest model este ineficient: un senzor ar trebui să fie interogat continuu (\textit{polling}) pentru a afla dacă starea sa s-a schimbat, irosind lățime de bandă și energie.
 
-\section{Analiza platformelor Smart Home existente}
-Ecosistemul open-source actual oferă soluții mature pentru automatizarea casnică, printre cele mai notabile numărându-se Home Assistant și OpenHAB \cite{opensource_smarthome_platforms}. Aceste platforme excelează prin numărul vast de integrări disponibile. Cu toate acestea, complexitatea lor ridicată și arhitectura monolitică pot intimida utilizatorii la început de drum și limitează flexibilitatea dezvoltatorilor care doresc să înțeleagă funcționarea sistemului la un nivel fundamental. HomeForge se diferențiază prin faptul că nu încearcă să înlocuiască aceste giganturi, ci oferă o arhitectură curată, orientată spre educație și dezvoltare personalizată de tip DIY, fără un surplus de funcționalități neutilizate.
+Pentru a rezolva această problemă, standardul industriei a devenit protocolul MQTT (\textit{Message Queuing Telemetry Transport}) \cite{mqtt_standard_iot}. Spre deosebire de HTTP, MQTT utilizează un model asincron de tip publicare-abonare (\textit{publish-subscribe}). În centrul rețelei se află un server numit \textit{broker}. Nodurile hardware (cum ar fi întrerupătoarele sau senzorii) doar „publică” mesaje atunci când o valoare se schimbă, iar interfața web, fiind „abonată” la acele date, se actualizează instantaneu. Această arhitectură condusă de evenimente (\textit{event-driven}) este fundația platformei HomeForge, permițând comunicarea în timp real, cu latență de ordinul milisecundelor.
 
-\section{Justificarea stivei tehnologice}
-Pentru a asigura o dezvoltare modulară, performantă și ușor de întreținut, platforma HomeForge a fost construită utilizând o suită de tehnologii moderne, decuplate:
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{MQTT_vs_REST.png}
+    \caption{Comparație arhitecturală între modelul tradițional HTTP și modelul MQTT (Publish-Subscribe)}
+    \label{fig:mqtt_vs_http}
+\end{figure}
+
+\section{Analiza platformelor existente și nișa HomeForge}
+Ecosistemul open-source actual este dominat de soluții extrem de mature, precum Home Assistant sau OpenHAB. Aceste platforme sunt veritabile „sisteme de operare” pentru case inteligente, având mii de integrări posibile. 
+
+Cu toate acestea, din perspectiva unui dezvoltator la început de drum sau a unui pasionat de electronică DIY, aceste platforme sunt adesea copleșitoare. Arhitectura lor este complexă, configurarea inițială necesită timp, iar adăugarea unui simplu senzor creat de la zero presupune înțelegerea unor concepte abstracte specifice fiecărei platforme.
+
+HomeForge nu își propune să concureze direct cu aceste sisteme gigantice. În schimb, HomeForge acoperă o nișă clară: oferă o platformă esențializată, curată și educațională. Scopul este de a oferi un sistem funcțional din prima zi, dar cu un cod sursă ușor de citit și modificat. HomeForge acționează ca o „punte” între scrierea codului pe un microcontroler și vizualizarea datelor într-o interfață modernă, fără funcționalități inutile (\textit{bloatware}).
+
+\section{Justificarea stivei tehnologice (\textit{Tech Stack})}
+Pentru a asigura o dezvoltare modulară, performantă și ușor de înțeles, platforma HomeForge a fost construită folosind o serie de tehnologii moderne, decuplate. Fiecare componentă a fost aleasă pentru rolul ei specific într-o arhitectură modernă de tip Client-Server:
 
 \begin{itemize}
-    \item \textbf{Backend și Baze de Date:} S-a optat pentru limbajul Python și framework-ul Django, împreună cu Django REST Framework (DRF), pentru a asigura crearea rapidă și sigură a unui API robust. Persistența datelor relaționale (utilizatori, camere, tipuri de dispozitive) este asigurată de PostgreSQL.
-    \item \textbf{Frontend web:} Interfața grafică a fost dezvoltată folosind ecosistemul React, prin intermediul framework-ului Next.js. Această alegere facilitează randarea rapidă a componentelor, o gestionare eficientă a stărilor aplicației și o experiență de utilizare fluidă \cite{react_nextjs_ui}.
-    \item \textbf{Hardware și Edge Computing:} Nodurile senzorilor și actuatoarelor sunt implementate pe microcontrolere ESP32, recunoscute pentru raportul excelent cost-performanță și conectivitatea Wi-Fi integrată.
-    \item \textbf{Orchestrare:} Pentru a garanta un proces de instalare (self-hosting) simplu și izolat, întregul sistem este containerizat folosind Docker și Docker Compose \cite{docker_iot_edge}, eliminând discrepanțele dintre mediile de dezvoltare și producție.
+    \item \textbf{Backend-ul (Logica și Datele):} Am optat pentru limbajul Python și ecosistemul Django, utilizând \textit{Django REST Framework} (DRF). Această combinație permite dezvoltarea rapidă a unui API sigur și robust. Datele relaționale (utilizatori, camere, tipuri de dispozitive) sunt salvate în PostgreSQL, una dintre cele mai performante baze de date open-source.
+    \item \textbf{Frontend-ul (Interfața Utilizator):} Pentru a oferi o experiență fluidă (\textit{Single Page Application}), interfața a fost dezvoltată cu React și framework-ul Next.js. Această tehnologie permite randarea instantanee a componentelor și, combinată cu instrumente de gestionare a stărilor (precum React Query), oferă o interacțiune fără întreruperi \cite{react_nextjs_ui}.
+    \item \textbf{Hardware-ul (Nodurile IoT):} La nivel fizic, platforma este testată folosind microcontrolere din familia ESP32. Acestea au devenit standardul în comunitatea DIY datorită costului redus, puterii de procesare și modulului Wi-Fi integrat nativ.
+    \item \textbf{Orchestrarea (Deployment):} Pentru a rezolva clasica problemă „pe calculatorul meu funcționează”, întregul ecosistem (bază de date, backend, frontend) este împachetat în containere izolate folosind Docker și Docker Compose. Astfel, instalarea sistemului HomeForge se reduce la rularea unei singure comenzi.
 \end{itemize}
+
+% SUGESTIE DE DIAGRAMĂ 2: 
+% Fă o diagramă cu blocuri (Stack Tehnologic). 
+% Sus: Next.js (React). Mijloc: Django + PostgreSQL + Broker MQTT. Jos: ESP32.
+% Poți folosi chiar iconițele/logo-urile tehnologiilor.
+% \begin{figure}[htbp]
+%     \centering
+%     % \includegraphics[width=0.6\textwidth]{imagini/stack_tehnologic.png}
+%     \caption{Stiva tehnologică decuplată a platformei HomeForge}
+%     \label{fig:tech_stack}
+% \end{figure}
