@@ -1,0 +1,158 @@
+%% Creator: Inkscape 1.2.2 (b0a8486541, 2022-12-01), www.inkscape.org
+%% PDF/EPS/PS + LaTeX output extension by Johan Engelen, 2010
+%% Accompanies image file 'MQTT_vs_REST_svg-tex.pdf' (pdf, eps, ps)
+%%
+%% To include the image in your LaTeX document, write
+%%   \input{<filename>.pdf_tex}
+%%  instead of
+%%   \includegraphics{<filename>.pdf}
+%% To scale the image, write
+%%   \def\svgwidth{<desired width>}
+%%   \input{<filename>.pdf_tex}
+%%  instead of
+%%   \includegraphics[width=<desired width>]{<filename>.pdf}
+%%
+%% Images with a different path to the parent latex file can
+%% be accessed with the `import' package (which may need to be
+%% installed) using
+%%   \usepackage{import}
+%% in the preamble, and then including the image with
+%%   \import{<path to file>}{<filename>.pdf_tex}
+%% Alternatively, one can specify
+%%   \graphicspath{{<path to file>/}}
+%% 
+%% For more information, please see info/svg-inkscape on CTAN:
+%%   http://tug.ctan.org/tex-archive/info/svg-inkscape
+%%
+\begingroup%
+  \makeatletter%
+  \providecommand\color[2][]{%
+    \errmessage{(Inkscape) Color is used for the text in Inkscape, but the package 'color.sty' is not loaded}%
+    \renewcommand\color[2][]{}%
+  }%
+  \providecommand\transparent[1]{%
+    \errmessage{(Inkscape) Transparency is used (non-zero) for the text in Inkscape, but the package 'transparent.sty' is not loaded}%
+    \renewcommand\transparent[1]{}%
+  }%
+  \providecommand\rotatebox[2]{#2}%
+  \newcommand*\fsize{\dimexpr\f@size pt\relax}%
+  \newcommand*\lineheight[1]{\fontsize{\fsize}{#1\fsize}\selectfont}%
+  \ifx\svgwidth\undefined%
+    \setlength{\unitlength}{590.12019958bp}%
+    \ifx\svgscale\undefined%
+      \relax%
+    \else%
+      \setlength{\unitlength}{\unitlength * \real{\svgscale}}%
+    \fi%
+  \else%
+    \setlength{\unitlength}{\svgwidth}%
+  \fi%
+  \global\let\svgwidth\undefined%
+  \global\let\svgscale\undefined%
+  \makeatother%
+  \begin{picture}(1,0.72125137)%
+    \lineheight{1}%
+    \setlength\tabcolsep{0pt}%
+    \put(0,0){\includegraphics[width=\unitlength,page=1]{MQTT_vs_REST_svg-tex.pdf}}%
+    \put(0.12839319,0.57328036){\color[rgb]{0.90196078,0.90196078,0.90196078}\rotatebox{90}{\makebox(0,0)[lt]{\lineheight{0}\smash{\begin{tabular}[t]{l}ESP-WROOM-32\end{tabular}}}}}%
+    \put(0.12141174,0.57587704){\color[rgb]{0.90196078,0.90196078,0.90196078}\rotatebox{90}{\makebox(0,0)[lt]{\lineheight{0}\smash{\begin{tabular}[t]{l}\textbf{ESPRESSIF}\end{tabular}}}}}%
+    \put(0.11087315,0.58997762){\color[rgb]{0.90196078,0.90196078,0.90196078}\rotatebox{90}{\makebox(0,0)[lt]{\lineheight{0}\smash{\begin{tabular}[t]{l}K.\end{tabular}}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=2]{MQTT_vs_REST_svg-tex.pdf}}%
+    \put(0.13970482,0.56999624){\rotatebox{90}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{W}\end{tabular}}}}}%
+    \put(0.13957209,0.57594427){\rotatebox{90}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{i}\end{tabular}}}}}%
+    \put(0.13958455,0.57844313){\rotatebox{90}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{F}\end{tabular}}}}}%
+    \put(0.13975669,0.58160164){\rotatebox{90}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{i}\end{tabular}}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=3]{MQTT_vs_REST_svg-tex.pdf}}%
+    \put(0.26034677,0.56239585){\rotatebox{90}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}EN\end{tabular}}}}}%
+    \put(0.26053448,0.61720576){\rotatebox{90}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}Boot\end{tabular}}}}}%
+    \put(0.11261789,0.5527011){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{3V3}\end{tabular}}}}%
+    \put(0.12308245,0.55275719){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{EN}\end{tabular}}}}%
+    \put(0.13211472,0.55275719){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{VP}\end{tabular}}}}%
+    \put(0.14184177,0.55275719){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{VN}\end{tabular}}}}%
+    \put(0.15073508,0.5527011){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{34}\end{tabular}}}}%
+    \put(0.16046213,0.5527011){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{35}\end{tabular}}}}%
+    \put(0.17003151,0.5527011){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{32}\end{tabular}}}}%
+    \put(0.17928383,0.5527011){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{33}\end{tabular}}}}%
+    \put(0.18853615,0.55270473){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{25}\end{tabular}}}}%
+    \put(0.19738494,0.55270473){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{26}\end{tabular}}}}%
+    \put(0.20724255,0.55270473){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{27}\end{tabular}}}}%
+    \put(0.21672546,0.55274996){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{14}\end{tabular}}}}%
+    \put(0.22554543,0.55270473){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{12}\end{tabular}}}}%
+    \put(0.23361599,0.55270473){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{GND}\end{tabular}}}}%
+    \put(0.24477066,0.5527011){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{13}\end{tabular}}}}%
+    \put(0.25387886,0.55270473){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{D2}\end{tabular}}}}%
+    \put(0.26330412,0.5527011){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{D3}\end{tabular}}}}%
+    \put(0.27092897,0.55270473){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{CMD}\end{tabular}}}}%
+    \put(0.28232758,0.55275719){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{5V}\end{tabular}}}}%
+    \put(0.2880017,0.63586951){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{CLK}\end{tabular}}}}}%
+    \put(0.27753713,0.63581342){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{D0}\end{tabular}}}}}%
+    \put(0.26850487,0.63581342){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{D1}\end{tabular}}}}}%
+    \put(0.25905573,0.63581342){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{15}\end{tabular}}}}}%
+    \put(0.24849493,0.63586951){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{2}\end{tabular}}}}}%
+    \put(0.23918475,0.63586951){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{0}\end{tabular}}}}}%
+    \put(0.22989329,0.63586951){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{4}\end{tabular}}}}}%
+    \put(0.22133576,0.63586951){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{16}\end{tabular}}}}}%
+    \put(0.21208344,0.63586588){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{17}\end{tabular}}}}}%
+    \put(0.20184506,0.63586588){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{5}\end{tabular}}}}}%
+    \put(0.19337703,0.63586588){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{18}\end{tabular}}}}}%
+    \put(0.18389413,0.63582065){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{19}\end{tabular}}}}}%
+    \put(0.17646373,0.63586588){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{GDN}\end{tabular}}}}}%
+    \put(0.16519713,0.63586588){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{21}\end{tabular}}}}}%
+    \put(0.15584893,0.63586951){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{RX}\end{tabular}}}}}%
+    \put(0.14674072,0.63586588){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{TX}\end{tabular}}}}}%
+    \put(0.13731546,0.63586951){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{22}\end{tabular}}}}}%
+    \put(0.12830103,0.63586588){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{23}\end{tabular}}}}}%
+    \put(0.12107115,0.63581342){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{GND}\end{tabular}}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=4]{MQTT_vs_REST_svg-tex.pdf}}%
+    \put(0.64398306,0.57328036){\color[rgb]{0.90196078,0.90196078,0.90196078}\rotatebox{90}{\makebox(0,0)[lt]{\lineheight{0}\smash{\begin{tabular}[t]{l}ESP-WROOM-32\end{tabular}}}}}%
+    \put(0.63700162,0.57587704){\color[rgb]{0.90196078,0.90196078,0.90196078}\rotatebox{90}{\makebox(0,0)[lt]{\lineheight{0}\smash{\begin{tabular}[t]{l}\textbf{ESPRESSIF}\end{tabular}}}}}%
+    \put(0.62646302,0.58997762){\color[rgb]{0.90196078,0.90196078,0.90196078}\rotatebox{90}{\makebox(0,0)[lt]{\lineheight{0}\smash{\begin{tabular}[t]{l}K.\end{tabular}}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=5]{MQTT_vs_REST_svg-tex.pdf}}%
+    \put(0.65529469,0.56999624){\rotatebox{90}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{W}\end{tabular}}}}}%
+    \put(0.65516197,0.57594427){\rotatebox{90}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{i}\end{tabular}}}}}%
+    \put(0.65517443,0.57844313){\rotatebox{90}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{F}\end{tabular}}}}}%
+    \put(0.65534657,0.58160164){\rotatebox{90}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{i}\end{tabular}}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=6]{MQTT_vs_REST_svg-tex.pdf}}%
+    \put(0.77593665,0.56239585){\rotatebox{90}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}EN\end{tabular}}}}}%
+    \put(0.77612436,0.61720576){\rotatebox{90}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}Boot\end{tabular}}}}}%
+    \put(0.62820776,0.5527011){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{3V3}\end{tabular}}}}%
+    \put(0.63867233,0.55275719){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{EN}\end{tabular}}}}%
+    \put(0.64770459,0.55275719){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{VP}\end{tabular}}}}%
+    \put(0.65743164,0.55275719){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{VN}\end{tabular}}}}%
+    \put(0.66632495,0.5527011){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{34}\end{tabular}}}}%
+    \put(0.67605201,0.5527011){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{35}\end{tabular}}}}%
+    \put(0.68562138,0.5527011){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{32}\end{tabular}}}}%
+    \put(0.6948737,0.5527011){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{33}\end{tabular}}}}%
+    \put(0.70412602,0.55270473){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{25}\end{tabular}}}}%
+    \put(0.71297481,0.55270473){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{26}\end{tabular}}}}%
+    \put(0.72283243,0.55270473){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{27}\end{tabular}}}}%
+    \put(0.73231533,0.55274996){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{14}\end{tabular}}}}%
+    \put(0.7411353,0.55270473){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{12}\end{tabular}}}}%
+    \put(0.74920587,0.55270473){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{GND}\end{tabular}}}}%
+    \put(0.76036053,0.5527011){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{13}\end{tabular}}}}%
+    \put(0.76946874,0.55270473){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{D2}\end{tabular}}}}%
+    \put(0.778894,0.5527011){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{D3}\end{tabular}}}}%
+    \put(0.78651885,0.55270473){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{CMD}\end{tabular}}}}%
+    \put(0.79791746,0.55275719){\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{5V}\end{tabular}}}}%
+    \put(0.80359157,0.63586951){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{CLK}\end{tabular}}}}}%
+    \put(0.79312701,0.63581342){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{D0}\end{tabular}}}}}%
+    \put(0.78409474,0.63581342){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{D1}\end{tabular}}}}}%
+    \put(0.77464561,0.63581342){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{15}\end{tabular}}}}}%
+    \put(0.7640848,0.63586951){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{2}\end{tabular}}}}}%
+    \put(0.75477462,0.63586951){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{0}\end{tabular}}}}}%
+    \put(0.74548316,0.63586951){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{4}\end{tabular}}}}}%
+    \put(0.73692563,0.63586951){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{16}\end{tabular}}}}}%
+    \put(0.72767331,0.63586588){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{17}\end{tabular}}}}}%
+    \put(0.71743494,0.63586588){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{5}\end{tabular}}}}}%
+    \put(0.70896691,0.63586588){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{18}\end{tabular}}}}}%
+    \put(0.699484,0.63582065){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{19}\end{tabular}}}}}%
+    \put(0.69205361,0.63586588){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{GDN}\end{tabular}}}}}%
+    \put(0.68078701,0.63586588){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{21}\end{tabular}}}}}%
+    \put(0.6714388,0.63586951){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{RX}\end{tabular}}}}}%
+    \put(0.6623306,0.63586588){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{TX}\end{tabular}}}}}%
+    \put(0.65290534,0.63586951){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{22}\end{tabular}}}}}%
+    \put(0.64389091,0.63586588){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{23}\end{tabular}}}}}%
+    \put(0.63666103,0.63581342){\rotatebox{-180}{\makebox(0,0)[lt]{\lineheight{1.25}\smash{\begin{tabular}[t]{l}\textbf{GND}\end{tabular}}}}}%
+    \put(0,0){\includegraphics[width=\unitlength,page=7]{MQTT_vs_REST_svg-tex.pdf}}%
+  \end{picture}%
+\endgroup%
