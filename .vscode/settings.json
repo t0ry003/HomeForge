@@ -1,0 +1,32 @@
+{
+  "[latex]": {
+    "editor.wordWrap": "on",
+    "editor.wordWrapColumn": 120,
+    "editor.rulers": [120]
+  },
+  "latex-workshop.latex.tools": [
+    {
+      "name": "latexmk (minted+biber)",
+      "command": "latexmk",
+      "args": [
+        "-pdf",
+        "-shell-escape",
+        "-interaction=nonstopmode",
+        "-file-line-error",
+        "-synctex=1",
+        "-outdir=build",
+        "-auxdir=build",
+        "%DOC%"
+      ]
+    }
+  ],
+  "latex-workshop.latex.recipes": [
+    {
+      "name": "latexmk (minted+biber)",
+      "tools": [
+        "latexmk (minted+biber)"
+      ]
+    }
+  ],
+  "latex-workshop.latex.recipe.default": "first"
+}

@@ -1,0 +1,72 @@
+\chapter{Stadiul Actual și Analiza Tehnologiilor}
+
+\section{Concepte fundamentale IoT: De la HTTP la MQTT}
+Orice sistem IoT modern depinde de modul în care dispozitivele comunică între ele. Tradițional, aplicațiile web folosesc protocolul HTTP, bazat pe un model de tip cerere-răspuns (\textit{request-response}). Pentru o casă inteligentă, acest model este ineficient: un senzor ar trebui să fie interogat continuu (\textit{polling}) pentru a afla dacă starea sa s-a schimbat, irosind lățime de bandă și energie.
+
+Pentru a rezolva această problemă, standardul industriei a devenit protocolul MQTT (\textit{Message Queuing Telemetry Transport}) \cite{mqtt_standard_iot}. Spre deosebire de HTTP, MQTT utilizează un model asincron de tip publicare-abonare (\textit{publish-subscribe}). În centrul rețelei se află un server numit \textit{broker}. Nodurile hardware (cum ar fi întrerupătoarele sau senzorii) doar „publică” mesaje atunci când o valoare se schimbă, iar interfața web, fiind „abonată” la acele date, se actualizează instantaneu. Această arhitectură condusă de evenimente (\textit{event-driven}) este fundația platformei HomeForge, permițând comunicarea în timp real, cu latență de ordinul milisecundelor.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{figuri/MQTT_vs_REST.pdf}
+    \caption{Comparație arhitecturală între modelul tradițional HTTP și modelul MQTT (Publish-Subscribe)}
+    \label{fig:mqtt_vs_http}
+\end{figure}
+
+\section{Comparație tehnică: MQTT versus HTTP/REST în ecosistemul IoT}
+
+Alegerea protocolului de comunicație dictează performanța generală, consumul de energie și scalabilitatea unui sistem de tip Smart Home. Tradițional, arhitectura web se bazează pe protocolul HTTP și stilul arhitectural REST (\textit{Representational State Transfer}). Deși REST excelează în comunicarea dintre servere și aplicații web complexe datorită compatibilității universale și simplității de integrare, acesta devine ineficient când este coborât la nivelul microcontrolerelor limitate fizic.
+
+HTTP utilizează un model sincron de tip \textit{Request-Response} (Cerere-Răspuns). Aceasta înseamnă că pentru fiecare mesaj trimis, clientul trebuie să inițieze o conexiune TCP completă, să trimită un pachet cu un antet (\textit{header}) de mari dimensiuni și să aștepte un răspuns. În plus, protocolul nu suportă nativ comunicarea bidirecțională; un server HTTP nu poate „împinge” proactiv date către un senzor fără ca senzorul să le fi cerut în prealabil (\textit{polling}) \cite{mqtt_vs_http_iot_perf}.
+
+Pe de altă parte, protocolul MQTT rezolvă aceste limitări printr-o arhitectură asincronă de tip \textit{Publish-Subscribe}. Odată ce un dispozitiv hardware stabilește o conexiune cu Broker-ul MQTT, această conexiune este menținută deschisă (\textit{persistent session}). Dimensiunea antetului MQTT este extrem de mică (minim 2 bytes, comparativ cu sute de bytes la HTTP), ceea ce reduce drastic timpul de răspuns, consumul lățimii de bandă și, cel mai important pentru rețelele de senzori, consumul de energie al bateriei.
+
+Pentru platforma HomeForge, s-a adoptat o arhitectură hibridă. MQTT este utilizat la nivelul de bază, pentru comunicarea rapidă și bidirecțională dintre server și nodurile ESP32, în timp ce API-ul REST este folosit de interfața web (Next.js) pentru preluarea datelor agregate și gestionarea profilurilor de utilizator. Diferențele fundamentale sunt sintetizate în Tabelul \ref{tab:mqtt_vs_rest}.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Analiza comparativă între protocoalele MQTT și HTTP/REST pentru aplicații IoT}
+    \vspace{0.4\baselineskip}
+    \label{tab:mqtt_vs_rest}
+    {\setstretch{1.0}
+    \footnotesize
+    \renewcommand{\arraystretch}{1.15}
+    \begin{tabular}{|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{5.8cm}|>{\raggedright\arraybackslash}p{5.8cm}|}
+        \hline
+        \textbf{Caracteristică} & \textbf{MQTT (Message Queuing Telemetry Transport)} & \textbf{HTTP / REST (Representational State Transfer)} \\ \hline
+        \textbf{Arhitectură model} & Asincron, Publish-Subscribe (mediat de un Broker). & Sincron, Client-Server (Request-Response). \\ \hline
+        \textbf{Dimensiune antet (Overhead)} & Foarte mic (începând de la 2 bytes). & Mare (sute de bytes, include cookies, tipuri de conținut etc.). \\ \hline
+        \textbf{Conexiune TCP} & Persistentă (\textit{stateful}). Conexiunea rămâne deschisă pentru mesaje multiple. & Independentă (\textit{stateless}). Se creează și se închide o conexiune la fiecare cerere. \\ \hline
+        \textbf{Calitatea Serviciului (QoS)} & Nativ (3 niveluri de QoS, garantează livrarea mesajului). & Lipsă nativă a conceptului de QoS. Depinde de logica aplicației. \\ \hline
+        \textbf{Comunicație bidirecțională} & Suportată nativ. Broker-ul poate împinge comenzi către senzori instantaneu. & Nu este suportată nativ (necesită tehnici ineficiente de tip \textit{polling} sau trecerea la WebSockets). \\ \hline
+        \textbf{Caz de utilizare ideal} & Rețele de senzori, microcontrolere cu resurse limitate (ESP32), telemetrie în timp real. & API-uri web, gestionarea conturilor, transmiterea unor calupuri mari de date (documente). \\ \hline
+    \end{tabular}
+    }
+\end{table}
+
+\section{Analiza platformelor existente și nișa HomeForge}
+Ecosistemul open-source actual este dominat de soluții extrem de mature, precum Home Assistant sau OpenHAB. Aceste platforme sunt veritabile „sisteme de operare” pentru case inteligente, având mii de integrări posibile. 
+
+Cu toate acestea, din perspectiva unui dezvoltator la început de drum sau a unui pasionat de electronică DIY, aceste platforme sunt adesea copleșitoare. Arhitectura lor este complexă, configurarea inițială necesită timp, iar adăugarea unui simplu senzor creat de la zero presupune înțelegerea unor concepte abstracte specifice fiecărei platforme.
+
+HomeForge nu își propune să concureze direct cu aceste sisteme gigantice. În schimb, HomeForge acoperă o nișă clară: oferă o platformă esențializată, curată și educațională. Scopul este de a oferi un sistem funcțional din prima zi, dar cu un cod sursă ușor de citit și modificat. HomeForge acționează ca o „punte” între scrierea codului pe un microcontroler și vizualizarea datelor într-o interfață modernă, fără funcționalități inutile (\textit{bloatware}).
+
+\section{Justificarea stivei tehnologice (\textit{Tech Stack})}
+Pentru a asigura o dezvoltare modulară, performantă și ușor de înțeles, platforma HomeForge a fost construită folosind o serie de tehnologii moderne, decuplate. Fiecare componentă a fost aleasă pentru rolul ei specific într-o arhitectură modernă de tip Client-Server:
+
+\begin{itemize}
+    \item \textbf{Backend-ul (Logica și Datele):} Am optat pentru limbajul Python și ecosistemul Django, utilizând \textit{Django REST Framework} (DRF). Această combinație permite dezvoltarea rapidă a unui API sigur și robust. Datele relaționale (utilizatori, camere, tipuri de dispozitive) sunt salvate în PostgreSQL, una dintre cele mai performante baze de date open-source.
+    \item \textbf{Frontend-ul (Interfața Utilizator):} Pentru a oferi o experiență fluidă (\textit{Single Page Application}), interfața a fost dezvoltată cu React și framework-ul Next.js. Această tehnologie permite randarea instantanee a componentelor și, combinată cu instrumente de gestionare a stărilor (precum React Query), oferă o interacțiune fără întreruperi \cite{react_nextjs_ui}.
+    \item \textbf{Hardware-ul (Nodurile IoT):} La nivel fizic, platforma este testată folosind microcontrolere din familia ESP32. Acestea au devenit standardul în comunitatea DIY datorită costului redus, puterii de procesare și modulului Wi-Fi integrat nativ.
+    \item \textbf{Orchestrarea (Deployment):} Pentru a rezolva clasica problemă „pe calculatorul meu funcționează”, întregul ecosistem (bază de date, backend, frontend) este împachetat în containere izolate folosind Docker și Docker Compose. Astfel, instalarea sistemului HomeForge se reduce la rularea unei singure comenzi.
+\end{itemize}
+
+% SUGESTIE DE DIAGRAMĂ 2: 
+% Fă o diagramă cu blocuri (Stack Tehnologic). 
+% Sus: Next.js (React). Mijloc: Django + PostgreSQL + Broker MQTT. Jos: ESP32.
+% Poți folosi chiar iconițele/logo-urile tehnologiilor.
+% \begin{figure}[htbp]
+%     \centering
+%     % \includegraphics[width=0.6\textwidth]{imagini/stack_tehnologic.png}
+%     \caption{Stiva tehnologică decuplată a platformei HomeForge}
+%     \label{fig:tech_stack}
+% \end{figure}

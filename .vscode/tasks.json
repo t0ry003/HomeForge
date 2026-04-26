@@ -1,0 +1,29 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "LaTeX: Bib Unused",
+      "type": "shell",
+      "command": "make",
+      "args": [
+        "bib-unused"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/HomeForge Licenta Tex"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "LaTeX: Bib Prune (to build/referinte.pruned.bib)",
+      "type": "shell",
+      "command": "make",
+      "args": [
+        "bib-prune"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}/HomeForge Licenta Tex"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
