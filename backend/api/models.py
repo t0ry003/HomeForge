@@ -16,13 +16,11 @@ class Profile(models.Model):
 	ROLE_OWNER = 'owner'
 	ROLE_ADMIN = 'admin'
 	ROLE_USER = 'user'
-	ROLE_VIEWER = 'viewer'
 
 	ROLE_CHOICES = [
 		(ROLE_OWNER, 'Owner'),
 		(ROLE_ADMIN, 'Admin'),
 		(ROLE_USER, 'User'),
-		(ROLE_VIEWER, 'Viewer'),
 	]
 
 	user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
@@ -67,7 +65,11 @@ def save_user_profile(sender, instance, **kwargs):
 
 class Room(models.Model):
     name = models.CharField(max_length=100)
+    icon = models.CharField(max_length=50, default='fa-door-open', blank=True, help_text="FontAwesome icon class (e.g., fa-bed, fa-couch)")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='rooms')
+
+    class Meta:
+        unique_together = ['name', 'user']
 
     def __str__(self):
         return f"{self.name} ({self.user.username})"
@@ -106,6 +108,11 @@ class Device(models.Model):
         return f"{self.name} - {self.ip_address}"
 
 
+def wiring_diagram_upload_path(instance, filename):
+    """Legacy: kept for migration compatibility only. No longer used."""
+    return f"wiring/{filename}"
+
+
 class CustomDeviceType(models.Model):
     name = models.CharField(max_length=100, unique=True)
     definition = models.JSONField(default=dict, blank=True)
@@ -119,6 +126,11 @@ class CustomDeviceType(models.Model):
         related_name='proposed_device_types',
         help_text="User who proposed this device type"
     )
+    firmware_code = models.TextField(blank=True, default='')
+    wiring_diagram_base64 = models.TextField(blank=True, default='', help_text="Base64 data URI of wiring diagram image, stored directly in DB")
+    wiring_diagram_text = models.TextField(blank=True, default='')
+    documentation = models.TextField(blank=True, default='')
+    documentation_images_base64 = models.JSONField(default=list, blank=True, help_text="Array of {filename, data} for documentation images, stored directly in DB")
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

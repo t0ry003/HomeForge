@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="../logos/favicon/favicon.svg" width="140" alt="HomeForge Logo">
+  <img src="public/logos/favicon.svg" width="140" alt="HomeForge Logo">
 </p>
 
 # HomeForge Frontend
@@ -29,10 +29,12 @@
 **HomeForge** is a smart home management dashboard that provides:
 
 - 🏠 **Device Management** — Register and monitor smart home devices
+- � **Device Collection** — Browse, import/export device type definitions
 - 🔧 **Device Builder** — Design custom device configurations via drag-and-drop
 - 🌐 **Topology View** — Visualize your connected device network
 - ⚙️ **Settings** — User profiles, themes, and preferences
 - 🛡️ **Admin Panel** — Room management, user roles, and device approvals
+- 🚀 **Setup Wizard** — Guided first-run configuration
 - 📱 **Mobile Responsive** — Fully optimized for phones, tablets, and desktops
 
 ---
@@ -64,6 +66,7 @@
 | @xyflow/react | Node-based graph canvas |
 | elkjs | Graph layout algorithms |
 | @dnd-kit | Drag-and-drop |
+| Prism.js | Code syntax highlighting |
 
 ### Data & State
 
@@ -72,6 +75,17 @@
 | TanStack Query | Server state & caching |
 | React Context | Global client state |
 | Sonner | Toast notifications |
+| date-fns | Date formatting |
+| lodash | Utility functions (debounce, etc.) |
+
+### Content & Rendering
+
+| Package | Purpose |
+|---------|---------|
+| react-markdown | Markdown rendering |
+| remark-gfm | GitHub-flavored markdown |
+| rehype-highlight | Code block highlighting |
+| react-simple-code-editor | Inline code editing |
 
 ### Optimistic UI Patterns
 
@@ -118,41 +132,61 @@ Component → React Query → apiClient.js → Backend API (port 8000)
 │   ├── globals.css             # Global styles & CSS variables
 │   ├── login/                  # Login page
 │   ├── register/               # Registration page
+│   ├── setup/                  # First-run setup wizard route
 │   └── dashboard/              # Protected routes
 │       ├── layout.tsx          # Dashboard layout (sidebar + header)
 │       ├── page.tsx            # Dashboard home
 │       ├── devices/            # Device registration wizard
 │       ├── device-builder/     # Visual device designer
+│       ├── device-collection/  # Device type collection viewer
+│       │   └── [id]/           # Dynamic collection detail page
 │       ├── device-types/       # Device type proposals
 │       ├── topology/           # Network visualization
 │       ├── settings/           # User preferences
 │       └── admin/              # Admin-only routes
 │           ├── rooms/          # Room management
 │           ├── users/          # User management
-│           ├── device-types/   # Approval queue
+│           ├── approvals/      # Pending approval queue
+│           ├── device-types/   # Device type management
 │           └── debug/          # Device state testing
 │
 ├── components/                 # Reusable components
-│   ├── ui/                     # shadcn/ui primitives (24 components)
+│   ├── ui/                     # shadcn/ui primitives (28 components)
 │   ├── devices/                # Device-related components
+│   ├── device-builder/         # Device builder editors
+│   │   ├── DocumentationEditor.tsx
+│   │   ├── FirmwareCodeEditor.tsx
+│   │   └── WiringDiagramEditor.tsx
 │   ├── topology/               # Graph visualization
 │   ├── notifications/          # Notification system
 │   │   └── notification-center.tsx
+│   ├── setup/                  # First-run setup wizard
+│   │   ├── SetupWizard.tsx
+│   │   └── steps/              # Wizard step components
+│   ├── onboarding/             # Post-setup onboarding
+│   │   ├── OnboardingChecklist.tsx
+│   │   └── PageTooltip.tsx
 │   ├── app-sidebar.tsx         # Main navigation
+│   ├── dynamic-breadcrumbs.tsx # Auto-generated breadcrumbs
+│   ├── homeforge-logo.tsx      # Adaptive logo (dark/light)
 │   ├── nav-user.tsx            # User menu + notifications
 │   ├── query-provider.tsx      # React Query setup
 │   ├── theme-provider.tsx      # Theme configuration
 │   └── user-provider.tsx       # Auth context
 │
 ├── hooks/                      # Custom React hooks
-│   └── use-mobile.ts           # Mobile detection
+│   ├── use-mobile.ts           # Mobile detection
+│   ├── useDashboardLayout.ts   # Dashboard grid layout persistence
+│   └── useTopologyLayout.ts    # Topology graph layout (ELK)
 │
 ├── lib/                        # Utilities
 │   ├── apiClient.js            # API communication
+│   ├── dashboard-grid.ts       # Dashboard grid types & helpers
 │   ├── utils.ts                # Helper functions (cn)
-│   └── icons.ts                # Icon mappings
+│   └── icons.ts                # Icon mappings (Lucide)
 │
 └── public/                     # Static assets
+    └── logos/                   # App logos & favicons
 ```
 
 ---
@@ -193,7 +227,6 @@ useEffect(() => {
 | `owner` | Full access + Admin Panel |
 | `admin` | Full access + Admin Panel |
 | `user` | Standard dashboard |
-| `viewer` | Read-only |
 
 ### Notification System
 
@@ -227,6 +260,36 @@ Real-time notifications with backend API integration:
 ---
 
 ## Features
+
+### Setup Wizard (First Run)
+
+When the system is fresh (no users exist), the setup wizard guides first-time configuration:
+
+1. **Welcome** — Introduction to HomeForge
+2. **Admin Account** — Create the owner account (prevents duplicate creation on back-navigation)
+3. **Rooms** — Select from suggested rooms (with default icons) or add custom rooms with icon picker
+4. **Device Types** — Import default device type definitions
+5. **Complete** — Summary of created resources
+
+**Suggested Room Icons:**
+
+| Room | Default Icon |
+|------|-------------|
+| Living Room | Sofa |
+| Kitchen | CookingPot |
+| Bedroom | Bed |
+| Bathroom | Bath |
+| Office | Monitor |
+| Garage | Warehouse |
+
+### Onboarding Checklist
+
+After setup, a dismissible checklist appears on the dashboard:
+
+- Tracks completion of key steps (add rooms, device types, devices)
+- Role-aware — admins see additional steps (room/device type management)
+- Reactive updates — checklist items update as resources are created
+- Links directly to relevant pages
 
 ### Device Builder (`/dashboard/device-builder`)
 
@@ -271,7 +334,7 @@ The main dashboard features a customizable drag-and-drop device grid with folder
 
 #### Grouping Modes
 - **All Devices** — Custom drag-and-drop grid with folders (default layout)
-- **Group by Room** — Devices grouped under room headings
+- **Group by Room** — Devices grouped under room headings with room icons
 - **Group by Type** — Devices grouped by device type
 - **Group by Status** — Devices sorted into Online / Offline / Error sections
 - **Sort by Name** — Flat alphabetical grid
@@ -320,8 +383,21 @@ Network visualization of connected devices:
 
 Three-step registration wizard:
 1. Select Device Type
-2. Choose Room
+2. Choose Room (with room icon displayed per option)
 3. Configure Details
+
+### Device Collection (`/dashboard/device-collection`)
+
+Browse and manage device type definitions:
+
+- **Card Grid** — Visual cards for each device type with sensor/control counts
+- **Search & Filter** — Filter by name, browse approved types
+- **Import/Export** — Import device types from JSON files, export individual types
+- **Detail View** (`[id]`) — Full device type details including:
+  - Hardware topology diagram (React Flow visualization)
+  - Firmware code with syntax highlighting
+  - Wiring diagrams
+  - Documentation (Markdown rendered)
 
 ### Settings (`/dashboard/settings`)
 
@@ -336,10 +412,12 @@ Admin-only features for system management:
 #### Rooms (`/dashboard/admin/rooms`)
 - Create, edit, and delete rooms
 - Assign rooms to device locations
+- Room icon picker (Lucide icons) — select an icon per room
+- Icons displayed in table, room group headers, device cards, and room selectors
 
 #### Users (`/dashboard/admin/users`)
 - View all registered users
-- Manage user roles (owner, admin, user, viewer)
+- Manage user roles (owner, admin, user)
 
 #### Device Types (`/dashboard/admin/device-types`)
 - View all device type definitions
@@ -454,35 +532,60 @@ Key optimizations:
 
 | Component | Description |
 |-----------|-------------|
+| `avatar` | User avatar display |
+| `badge` | Status/label badges |
+| `breadcrumb` | Navigation breadcrumbs |
 | `button` | Action buttons with variants |
 | `card` | Content containers |
-| `dialog` | Modal dialogs |
-| `input` | Text inputs |
-| `select` | Dropdowns |
-| `switch` | Toggle controls |
-| `slider` | Range inputs |
-| `table` | Data tables |
-| `tooltip` | Hover information |
-| `popover` | Floating content |
+| `checkbox` | Checkbox inputs |
+| `collapsible` | Expandable sections |
 | `command` | Command palette |
+| `context-menu` | Right-click menus |
+| `dialog` | Modal dialogs |
 | `dropdown-menu` | Action menus |
+| `input` | Text inputs |
+| `label` | Form labels |
+| `markdown-editor` | Markdown editing |
+| `popover` | Floating content |
+| `scroll-area` | Custom scrollbars |
+| `select` | Dropdowns |
+| `separator` | Visual dividers |
 | `sheet` | Slide-out panels |
+| `sidebar` | Sidebar layout primitive |
 | `skeleton` | Loading placeholders |
+| `slider` | Range inputs |
+| `sonner` | Toast notifications |
+| `switch` | Toggle controls |
+| `table` | Data tables |
+| `tabs` | Tabbed content |
+| `textarea` | Multi-line text inputs |
+| `tooltip` | Hover information |
 
 ### Custom Components
 
 | Component | Purpose |
 |-----------|---------|
 | `AppSidebar` | Main navigation sidebar |
+| `DynamicBreadcrumbs` | Auto-generated route breadcrumbs |
+| `HomeForgeLogo` | Adaptive logo (color in dark, masked BW in light) |
 | `NavUser` | User dropdown menu + notification bell |
 | `NotificationCenter` | Bell icon with popover notification list |
+| `SetupWizard` | First-run setup flow (account, rooms, device types) |
+| `OnboardingChecklist` | Post-setup task checklist with reactive completion |
+| `PageTooltip` | Contextual page-level tooltip hints |
 | `SmartDeviceCard` | Device display card with smart toggle behavior |
+| `DraggableDeviceGrid` | Drag-and-drop dashboard grid with folder support |
+| `DeviceFolder` | iOS-style device folder with 2×2 preview |
+| `AddDeviceDialog` | Multi-step device registration dialog |
 | `SensorWidgets` | Temperature, Humidity, Motion, Light, CO2 displays |
-| `IconPicker` | Icon selection UI |
+| `IconPicker` | Icon selection UI (used for devices and rooms) |
 | `TopologyCanvas` | React Flow wrapper |
 | `TopologyBuilderNode` | Network device node (type-based coloring) |
 | `BuilderStyleNode` | Glassmorphism graph node |
 | `DeviceUICreator` | Widget builder with auto-generation |
+| `DocumentationEditor` | Markdown documentation editor for device types |
+| `FirmwareCodeEditor` | Code editor with syntax highlighting |
+| `WiringDiagramEditor` | Wiring diagram image editor |
 | `SortableSquareWidget` | Draggable square widget (dnd-kit) |
 | `SortableRowWidget` | Draggable row widget (dnd-kit) |
 
@@ -566,6 +669,7 @@ This prevents the "no devices" flash that can occur when:
 
 ```javascript
 import { fetchDevices, updateDevice, updateDeviceState, deleteDevice } from '@/lib/apiClient'
+import { fetchRooms, createRoom, updateRoom, deleteRoom } from '@/lib/apiClient'
 
 // Fetch all devices
 const devices = await fetchDevices()
@@ -578,6 +682,12 @@ await updateDeviceState(deviceId, { relay_1: true, brightness: 75 })
 
 // Delete a device
 await deleteDevice(deviceId)
+
+// Room CRUD (icon field uses Lucide icon names, e.g. "Sofa", "Bed", "DoorOpen")
+const rooms = await fetchRooms()
+await createRoom({ name: 'Living Room', icon: 'Sofa' })
+await updateRoom(roomId, { name: 'Living Room', icon: 'Armchair' })
+await deleteRoom(roomId)
 ```
 
 ### Notification API
@@ -705,7 +815,7 @@ The frontend auto-connects to the backend:
 ## Additional Resources
 
 - [Changelog](CHANGELOG.md)
-- [Backend API Documentation](backend_api.md)
+- [API Usage](API_USAGE.md)
 - [Copilot Instructions](.github/copilot-instructions.md)
 - [shadcn/ui](https://ui.shadcn.com)
 - [React Flow](https://reactflow.dev)

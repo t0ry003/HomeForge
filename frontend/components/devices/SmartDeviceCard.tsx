@@ -47,6 +47,7 @@ interface SmartDeviceCardProps {
   device: any;
   deviceType: any;
   roomName?: string;
+  roomIcon?: string;
   readOnly?: boolean;
   animationIndex?: number;
 }
@@ -63,7 +64,7 @@ function getToggleControls(controls: Control[]): Control[] {
   return controls.filter(c => c.widget_type === 'TOGGLE');
 }
 
-export default function SmartDeviceCard({ device, deviceType, roomName, readOnly = false, animationIndex }: SmartDeviceCardProps) {
+export default function SmartDeviceCard({ device, deviceType, roomName, roomIcon, readOnly = false, animationIndex }: SmartDeviceCardProps) {
   const [currentState, setCurrentState] = useState<any>(device.current_state || {});
   // Use a local online state that can be optimistic
   const [isOnline, setIsOnline] = useState(device.status === 'online' || device.is_online);
@@ -489,7 +490,10 @@ export default function SmartDeviceCard({ device, deviceType, roomName, readOnly
           </div>
           <div className="flex items-center gap-2">
             {roomName && (
-              <p className="text-xs text-muted-foreground">{roomName}</p>
+              <p className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                {roomIcon && (() => { const RI = getIconComponent(roomIcon); return RI ? <RI className="h-3 w-3" /> : null; })()}
+                {roomName}
+              </p>
             )}
             {deviceType && (
               <Badge variant="outline" className="text-[10px] h-4 px-1 py-0">{deviceType.name}</Badge>

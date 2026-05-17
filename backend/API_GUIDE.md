@@ -1,9 +1,9 @@
 # HomeForge API Guide
 
-> **Version:** 1.6.0  
+> **Version:** 1.8.0  
 > **Base URL:** `http://localhost:8000/api/`  
 > **Authentication:** JWT (JSON Web Tokens)  
-> **Last Updated:** February 15, 2026
+> **Last Updated:** May 17, 2026
 
 A comprehensive API reference for the HomeForge smart home management platform. This guide is designed for frontend developers and AI agents to build complete user interfaces.
 
@@ -61,6 +61,7 @@ When making backend changes, ensure you update:
 11. [Data Models](#11-data-models)
 12. [Error Handling](#12-error-handling)
 13. [Integration Examples](#13-integration-examples)
+14. [System Status](#14-system-status)
 
 ---
 
@@ -100,7 +101,7 @@ Creates a new user account. The **first registered user** automatically becomes 
 | `password` | string | ✅ | Min 4 chars, must contain 1 uppercase letter |
 | `first_name` | string | ❌ | User's first name |
 | `last_name` | string | ❌ | User's last name |
-| `role` | string | ❌ | One of: `owner`, `admin`, `user`, `viewer`. Default: `user` |
+| `role` | string | ❌ | One of: `owner`, `admin`, `user`. Default: `user` |
 
 **Success Response (201 Created):**
 ```json
@@ -342,7 +343,7 @@ await fetch('/api/me/', {
 
 ## 4. Rooms
 
-Rooms represent physical locations in the smart home (e.g., "Living Room", "Kitchen").
+Rooms represent physical locations in the smart home (e.g., "Living Room", "Kitchen"). Each room has a customizable FontAwesome icon and room names must be unique per user (case-insensitive).
 
 ### 4.1 List All Rooms
 
@@ -353,9 +354,9 @@ Rooms represent physical locations in the smart home (e.g., "Living Room", "Kitc
 **Success Response (200 OK):**
 ```json
 [
-  { "id": 1, "name": "Living Room" },
-  { "id": 2, "name": "Kitchen" },
-  { "id": 3, "name": "Bedroom" }
+  { "id": 1, "name": "Living Room", "icon": "fa-couch" },
+  { "id": 2, "name": "Kitchen", "icon": "fa-utensils" },
+  { "id": 3, "name": "Bedroom", "icon": "fa-bed" }
 ]
 ```
 
@@ -370,15 +371,29 @@ Rooms represent physical locations in the smart home (e.g., "Living Room", "Kitc
 **Request Body:**
 ```json
 {
-  "name": "Garage"
+  "name": "Garage",
+  "icon": "fa-warehouse"
 }
 ```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | ✅ | Room name (max 100 chars, unique per user, case-insensitive) |
+| `icon` | string | ❌ | FontAwesome icon class. Default: `fa-door-open` |
 
 **Success Response (201 Created):**
 ```json
 {
   "id": 4,
-  "name": "Garage"
+  "name": "Garage",
+  "icon": "fa-warehouse"
+}
+```
+
+**Error Response (400 Bad Request):**
+```json
+{
+  "name": ["A room with this name already exists."]
 }
 ```
 
@@ -401,7 +416,8 @@ Rooms represent physical locations in the smart home (e.g., "Living Room", "Kitc
 **Request Body:**
 ```json
 {
-  "name": "Guest Bedroom"
+  "name": "Guest Bedroom",
+  "icon": "fa-bed"
 }
 ```
 
@@ -627,7 +643,11 @@ Device Types define the hardware specification and UI template for a category of
           "step": null
         }
       ]
-    }
+    },
+    "firmware_code": "#include <WiFi.h>\nconst char* wifi_ssid = \"{{WIFI_SSID}}\";\n...",
+    "wiring_diagram_image": "http://localhost:8000/media/wiring/abc123.png",
+    "wiring_diagram_text": "## Pin Connections\n| ESP32 Pin | Component |\n|---|---|\n| GPIO4 | DHT22 Data |",
+    "documentation": "# Smart Light\n\n## Overview\n..."
   }
 ]
 ```
@@ -671,7 +691,10 @@ Any authenticated user can propose a new device type for admin review.
         "step": 10
       }
     ]
-  }
+  },
+  "firmware_code": "#include <WiFi.h>\nconst char* wifi_ssid = \"{{WIFI_SSID}}\";\nconst char* wifi_password = \"{{WIFI_PASSWORD}}\";\nconst char* server_ip = \"{{SERVER_IP}}\";\n...",
+  "wiring_diagram_text": "## Pin Connections\n| ESP32 Pin | Component |\n|---|---|\n| GPIO4 | DHT22 Data |",
+  "documentation": "# Smart Fan\n\n## Parts List\n..."
 }
 ```
 
@@ -679,6 +702,11 @@ Any authenticated user can propose a new device type for admin review.
 - `name` must be unique
 - Every `variable_mapping` in controls must match an `id` in `definition.structure`
 - Always created with `approved: false`
+- If `firmware_code` is provided, it must contain the strings `wifi_ssid`, `wifi_password`, and `server_ip`
+- `firmware_code`: max 100,000 characters
+- `wiring_diagram_text`: max 50,000 characters
+- `documentation`: max 50,000 characters
+- All 3 new text fields are optional (blank is fine)
 
 ---
 
@@ -687,6 +715,8 @@ Any authenticated user can propose a new device type for admin review.
 | Method | Endpoint | Auth Required |
 |--------|----------|---------------|
 | `GET` | `/device-types/{id}/` | ✅ Yes |
+
+Returns full device type details including all fields (definition, card_template, firmware_code, wiring_diagram_image, wiring_diagram_text, documentation). Any authenticated user can view approved types.
 
 ---
 
@@ -1036,7 +1066,187 @@ DELETE /api/admin/device-types/denied/delete/
 
 ---
 
-### 6.15 Admin Workflow Summary
+### 6.15 Upload Wiring Diagram Image
+
+| Method | Endpoint | Auth Required | Role Required |
+|--------|----------|---------------|---------------|
+| `POST` | `/device-types/{id}/wiring-image/` | ✅ Yes | Owner of type OR Admin |
+
+**Content-Type:** `multipart/form-data`
+
+**Request:**
+```
+image: <file>  (PNG, JPG, or WEBP, max 5MB)
+```
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "Image uploaded",
+  "wiring_diagram_image": "data:image/png;base64,iVBORw0KGgoAAAANS..."
+}
+```
+
+> **Note:** The image is stored as a base64 data URI directly in the database. The response returns the full data URI (not a file path).
+
+**Validation:**
+- File must be PNG, JPEG, or WEBP
+- Max file size: 5MB
+- Only the user who proposed the type OR an admin/owner can upload
+
+**Error (400):**
+```json
+{
+  "image": ["File too large. Maximum size is 5MB."]
+}
+```
+
+---
+
+### 6.16 Upload Documentation Image
+
+| Method | Endpoint | Auth Required |
+|--------|----------|---------------|
+| `POST` | `/device-types/doc-images/` | ✅ Yes |
+
+**Content-Type:** `multipart/form-data`
+
+Upload a documentation image for a device type. Stored as base64 in the database.
+
+**Request:**
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `image` | file | ✅ | PNG, JPEG, WEBP, or GIF (max 5MB) |
+| `device_type_id` | integer | ✅ | ID of the device type |
+
+**Success Response (201 Created):**
+```json
+{
+  "url": "/api/device-types/3/doc-image/a1b2c3d4.png"
+}
+```
+
+> **Usage:** Use the returned URL in markdown documentation content. The URL serves the image directly from the database.
+
+**Error Responses:**
+- `400`: Missing image, invalid type, file too large, missing device_type_id
+- `404`: Device type not found
+
+---
+
+### 6.17 Serve Documentation Image
+
+| Method | Endpoint | Auth Required |
+|--------|----------|---------------|
+| `GET` | `/device-types/{id}/doc-image/{filename}` | ❌ No |
+
+Serves a documentation image directly from the database as binary image data with the correct `Content-Type` header.
+
+**Success Response:** Raw image bytes with appropriate MIME type header.
+
+**Error:** `404` if device type or filename not found.
+
+---
+
+### 6.18 Export Device Types
+
+| Method | Endpoint | Auth Required |
+|--------|----------|---------------|
+| `GET` | `/device-types/export/` | ✅ Yes |
+| `GET` | `/device-types/{id}/export/` | ✅ Yes |
+
+Export device types as a self-contained JSON file with all images embedded as base64.
+
+**Query Parameters (bulk export only):**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ids` | string | Comma-separated IDs to export specific types |
+
+Without `ids`, exports all approved device types.
+
+**Success Response (200 OK):**
+```json
+[
+  {
+    "name": "Smart Relay",
+    "definition": { "structure": [...] },
+    "firmware_code": "...",
+    "wiring_diagram_text": "...",
+    "documentation": "...",
+    "wiring_diagram_base64": "data:image/png;base64,...",
+    "documentation_images_base64": [
+      { "filename": "wiring1.png", "data": "data:image/png;base64,..." }
+    ],
+    "card_template": {
+      "layout_config": {},
+      "controls": [...]
+    }
+  }
+]
+```
+
+> The response includes `Content-Disposition: attachment` header for download.
+
+---
+
+### 6.19 Import Device Types
+
+| Method | Endpoint | Auth Required | Role Required |
+|--------|----------|---------------|---------------|
+| `POST` | `/device-types/import/` | ✅ Yes | `admin` or `owner` |
+
+Import device types from a JSON file (same format as export). Skips types whose name already exists.
+
+**Content-Type:** `multipart/form-data` (with `file` field) OR `application/json` (direct body)
+
+**Success Response (200 OK):**
+```json
+{
+  "status": "Import complete",
+  "created": ["Smart Relay", "RGB Controller"],
+  "skipped": ["Thermostat DHT11"],
+  "errors": [],
+  "created_count": 2,
+  "skipped_count": 1
+}
+```
+
+---
+
+### 6.20 Import Default Device Types
+
+| Method | Endpoint | Auth Required | Role Required |
+|--------|----------|---------------|---------------|
+| `GET` | `/device-types/import-defaults/` | ✅ Yes | Any |
+| `POST` | `/device-types/import-defaults/` | ✅ Yes | `admin` or `owner` |
+
+**GET** - List available platform defaults and import status:
+```json
+{
+  "defaults": [
+    { "name": "ESP32 Single Relay", "already_imported": true },
+    { "name": "ESP32 Thermostat DHT11", "already_imported": false }
+  ],
+  "total": 4,
+  "imported": 2
+}
+```
+
+**POST** - Import all unimported defaults:
+```json
+{
+  "status": "Import complete",
+  "created": ["ESP32 Thermostat DHT11"],
+  "skipped": ["ESP32 Single Relay"],
+  "created_count": 1,
+  "skipped_count": 1
+}
+```
+
+---
+
+### 6.21 Admin Workflow Summary
 
 The typical admin workflow for reviewing a device type proposal:
 
@@ -1748,22 +1958,22 @@ HomeForge implements a hierarchical role system.
 | `owner` | Highest | Full system control, first user automatically assigned |
 | `admin` | High | Can manage users, rooms, device types, and devices |
 | `user` | Standard | Can manage own devices, propose device types |
-| `viewer` | Lowest | Read-only access |
 
 ### Permission Matrix
 
-| Resource | Owner | Admin | User | Viewer |
-|----------|-------|-------|------|--------|
-| View devices | ✅ | ✅ | ✅ | ✅ |
-| Create/Edit devices | ✅ | ✅ | ✅ | ❌ |
-| Control device state | ✅ | ✅ | ✅ | ✅ |
-| View rooms | ✅ | ✅ | ✅ | ✅ |
-| Create/Edit rooms | ✅ | ✅ | ❌ | ❌ |
-| List users | ✅ | ✅ | ❌ | ❌ |
-| Manage users | ✅ | ✅ | ❌ | ❌ |
-| View device types | ✅ All | ✅ All | ✅ Approved | ✅ Approved |
-| Approve device types | ✅ | ✅ | ❌ | ❌ |
-| Propose device types | ✅ | ✅ | ✅ | ❌ |
+| Resource | Owner | Admin | User |
+|----------|-------|-------|------|
+| View devices | ✅ | ✅ | ✅ |
+| Create/Edit devices | ✅ | ✅ | ✅ |
+| Control device state | ✅ | ✅ | ✅ |
+| View rooms | ✅ | ✅ | ✅ |
+| Create/Edit rooms | ✅ | ✅ | ❌ |
+| List users | ✅ | ✅ | ❌ |
+| Manage users | ✅ | ✅ | ❌ |
+| View device types | ✅ All | ✅ All | ✅ Approved |
+| Approve device types | ✅ | ✅ | ❌ |
+| Propose device types | ✅ | ✅ | ✅ |
+| Export/Import types | ✅ | ✅ | ❌ |
 
 ---
 
@@ -1774,7 +1984,7 @@ HomeForge implements a hierarchical role system.
 ```typescript
 interface UserProfile {
   avatar: string | null;    // Full URL to avatar image
-  role: 'owner' | 'admin' | 'user' | 'viewer';
+  role: 'owner' | 'admin' | 'user';
   accent_color: string;     // Hex color code, default: "#3B82F6"
 }
 
@@ -1793,7 +2003,8 @@ interface User {
 ```typescript
 interface Room {
   id: number;
-  name: string;             // Max 100 characters
+  name: string;             // Max 100 characters (unique per user, case-insensitive)
+  icon: string;             // FontAwesome icon class, default: "fa-door-open"
 }
 ```
 
@@ -1876,6 +2087,15 @@ interface CustomDeviceType {
   proposed_by_username: string | null;    // Username of proposer
   created_at: string;                     // ISO datetime
   card_template: DeviceCardTemplate | null;
+  firmware_code: string;                  // ESP32 firmware source code
+  wiring_diagram_image: string | null;    // Base64 data URI (backward compat alias for wiring_diagram_base64)
+  wiring_diagram_base64: string;          // Base64 data URI of wiring diagram image (stored in DB)
+  wiring_diagram_text: string;            // Markdown wiring instructions
+  documentation: string;                  // Markdown documentation
+  documentation_images_base64: Array<{    // Doc images stored in DB
+    filename: string;
+    data: string;                         // Base64 data URI
+  }>;
 }
 ```
 
@@ -2172,6 +2392,7 @@ function NetworkTopology({ api }) {
 
 | Method | Endpoint | Description | Auth | Role |
 |--------|----------|-------------|------|------|
+| `GET` | `/system-status/` | Check if fresh install | ❌ | - |
 | `POST` | `/register/` | Register new user | ❌ | - |
 | `POST` | `/login/` | Get JWT tokens | ❌ | - |
 | `POST` | `/token/refresh/` | Refresh access token | ❌ | - |
@@ -2193,6 +2414,14 @@ function NetworkTopology({ api }) {
 | `PATCH` | `/devices/{id}/state/` | Control device | ✅ | Any |
 | `GET` | `/device-types/` | List device types | ✅ | Any |
 | `POST` | `/device-types/propose/` | Propose type | ✅ | Any |
+| `POST` | `/device-types/{id}/wiring-image/` | Upload wiring image | ✅ | Owner/Admin |
+| `POST` | `/device-types/doc-images/` | Upload doc image | ✅ | Any |
+| `GET` | `/device-types/{id}/doc-image/{filename}` | Serve doc image | ❌ | - |
+| `GET` | `/device-types/export/` | Export all types | ✅ | Any |
+| `GET` | `/device-types/{id}/export/` | Export single type | ✅ | Any |
+| `POST` | `/device-types/import/` | Import types | ✅ | Admin |
+| `GET` | `/device-types/import-defaults/` | List available defaults | ✅ | Any |
+| `POST` | `/device-types/import-defaults/` | Import defaults | ✅ | Admin |
 | `GET` | `/device-types/{id}/` | Get type details | ✅ | Any |
 | `PUT` | `/device-types/{id}/` | Update type | ✅ | Admin |
 | `DELETE` | `/device-types/{id}/` | Delete type | ✅ | Admin |
@@ -2227,13 +2456,44 @@ function NetworkTopology({ api }) {
 
 ## Notes for Frontend Developers
 
-1. **First User Setup:** The first registered user becomes the `owner` with full privileges. Design an onboarding flow accordingly.
+1. **First User Setup:** The first registered user becomes the `owner` with full privileges. Use `GET /api/system-status/` to detect fresh installs and show the setup wizard.
 
 2. **Token Management:** Access tokens expire quickly. Implement automatic refresh using the refresh token.
 
 3. **Device Controls:** Use `card_template.controls` to dynamically render UI widgets. The `variable_mapping` corresponds to keys in `current_state`.
 
 4. **Real-time Updates:** Currently HTTP-based. For real-time, poll `/notifications/unread-count/` every 30 seconds for notification badges, or await future WebSocket implementation.
+
+5. **Room Icons:** Rooms now include an `icon` field (FontAwesome class). Default: `fa-door-open`. Display this icon in room lists and device assignments.
+
+6. **Device Type Images:** All images (wiring diagrams, documentation images) are stored as base64 data URIs in the database. No filesystem paths are used. Exports are fully self-contained.
+
+---
+
+## 14. System Status
+
+Public endpoint for frontend setup wizard detection.
+
+### 14.1 Get System Status
+
+| Method | Endpoint | Auth Required |
+|--------|----------|---------------|
+| `GET` | `/system-status/` | ❌ No |
+
+Returns whether this is a fresh installation (no users have been registered yet).
+
+**Success Response (200 OK):**
+```json
+{
+  "is_fresh": true
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `is_fresh` | boolean | `true` if no users exist (first-time setup), `false` otherwise |
+
+> **Frontend Usage:** Call this on app load. If `is_fresh` is `true`, show the setup wizard / first-user registration flow instead of the login page.
 
 5. **Notifications:** Use `/notifications/unread-count/` for badge counts. The `by_type` field allows showing different badges for different notification categories.
 

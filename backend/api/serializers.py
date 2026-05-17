@@ -48,18 +48,47 @@ class DeviceCardTemplateSerializer(serializers.ModelSerializer):
 class CustomDeviceTypeSerializer(serializers.ModelSerializer):
     card_template = DeviceCardTemplateSerializer(required=False)
     proposed_by_username = serializers.CharField(source='proposed_by.username', read_only=True)
+    wiring_diagram_base64 = serializers.CharField(required=False, allow_blank=True)
+    # Keep wiring_diagram_image as an alias that returns the same base64 value (backward compat for frontend)
+    wiring_diagram_image = serializers.CharField(source='wiring_diagram_base64', read_only=True)
 
     class Meta:
         model = CustomDeviceType
-        fields = ['id', 'name', 'definition', 'approved', 'rejection_reason', 'proposed_by', 'proposed_by_username', 'created_at', 'card_template']
-        read_only_fields = ['id', 'created_at', 'approved', 'rejection_reason', 'proposed_by', 'proposed_by_username']
+        fields = ['id', 'name', 'definition', 'approved', 'rejection_reason', 'proposed_by', 'proposed_by_username', 'created_at', 'card_template', 'firmware_code', 'wiring_diagram_image', 'wiring_diagram_base64', 'wiring_diagram_text', 'documentation', 'documentation_images_base64']
+        read_only_fields = ['id', 'created_at', 'approved', 'rejection_reason', 'proposed_by', 'proposed_by_username', 'wiring_diagram_image']
         extra_kwargs = {
             'name': {
                 'error_messages': {
                     'unique': 'A device type with this name already exists.'
                 }
-            }
+            },
+            'firmware_code': {'required': False},
+            'wiring_diagram_text': {'required': False},
+            'documentation': {'required': False},
+            'documentation_images_base64': {'required': False},
         }
+
+    def validate_firmware_code(self, value):
+        if value and len(value) > 100000:
+            raise serializers.ValidationError("Firmware code must not exceed 100,000 characters.")
+        if value:
+            required_vars = ['wifi_ssid', 'wifi_password', 'server_ip']
+            missing = [v for v in required_vars if v not in value]
+            if missing:
+                raise serializers.ValidationError(
+                    "Firmware code must contain the variables: wifi_ssid, wifi_password, server_ip. These are required for device connectivity."
+                )
+        return value
+
+    def validate_documentation(self, value):
+        if value and len(value) > 50000:
+            raise serializers.ValidationError("Documentation must not exceed 50,000 characters.")
+        return value
+
+    def validate_wiring_diagram_text(self, value):
+        if value and len(value) > 50000:
+            raise serializers.ValidationError("Wiring diagram text must not exceed 50,000 characters.")
+        return value
 
     def validate(self, data):
         definition = data.get('definition', {})
@@ -108,6 +137,18 @@ class CustomDeviceTypeSerializer(serializers.ModelSerializer):
         # Update definition and name
         instance.name = validated_data.get('name', instance.name)
         instance.definition = validated_data.get('definition', instance.definition)
+        instance.firmware_code = validated_data.get('firmware_code', instance.firmware_code)
+        instance.wiring_diagram_text = validated_data.get('wiring_diagram_text', instance.wiring_diagram_text)
+        instance.documentation = validated_data.get('documentation', instance.documentation)
+        
+        # Handle wiring diagram base64
+        if 'wiring_diagram_base64' in validated_data:
+            instance.wiring_diagram_base64 = validated_data['wiring_diagram_base64']
+        
+        # Handle documentation images base64
+        if 'documentation_images_base64' in validated_data:
+            instance.documentation_images_base64 = validated_data['documentation_images_base64']
+        
         instance.save()
         
         if card_template_data:
@@ -135,7 +176,18 @@ class CustomDeviceTypeSerializer(serializers.ModelSerializer):
 class RoomSerializer(serializers.ModelSerializer):
     class Meta:
         model = Room
-        fields = ['id', 'name']
+        fields = ['id', 'name', 'icon']
+
+    def validate_name(self, value):
+        """Ensure no duplicate room names for the same user."""
+        request = self.context.get('request')
+        if request and request.user:
+            qs = Room.objects.filter(name__iexact=value, user=request.user)
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError("A room with this name already exists.")
+        return value
 
 
 class DeviceSerializer(serializers.ModelSerializer):

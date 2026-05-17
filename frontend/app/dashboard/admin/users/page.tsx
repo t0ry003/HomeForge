@@ -141,8 +141,6 @@ export default function UsersPage() {
         return <Badge className="bg-red-500/10 text-red-500 border-red-500/20">Admin</Badge>
       case 'user':
         return <Badge variant="outline">User</Badge>
-      case 'viewer':
-        return <Badge variant="secondary">Viewer</Badge>
       default:
         return <Badge variant="outline">{role}</Badge>
     }
@@ -189,7 +187,6 @@ export default function UsersPage() {
             <SelectItem value="owner">Owner</SelectItem>
             <SelectItem value="admin">Admin</SelectItem>
             <SelectItem value="user">User</SelectItem>
-            <SelectItem value="viewer">Viewer</SelectItem>
           </SelectContent>
         </Select>
         {(searchQuery || roleFilter !== "all") && (
@@ -276,9 +273,6 @@ export default function UsersPage() {
                              </DropdownMenuItem>
                              <DropdownMenuItem onClick={() => handleRoleChange(user.id, 'user')}>
                                User
-                             </DropdownMenuItem>
-                             <DropdownMenuItem onClick={() => handleRoleChange(user.id, 'viewer')}>
-                               Viewer
                              </DropdownMenuItem>
                           </DropdownMenuSubContent>
                         </DropdownMenuSub>

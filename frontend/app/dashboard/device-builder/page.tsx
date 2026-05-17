@@ -57,9 +57,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
-import { proposeDeviceType, fetchAdminDeviceType, updateAdminDeviceType, approveDeviceType } from "@/lib/apiClient"
+import { proposeDeviceType, fetchAdminDeviceType, updateAdminDeviceType, approveDeviceType, getMediaUrl, uploadWiringDiagramImage } from "@/lib/apiClient"
 import { useSearchParams } from 'next/navigation'
 import DeviceUICreator from './DeviceUICreator';
+import FirmwareCodeEditor from '@/components/device-builder/FirmwareCodeEditor';
+import WiringDiagramEditor from '@/components/device-builder/WiringDiagramEditor';
+import DocumentationEditor from '@/components/device-builder/DocumentationEditor';
+import { PageTooltip } from '@/components/onboarding/PageTooltip';
 
 // --- Types ---
 type SensorType = 'mcu' | 'temperature' | 'humidity' | 'motion' | 'light' | 'switch' | 'co2';
@@ -259,7 +263,7 @@ const DeviceBuilderContent = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [deviceName, setDeviceName] = useState("New Device");
-  const [step, setStep] = useState<'nodes' | 'ui'>('nodes');
+  const [step, setStep] = useState<'nodes' | 'ui' | 'firmware' | 'wiring' | 'docs'>('nodes');
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -268,6 +272,14 @@ const DeviceBuilderContent = () => {
   const [reviewMode, setReviewMode] = useState(false); // Admin review mode
   const [editId, setEditId] = useState<number | null>(null);
   const [cardTemplate, setCardTemplate] = useState<any>(null);
+
+  // New builder steps state
+  const [savedCardTemplate, setSavedCardTemplate] = useState<any>(null);
+  const [firmwareCode, setFirmwareCode] = useState<string>('');
+  const [wiringDiagramText, setWiringDiagramText] = useState<string>('');
+  const [wiringDiagramFile, setWiringDiagramFile] = useState<File | null>(null);
+  const [wiringDiagramPreview, setWiringDiagramPreview] = useState<string | null>(null);
+  const [documentation, setDocumentation] = useState<string>('');
 
   const { screenToFlowPosition, getViewport, setCenter } = useReactFlow();
   const searchParams = useSearchParams();
@@ -295,6 +307,12 @@ const DeviceBuilderContent = () => {
             }
             if (data.name) setDeviceName(data.name);
             if (data.card_template) setCardTemplate(data.card_template);
+            if (data.firmware_code) setFirmwareCode(data.firmware_code);
+            if (data.wiring_diagram_text) setWiringDiagramText(data.wiring_diagram_text);
+            if (data.wiring_diagram_image || data.wiring_diagram_base64) {
+              setWiringDiagramPreview(getMediaUrl(data.wiring_diagram_image || data.wiring_diagram_base64));
+            }
+            if (data.documentation) setDocumentation(data.documentation);
             
             toast.success("Loaded device type for review", { id: "review-load" });
           })
@@ -325,6 +343,12 @@ const DeviceBuilderContent = () => {
             if (data.name) setDeviceName(data.name);
             // Store card_template for later
             if (data.card_template) setCardTemplate(data.card_template);
+            if (data.firmware_code) setFirmwareCode(data.firmware_code);
+            if (data.wiring_diagram_text) setWiringDiagramText(data.wiring_diagram_text);
+            if (data.wiring_diagram_image || data.wiring_diagram_base64) {
+              setWiringDiagramPreview(getMediaUrl(data.wiring_diagram_image || data.wiring_diagram_base64));
+            }
+            if (data.documentation) setDocumentation(data.documentation);
             
             toast.success("Loaded device type for editing", { id: "edit-load" });
           })
@@ -569,7 +593,28 @@ const DeviceBuilderContent = () => {
     setStep('ui');
   };
 
-  const handleFinalSubmit = async (newCardTemplate: any) => {
+  // Called when UI Designer finishes — saves card_template and moves to firmware step
+  const handleUIComplete = (newCardTemplate: any) => {
+    setSavedCardTemplate(newCardTemplate);
+    setStep('firmware');
+  };
+
+  // Called when firmware step finishes
+  const handleFirmwareComplete = (code: string) => {
+    setFirmwareCode(code);
+    setStep('wiring');
+  };
+
+  // Called when wiring step finishes
+  const handleWiringComplete = (data: { wiringDiagramText: string; wiringDiagramFile: File | null; wiringDiagramPreview: string | null }) => {
+    setWiringDiagramText(data.wiringDiagramText);
+    setWiringDiagramFile(data.wiringDiagramFile);
+    setWiringDiagramPreview(data.wiringDiagramPreview);
+    setStep('docs');
+  };
+
+  // Final submit — called from Documentation step
+  const handleFinalSubmit = async (finalDocumentation: string) => {
       setIsSubmitting(true);
       try {
         const structure = buildStructure(nodes, edges);
@@ -583,57 +628,74 @@ const DeviceBuilderContent = () => {
         const initialState: Record<string, any> = {};
         structure.forEach((node: any) => {
           if (node.type !== 'mcu') {
-            // Set default values based on node type
             if (node.type === 'switch') {
-              initialState[node.id] = false; // Relays default to off
+              initialState[node.id] = false;
             } else if (node.type === 'temperature') {
-              initialState[node.id] = 20; // Default room temp
+              initialState[node.id] = 20;
             } else if (node.type === 'humidity') {
-              initialState[node.id] = 50; // Default humidity
+              initialState[node.id] = 50;
             } else if (node.type === 'light') {
-              initialState[node.id] = 0; // Light level
+              initialState[node.id] = 0;
             } else if (node.type === 'motion') {
-              initialState[node.id] = false; // No motion
+              initialState[node.id] = false;
             } else if (node.type === 'co2') {
-              initialState[node.id] = 400; // Normal CO2 ppm
+              initialState[node.id] = 400;
             } else {
-              initialState[node.id] = null; // Unknown type
+              initialState[node.id] = null;
             }
           }
         });
         
-        const payload = {
+        const payload: any = {
             name: deviceName,
             definition: definition,
-            card_template: newCardTemplate,
-            initial_state: initialState // Include initial state template
+            card_template: savedCardTemplate,
+            initial_state: initialState,
+            firmware_code: firmwareCode,
+            wiring_diagram_text: wiringDiagramText,
+            documentation: finalDocumentation,
         };
-        
+
+        // If there's a wiring diagram image file, we need multipart upload
+        // For now, submit JSON payload first, then upload image separately
         console.log(reviewMode ? "Review & Approve:" : (editMode ? "Update:" : "Proposal:"), JSON.stringify(payload, null, 2));
 
         if (reviewMode && editId) {
-          // Review mode: update then approve
           await updateAdminDeviceType(editId, payload);
+          if (wiringDiagramFile) {
+            await uploadWiringDiagramImage(editId, wiringDiagramFile);
+          }
           await approveDeviceType(editId);
           toast.success("Device Type Approved", {
             description: "The device type is now available for use."
           });
           window.location.href = '/dashboard/admin/approvals';
         } else if (editMode && editId) {
-          // Edit mode: update existing device type
           await updateAdminDeviceType(editId, payload);
+          if (wiringDiagramFile) {
+            await uploadWiringDiagramImage(editId, wiringDiagramFile);
+          }
           toast.success("Device Type Updated", {
             description: "The device type has been saved."
           });
           window.location.href = '/dashboard/admin/device-types';
         } else {
-          // New proposal mode
-          await proposeDeviceType(payload);
+          const result = await proposeDeviceType(payload);
+          if (wiringDiagramFile && result?.id) {
+            await uploadWiringDiagramImage(result.id, wiringDiagramFile);
+          }
           toast.success("Device Proposal Submitted", {
             description: "An admin will review your device type."
           });
+          // Reset all state
           setNodes([]); 
           setEdges([]); 
+          setSavedCardTemplate(null);
+          setFirmwareCode('');
+          setWiringDiagramText('');
+          setWiringDiagramFile(null);
+          setWiringDiagramPreview(null);
+          setDocumentation('');
           setStep('nodes');
         }
 
@@ -703,11 +765,59 @@ const DeviceBuilderContent = () => {
         <DeviceUICreator 
             nodes={nodes} 
             onBack={() => setStep('nodes')}
-            onSave={handleFinalSubmit}
-            isSubmitting={isSubmitting}
+            onSave={handleUIComplete}
+            isSubmitting={false}
             initialCardTemplate={cardTemplate}
             editMode={editMode}
             reviewMode={reviewMode}
+            deviceName={deviceName}
+            onNameChange={setDeviceName}
+        />
+      );
+  }
+
+  if (step === 'firmware') {
+      return (
+        <FirmwareCodeEditor
+            onBack={() => setStep('ui')}
+            onNext={handleFirmwareComplete}
+            initialCode={firmwareCode || undefined}
+            editMode={editMode}
+            reviewMode={reviewMode}
+            deviceName={deviceName}
+            onNameChange={setDeviceName}
+        />
+      );
+  }
+
+  if (step === 'wiring') {
+      return (
+        <WiringDiagramEditor
+            onBack={() => setStep('firmware')}
+            onNext={handleWiringComplete}
+            initialText={wiringDiagramText}
+            initialImagePreview={wiringDiagramPreview}
+            initialFile={wiringDiagramFile}
+            editMode={editMode}
+            reviewMode={reviewMode}
+            deviceName={deviceName}
+            onNameChange={setDeviceName}
+        />
+      );
+  }
+
+  if (step === 'docs') {
+      return (
+        <DocumentationEditor
+            onBack={() => setStep('wiring')}
+            onSubmit={handleFinalSubmit}
+            initialDocumentation={documentation || undefined}
+            editMode={editMode}
+            reviewMode={reviewMode}
+            isSubmitting={isSubmitting}
+            deviceTypeId={editId || undefined}
+            deviceName={deviceName}
+            onNameChange={setDeviceName}
         />
       );
   }
@@ -715,35 +825,26 @@ const DeviceBuilderContent = () => {
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Header Toolbar */}
-      <div className="flex items-center justify-between px-4 md:px-6 py-3 border-b border-border bg-background backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-foreground">
+      <div className="flex items-center justify-between px-3 md:px-6 py-3 border-b border-border bg-background backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
+        <div className="flex items-center gap-2 md:gap-4 min-w-0">
+          <div className="flex items-center gap-2 text-foreground shrink-0">
             <div className="p-1.5 rounded-md bg-primary/10 hidden md:block">
               <Cpu className="w-4 h-4 text-primary" />
             </div>
             <span className="font-semibold tracking-tight hidden sm:inline">
               {reviewMode ? 'Review Device Type' : (editMode ? 'Edit Device Type' : 'Device Builder')}
             </span>
-            {reviewMode ? (
-              <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-500 border border-blue-500/20">
-                REVIEW
-              </span>
-            ) : editMode && (
-              <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
-                EDITING
-              </span>
-            )}
           </div>
           <div className="h-4 w-px bg-border hidden md:block" />
           <Input 
             value={deviceName}
             onChange={(e) => setDeviceName(e.target.value)}
-            className="h-8 w-40 md:w-64 bg-muted/50 border-border text-foreground focus-visible:ring-primary/50 transition-all focus:bg-background"
+            className="h-7 w-28 md:w-48 bg-muted/50 border-border text-foreground text-sm focus-visible:ring-primary/50 transition-all focus:bg-background"
             placeholder="Device Name"
             readOnly={reviewMode}
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2 shrink-0">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -757,11 +858,13 @@ const DeviceBuilderContent = () => {
 
           <Button size="sm" onClick={handleNextStep} className="bg-primary hover:bg-primary/90 text-primary-foreground border-0 shadow-lg shadow-primary/20">
             <span className="hidden sm:inline">Next: UI Builder</span>
-            <span className="sm:inline hidden">Next</span>
-            <CheckCircle2 className="w-4 h-4 sm:ml-2" />
+            <span className="sm:hidden">Next</span>
+            <CheckCircle2 className="w-4 h-4 ml-1 sm:ml-2" />
           </Button>
         </div>
       </div>
+
+      <PageTooltip pageKey="device-builder" message="Design custom smart devices here — connect components to an MCU, write firmware, and add wiring diagrams." className="mx-3 md:mx-6 mt-2" />
 
       <div className="flex flex-1 overflow-hidden relative md:p-4 bg-background/20">
         <div className="flex w-full h-full md:rounded-2xl overflow-hidden md:border md:border-border bg-background shadow-2xl relative">

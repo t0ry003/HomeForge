@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AddDeviceDialog } from '@/components/devices/AddDeviceDialog';
-import { Search, RotateCw } from 'lucide-react';
+import { Search, RotateCw, Home } from 'lucide-react';
 import { clsx } from 'clsx';
 import { getIconComponent } from '@/lib/icons';
 
@@ -30,18 +30,21 @@ export default function DevicesPage() {
   });
 
   // Rooms lookup - rarely changes, cache longer
-  const { data: roomsMap = new Map() } = useQuery({
-    queryKey: ['rooms', 'map'],
+  const { data: roomsList = [] } = useQuery({
+    queryKey: ['rooms'],
     queryFn: async () => {
       const res = await fetchRooms();
-      const list = Array.isArray(res) ? res : (res.results || []);
-      const map = new Map<number, string>();
-      list.forEach((r: any) => map.set(r.id, r.name));
-      return map;
+      return Array.isArray(res) ? res : (res.results || []);
     },
     staleTime: 60000,
     gcTime: 10 * 60 * 1000,
   });
+
+  const roomsMap = useMemo(() => {
+    const map = new Map<number, { name: string; icon: string }>();
+    roomsList.forEach((r: any) => map.set(r.id, { name: r.name, icon: r.icon }));
+    return map;
+  }, [roomsList]);
 
   // Types lookup - rarely changes, cache longer
   const { data: typesMap = new Map() } = useQuery({
@@ -159,7 +162,12 @@ export default function DevicesPage() {
                           <Badge variant="outline" className="capitalize">{typeName}</Badge>
                        </TableCell>
                        <TableCell>
-                          {device.room ? (roomsMap.get(device.room) || 'Unassigned') : <span className="text-muted-foreground italic">Unassigned</span>}
+                          {device.room ? (() => {
+                            const room = roomsMap.get(device.room);
+                            if (!room) return 'Unassigned';
+                            const RoomIcon = (room.icon ? getIconComponent(room.icon) : null) || Home;
+                            return <span className="inline-flex items-center gap-1.5"><RoomIcon className="h-4 w-4 text-muted-foreground" />{room.name}</span>;
+                          })() : <span className="text-muted-foreground italic">Unassigned</span>}
                        </TableCell>
                        <TableCell className="font-mono text-xs">{device.ip_address || 'N/A'}</TableCell>
                        <TableCell className="text-xs text-muted-foreground font-mono">

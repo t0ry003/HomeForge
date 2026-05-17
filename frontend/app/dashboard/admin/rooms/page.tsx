@@ -2,8 +2,10 @@
 
 import { useState, useCallback } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Pencil, Trash2 } from "lucide-react"
+import { Plus, Pencil, Trash2, Home } from "lucide-react"
 import { toast } from "sonner"
+import { getIconComponent } from "@/lib/icons"
+import { IconPicker } from "@/components/devices/IconPicker"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -32,6 +34,7 @@ export default function RoomsPage() {
   const [editingRoom, setEditingRoom] = useState<any>(null)
   const [roomToDelete, setRoomToDelete] = useState<number | null>(null)
   const [name, setName] = useState("")
+  const [icon, setIcon] = useState("DoorOpen")
   const queryClient = useQueryClient()
 
   // Fetch rooms with React Query
@@ -47,7 +50,7 @@ export default function RoomsPage() {
 
   // Create room mutation
   const createMutation = useMutation({
-    mutationFn: (payload: { name: string }) => createRoom(payload),
+    mutationFn: (payload: { name: string; icon: string }) => createRoom(payload),
     onSuccess: () => {
       toast.success("Room created")
       queryClient.invalidateQueries({ queryKey: ['rooms'] })
@@ -60,7 +63,7 @@ export default function RoomsPage() {
 
   // Update room mutation
   const updateMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: number; payload: { name: string } }) => 
+    mutationFn: ({ id, payload }: { id: number; payload: { name: string; icon: string } }) => 
       updateRoom(id, payload),
     onSuccess: () => {
       toast.success("Room updated")
@@ -90,22 +93,24 @@ export default function RoomsPage() {
     if (room) {
       setEditingRoom(room)
       setName(room.name)
+      setIcon(room.icon || 'DoorOpen')
     } else {
       setEditingRoom(null)
       setName("")
+      setIcon("DoorOpen")
     }
     setIsDialogOpen(true)
   }, [])
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault()
-    const payload = { name }
+    const payload = { name, icon }
     if (editingRoom) {
       updateMutation.mutate({ id: editingRoom.id, payload })
     } else {
       createMutation.mutate(payload)
     }
-  }, [name, editingRoom, updateMutation, createMutation])
+  }, [name, icon, editingRoom, updateMutation, createMutation])
 
   const confirmDelete = useCallback(() => {
     if (roomToDelete) {
@@ -131,6 +136,7 @@ export default function RoomsPage() {
         <Table className="min-w-[300px]">
           <TableHeader>
             <TableRow>
+              <TableHead>Icon</TableHead>
               <TableHead>Name</TableHead>
               <TableHead className="w-[100px] text-right">Actions</TableHead>
             </TableRow>
@@ -141,6 +147,7 @@ export default function RoomsPage() {
               <>
                 {[1, 2, 3].map((i) => (
                   <TableRow key={i}>
+                    <TableCell><Skeleton className="h-5 w-5" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -153,13 +160,16 @@ export default function RoomsPage() {
               </>
             ) : rooms.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={2} className="h-24 text-center">
+                <TableCell colSpan={3} className="h-24 text-center">
                   No rooms found.
                 </TableCell>
               </TableRow>
             ) : (
-              rooms.map((room: any) => (
+              rooms.map((room: any) => {
+                const RoomIcon = getIconComponent(room.icon) || Home;
+                return (
                 <TableRow key={room.id}>
+                  <TableCell><RoomIcon className="h-5 w-5 text-muted-foreground" /></TableCell>
                   <TableCell className="font-medium">{room.name}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
@@ -172,7 +182,8 @@ export default function RoomsPage() {
                     </div>
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -198,6 +209,10 @@ export default function RoomsPage() {
                   placeholder="Living Room"
                   required
                 />
+              </div>
+              <div className="grid gap-2">
+                <Label>Icon</Label>
+                <IconPicker value={icon} onChange={setIcon} className="w-full" />
               </div>
             </div>
             <DialogFooter>

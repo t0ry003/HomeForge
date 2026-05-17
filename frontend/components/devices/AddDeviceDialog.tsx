@@ -23,8 +23,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from "sonner";
-import { Loader2, ArrowLeft, ArrowRight, Plus } from 'lucide-react';
+import { Loader2, ArrowLeft, ArrowRight, Plus, Home } from 'lucide-react';
 import { IconPicker } from './IconPicker';
+import { getIconComponent } from '@/lib/icons';
 
 interface AddDeviceDialogProps {
   onDeviceAdded?: () => void;
@@ -211,9 +212,17 @@ export function AddDeviceDialog({ onDeviceAdded, trigger }: AddDeviceDialogProps
                        {rooms.length === 0 ? (
                          <div className="p-2 text-sm text-center text-muted-foreground">No rooms found</div>
                        ) : ( 
-                        rooms.map((r) => (
-                          <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>
-                        ))
+                        rooms.map((r) => {
+                          const RoomIcon = (r.icon ? getIconComponent(r.icon) : null) || Home;
+                          return (
+                          <SelectItem key={r.id} value={String(r.id)}>
+                            <div className="flex items-center gap-2">
+                              <RoomIcon className="h-4 w-4 text-muted-foreground" />
+                              <span>{r.name}</span>
+                            </div>
+                          </SelectItem>
+                          );
+                        })
                        )}
                     </SelectContent>
                   </Select>

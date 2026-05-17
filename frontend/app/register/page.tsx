@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/card"
 import { ModeToggle } from "@/components/mode-toggle"
 import { registerUser } from "@/lib/apiClient"
+import { HomeForgeLogo } from "@/components/homeforge-logo"
 
 export default function RegisterPage() {
   const router = useRouter()
@@ -47,7 +48,7 @@ export default function RegisterPage() {
     }
 
     try {
-      await registerUser({ ...formData, role: 'viewer' })
+      await registerUser({ ...formData, role: 'user' })
       toast.success("Account created!", {
         description: "You can now log in with your credentials.",
       })
@@ -73,6 +74,7 @@ export default function RegisterPage() {
       
       <div className="w-full max-w-md px-4 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-500">
         <div className="mb-8 text-center">
+          <HomeForgeLogo size={72} className="mx-auto mb-3" />
           <h1 className="text-3xl font-bold tracking-tighter text-primary">HomeForge</h1>
           <p className="text-muted-foreground">Create your account</p>
         </div>

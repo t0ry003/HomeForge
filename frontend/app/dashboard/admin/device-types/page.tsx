@@ -19,7 +19,8 @@ import 'reactflow/dist/style.css';
 import { 
     Cpu, Thermometer, Droplets, Activity, Sun, ToggleLeft, Wind, 
     CheckCircle2, XCircle, Inbox, RotateCw, Plus, Edit, Trash2,
-    AlertTriangle, CheckSquare, Square, Filter
+    AlertTriangle, CheckSquare, Square, Filter, Download, Upload,
+    FileUp, Package
 } from 'lucide-react';
 import { toast } from "sonner";
 import Link from "next/link";
@@ -48,8 +49,14 @@ import {
     deleteDeviceType,
     deleteDeniedDeviceType,
     bulkDeleteDeniedDeviceTypes,
-    updateAdminDeviceType
+    updateAdminDeviceType,
+    getImportDefaults,
+    importDefaults,
+    importDeviceTypesFromFile,
+    exportDeviceTypes,
+    exportSingleDeviceType,
 } from "@/lib/apiClient";
+import { useUser } from "@/components/user-provider";
 import SmartDeviceCard from "@/components/devices/SmartDeviceCard";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -149,11 +156,31 @@ function StatusBadge({ status }: { status: 'approved' | 'pending' | 'denied' }) 
     );
 }
 
+// Helper to trigger a file download from a fetch Response
+async function downloadResponseAsFile(res: Response, fallbackName: string) {
+    const disposition = res.headers.get('content-disposition');
+    let filename = fallbackName;
+    if (disposition) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match) filename = match[1];
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
 export default function DeviceTypesManagementPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const queryClient = useQueryClient();
     const isMobile = useIsMobile();
+    const { user: contextUser } = useUser();
+    const userRole = contextUser?.profile?.role || contextUser?.role;
+    const isAdmin = userRole === 'admin' || userRole === 'owner';
     
     // Get initial filter from URL query params
     const initialFilter = (searchParams.get('filter') as StatusFilter) || 'all';
@@ -182,6 +209,12 @@ export default function DeviceTypesManagementPage() {
     const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
     const [editName, setEditName] = useState("");
     const [isEditingName, setIsEditingName] = useState(false);
+
+    // Import/Export state
+    const [isImportDefaultsOpen, setIsImportDefaultsOpen] = useState(false);
+    const [defaultsPreview, setDefaultsPreview] = useState<any>(null);
+    const [loadingDefaults, setLoadingDefaults] = useState(false);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     // Fetch all device types
     const { data: approvedTypes = [], isLoading: loadingApproved } = useQuery({
@@ -388,6 +421,84 @@ export default function DeviceTypesManagementPage() {
         },
     });
 
+    // --- Import/Export Mutations ---
+
+    const importDefaultsMutation = useMutation({
+        mutationFn: () => importDefaults(),
+        onSuccess: (data: any) => {
+            toast.success("Defaults Imported", {
+                description: `Created: ${data.created_count || 0}, Skipped: ${data.skipped_count || 0}`,
+            });
+            setIsImportDefaultsOpen(false);
+            setDefaultsPreview(null);
+            refetchAll();
+        },
+        onError: (e: any) => {
+            toast.error("Import Failed", { description: e.message });
+        },
+    });
+
+    const importFileMutation = useMutation({
+        mutationFn: (file: File) => importDeviceTypesFromFile(file),
+        onSuccess: (data: any) => {
+            toast.success("File Imported", {
+                description: `Created: ${data.created_count || 0}, Skipped: ${data.skipped_count || 0}${
+                    data.errors_count ? `, Errors: ${data.errors_count}` : ''
+                }`,
+            });
+            refetchAll();
+        },
+        onError: (e: any) => {
+            toast.error("Import Failed", { description: e.message });
+        },
+    });
+
+    const handleOpenImportDefaults = useCallback(async () => {
+        setIsImportDefaultsOpen(true);
+        setLoadingDefaults(true);
+        try {
+            const data = await getImportDefaults();
+            setDefaultsPreview(data);
+        } catch (e: any) {
+            toast.error("Failed to load defaults", { description: e.message });
+        } finally {
+            setLoadingDefaults(false);
+        }
+    }, []);
+
+    const handleImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (!file.name.endsWith('.json')) {
+            toast.error("Invalid file", { description: "Please select a .json file" });
+            return;
+        }
+        importFileMutation.mutate(file);
+        // Reset the input so the same file can be selected again
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    }, [importFileMutation]);
+
+    const handleBulkExport = useCallback(async () => {
+        try {
+            const ids = selectedIds.size > 0 ? Array.from(selectedIds) : null;
+            const res = await exportDeviceTypes(ids as any);
+            await downloadResponseAsFile(res, 'homeforge-device-types.json');
+            toast.success("Export downloaded");
+        } catch (e: any) {
+            toast.error("Export failed", { description: e.message });
+        }
+    }, [selectedIds]);
+
+    const handleSingleExport = useCallback(async (id: number, name: string) => {
+        try {
+            const res = await exportSingleDeviceType(id);
+            await downloadResponseAsFile(res, `${name.toLowerCase().replace(/\s+/g, '_')}.json`);
+            toast.success("Export downloaded");
+        } catch (e: any) {
+            toast.error("Export failed", { description: e.message });
+        }
+    }, []);
+
     // --- Handlers ---
     
     const handleSelect = useCallback((item: any) => {
@@ -474,7 +585,30 @@ export default function DeviceTypesManagementPage() {
                     <h1 className="text-2xl font-bold tracking-tight">Device Types</h1>
                     <p className="text-sm text-muted-foreground">Manage and review all device type definitions</p>
                 </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+                    <Button variant="outline" size="sm" onClick={handleBulkExport}>
+                        <Download className="w-4 h-4 mr-2" />
+                        {selectedIds.size > 0 ? `Export (${selectedIds.size})` : 'Export All'}
+                    </Button>
+                    {isAdmin && (
+                        <>
+                            <Button variant="outline" size="sm" onClick={handleOpenImportDefaults}>
+                                <Package className="w-4 h-4 mr-2" />
+                                Import Defaults
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
+                                <FileUp className="w-4 h-4 mr-2" />
+                                Import File
+                            </Button>
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept=".json"
+                                className="hidden"
+                                onChange={handleImportFile}
+                            />
+                        </>
+                    )}
                     <Button variant="outline" size="sm" onClick={refetchAll} disabled={isLoading}>
                         <RotateCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
                         Refresh
@@ -852,6 +986,13 @@ export default function DeviceTypesManagementPage() {
                                                 <Trash2 className="w-4 h-4 mr-1.5" /> Delete
                                             </Button>
                                         )}
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm"
+                                            onClick={() => handleSingleExport(selectedType.id, selectedType.name)}
+                                        >
+                                            <Download className="w-4 h-4 mr-1.5" /> Export
+                                        </Button>
                                     </div>
                                 </div>
 
@@ -989,6 +1130,72 @@ export default function DeviceTypesManagementPage() {
                             disabled={bulkDeleteMutation.isPending}
                         >
                             {bulkDeleteMutation.isPending ? 'Deleting...' : `Delete ${selectedDeniedCount} Type(s)`}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Import Defaults Modal */}
+            <Dialog open={isImportDefaultsOpen} onOpenChange={(open) => {
+                setIsImportDefaultsOpen(open);
+                if (!open) setDefaultsPreview(null);
+            }}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Package className="w-5 h-5 text-primary" />
+                            Import Default Device Types
+                        </DialogTitle>
+                        <DialogDescription>
+                            Import the built-in device type definitions. Already existing types will be skipped.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        {loadingDefaults ? (
+                            <div className="flex items-center justify-center py-6 text-muted-foreground">
+                                <RotateCw className="w-4 h-4 animate-spin mr-2" />
+                                Loading available defaults...
+                            </div>
+                        ) : defaultsPreview ? (
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">Available defaults:</span>
+                                    <Badge variant="secondary">{defaultsPreview.available_count ?? defaultsPreview.count ?? '—'}</Badge>
+                                </div>
+                                {defaultsPreview.already_imported_count != null && (
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">Already imported:</span>
+                                        <Badge variant="outline">{defaultsPreview.already_imported_count}</Badge>
+                                    </div>
+                                )}
+                                {defaultsPreview.types && Array.isArray(defaultsPreview.types) && (
+                                    <div className="max-h-48 overflow-y-auto border rounded-md p-2 space-y-1">
+                                        {defaultsPreview.types.map((t: any, i: number) => (
+                                            <div key={i} className="text-sm flex items-center gap-2 py-1 px-2 rounded hover:bg-muted/50">
+                                                <Cpu className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                                                <span className="truncate">{t.name || t}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-muted-foreground text-center py-4">
+                                Click Import to add the default device types.
+                            </p>
+                        )}
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsImportDefaultsOpen(false)}>Cancel</Button>
+                        <Button 
+                            onClick={() => importDefaultsMutation.mutate()}
+                            disabled={importDefaultsMutation.isPending}
+                        >
+                            {importDefaultsMutation.isPending ? (
+                                <><RotateCw className="w-4 h-4 mr-2 animate-spin" /> Importing...</>
+                            ) : (
+                                <><Upload className="w-4 h-4 mr-2" /> Import</>
+                            )}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

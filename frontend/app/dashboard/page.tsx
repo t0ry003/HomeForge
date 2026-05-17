@@ -9,7 +9,8 @@ import {
   Filter,
   Activity,
   SortAsc,
-  Pencil
+  Pencil,
+  Home
 } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
@@ -33,6 +34,8 @@ import DraggableDeviceGrid from "@/components/devices/DraggableDeviceGrid";
 import { useDashboardLayout, type DeviceOrder } from "@/hooks/useDashboardLayout";
 import { useUser } from "@/components/user-provider";
 import { toast } from "sonner";
+import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
+import { PageTooltip } from "@/components/onboarding/PageTooltip";
 
 // Helper to get ID securely
 const getId = (obj: any) => (typeof obj === 'object' && obj !== null ? obj.id : obj);
@@ -152,6 +155,11 @@ export default function DashboardPage() {
       const room = rooms.find((r: any) => r.id === id);
       return room ? room.name : "Unassigned";
   };
+
+  const getRoomIcon = (id: any) => {
+      const room = rooms.find((r: any) => r.id === id);
+      return room?.icon || '';
+  };
   
   const getTypeName = (id: any) => {
       const type = deviceTypes.find((t: any) => t.id === id);
@@ -182,9 +190,13 @@ export default function DashboardPage() {
              if (!groups[r.name]) groups[r.name] = [];
         });
 
-        return Object.entries(groups).sort((a,b) => a[0].localeCompare(b[0])).map(([groupName, groupDevices]) => (
+        return Object.entries(groups).sort((a,b) => a[0].localeCompare(b[0])).map(([groupName, groupDevices]) => {
+            const roomObj = rooms.find((r: any) => r.name === groupName);
+            const RoomIcon = (roomObj?.icon ? getIconComponent(roomObj.icon) : null) || Home;
+            return (
             <div key={groupName} className="space-y-4">
                  <div className="flex items-center gap-2 pb-2 border-b">
+                    <RoomIcon className="h-5 w-5 text-muted-foreground" />
                     <h3 className="text-lg font-semibold tracking-tight">{groupName}</h3>
                     <Badge variant="secondary" className="ml-auto">{groupDevices.length}</Badge>
                  </div>
@@ -198,13 +210,15 @@ export default function DashboardPage() {
                                 device={d} 
                                 deviceType={getDeviceTypeObj(getId(d.device_type))}
                                 roomName={""}
+                                roomIcon={""}
                                 animationIndex={i}
                              />
                          ))}
                     </div>
                  )}
             </div>
-        ));
+            );
+        });
     }
 
     if (viewMode === 'type') {
@@ -230,6 +244,7 @@ export default function DashboardPage() {
                                 device={d} 
                                 deviceType={getDeviceTypeObj(getId(d.device_type))}
                                 roomName={getRoomName(getId(d.room))}
+                                roomIcon={getRoomIcon(getId(d.room))}
                                 animationIndex={i}
                             />
                         ))}
@@ -261,6 +276,7 @@ export default function DashboardPage() {
                                 device={d} 
                                 deviceType={getDeviceTypeObj(getId(d.device_type))}
                                 roomName={getRoomName(getId(d.room))}
+                                roomIcon={getRoomIcon(getId(d.room))}
                                 animationIndex={i}
                             />
                         ))}
@@ -280,6 +296,7 @@ export default function DashboardPage() {
                         device={d}
                         deviceType={getDeviceTypeObj(getId(d.device_type))}
                         roomName={getRoomName(getId(d.room))}
+                        roomIcon={getRoomIcon(getId(d.room))}
                         animationIndex={i}
                     />
                 ))}
@@ -290,12 +307,13 @@ export default function DashboardPage() {
     // Default: 'all'
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {devices.map((d: any, i: number) => ( // Updated type annotation
+            {devices.map((d: any, i: number) => (
                 <SmartDeviceCard 
                     key={d.id} 
                     device={d}
                     deviceType={getDeviceTypeObj(getId(d.device_type))}
                     roomName={getRoomName(getId(d.room))}
+                    roomIcon={getRoomIcon(getId(d.room))}
                     animationIndex={i}
                 />
             ))}
@@ -365,6 +383,15 @@ export default function DashboardPage() {
             />
         </div>
       </div>
+
+      {/* Onboarding */}
+      <PageTooltip pageKey="dashboard" message="This is your control center. Add devices, organize them into rooms, and monitor everything in real time." />
+      <OnboardingChecklist
+        isAdmin={isAdmin}
+        deviceCount={devices.length}
+        roomCount={rooms.length}
+        deviceTypeCount={deviceTypes.length}
+      />
 
       {/* Content */}
       <div className="flex-1">

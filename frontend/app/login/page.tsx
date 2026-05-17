@@ -21,6 +21,7 @@ import { ModeToggle } from "@/components/mode-toggle"
 import { login } from "@/lib/apiClient"
 import { useUser } from "@/components/user-provider"
 import { useQueryClient } from "@tanstack/react-query"
+import { HomeForgeLogo } from "@/components/homeforge-logo"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -63,6 +64,7 @@ export default function LoginPage() {
       
       <div className="w-full max-w-md px-4 animate-in fade-in zoom-in-95 slide-in-from-bottom-4 duration-500">
         <div className="mb-8 text-center">
+          <HomeForgeLogo size={72} className="mx-auto mb-3" />
           <h1 className="text-3xl font-bold tracking-tighter text-primary">HomeForge</h1>
           <p className="text-muted-foreground">Your smart home companion</p>
         </div>

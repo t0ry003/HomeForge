@@ -43,6 +43,8 @@ Unlike commercial solutions, HomeForge gives you complete control over your devi
 ### 🎛️ Device Management
 - **Universal Device Support** — Register any IoT device with flexible JSON state
 - **Visual Device Builder** — Design custom device configurations via drag-and-drop
+- **Device Collection** — Browse, import, and export community device type definitions
+- **Firmware/Wiring/Docs** — Store firmware, wiring diagrams, and documentation per device type
 - **Real-time Control** — Toggle switches, sliders, and gauges with instant "Smart Sync" feedback
 - **Custom Device Types** — Propose and approve new device categories
 - **Enhanced Device Cards** — Visual status indicators with offline overlay and disabled controls
@@ -69,6 +71,7 @@ Unlike commercial solutions, HomeForge gives you complete control over your devi
 - **Physical Grouping** — Organize devices by location
 - **Room Dashboard** — View all devices in a room at a glance
 - **Drag & Drop** — Easy device-to-room assignment
+- **Room Icons** — Icon picker support in rooms and device grouping views
 
 ### 🎨 Modern UI/UX
 - **Dark/Light Mode** — System-aware theme switching
@@ -77,7 +80,7 @@ Unlike commercial solutions, HomeForge gives you complete control over your devi
 - **shadcn/ui Components** — Accessible, customizable components
 
 ### 🔧 Developer Friendly
-- **RESTful API** — Complete API v1.3.0 with comprehensive documentation
+- **RESTful API** — Complete API v1.8.0 with comprehensive documentation
 - **React Query Caching** — Optimized data fetching with 30s stale time
 - **Docker Ready** — One-command deployment with Docker Compose
 - **Dev Containers** — VS Code development containers included
@@ -139,6 +142,7 @@ HomeForge/
 │   │   ├── dashboard/          # Protected routes
 │   │   │   ├── devices/        # Device management
 │   │   │   ├── device-builder/ # Visual device designer
+│   │   │   ├── device-collection/ # Community device catalog
 │   │   │   ├── topology/       # Network visualization
 │   │   │   └── admin/          # Admin panel (rooms, users, device-types, debug)
 │   │   ├── login/              # Authentication
@@ -246,7 +250,6 @@ HomeForge/
 | [Frontend README](frontend/frontend_readme.md) | Frontend architecture, components, and patterns |
 | [Wiki Website](website/README.md) | Docusaurus documentation site and deployment |
 | [API Guide](backend/API_GUIDE.md) | Complete API reference with examples |
-| [Frontend API Usage](frontend/API_USAGE.md) | Frontend apiClient.js usage guide |
 | [Copilot Instructions](.github/copilot-instructions.md) | AI coding guidelines and conventions |
 
 ---
@@ -390,6 +393,14 @@ This project is open source and available under the [MIT License](LICENSE).
 ---
 
 ## 📋 Changelog
+
+### [2026-05-17] - v1.8.0
+- **Added**: Device Collection browse/detail pages with import/export tools
+- **Added**: Firmware, wiring diagram, and documentation content for device types (including doc images)
+- **Added**: Setup wizard flow plus onboarding checklist for first-run guidance
+- **Changed**: Wiring diagram storage migrated to base64 in the database
+- **Changed**: Room management now includes icon selection and display
+- **Fixed**: Wiring diagram image persistence and editor sync in Device Builder
 
 ### [2026-03-24] - v1.7.0
 - **Added**: HomeForge Docusaurus wiki scaffold in `website/` with Overview, Backend, Frontend, and API Usage starter pages

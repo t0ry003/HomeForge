@@ -1,0 +1,233 @@
+[
+  {
+    "name": "ESP32 Relay Switch",
+    "definition": {
+      "name": "ESP32 Relay Switch",
+      "structure": [
+        {
+          "id": "mcu-1",
+          "type": "mcu",
+          "label": "ESP32",
+          "position": {
+            "x": 50,
+            "y": 100
+          }
+        },
+        {
+          "id": "relay_1",
+          "type": "relay",
+          "label": "Relay",
+          "position": {
+            "x": 250,
+            "y": 100
+          }
+        }
+      ]
+    },
+    "card_template": {
+      "layout_config": {
+        "h": 2,
+        "w": 2
+      },
+      "controls": [
+        {
+          "widget_type": "TOGGLE",
+          "label": "Power",
+          "variable_mapping": "relay_1"
+        }
+      ]
+    },
+    "firmware_code_file": "firmware/projects/ESP32_RELAY/firmware.ino",
+    "wiring_diagram_text_file": "firmware/projects/ESP32_RELAY/wiring.md",
+    "documentation_file": "firmware/projects/ESP32_RELAY/README.md"
+  },
+  {
+    "name": "ESP32 Thermostat (DHT11)",
+    "definition": {
+      "name": "ESP32 Thermostat (DHT11)",
+      "structure": [
+        {
+          "id": "mcu-1",
+          "type": "mcu",
+          "label": "ESP32",
+          "position": {
+            "x": 50,
+            "y": 100
+          }
+        },
+        {
+          "id": "temperature",
+          "type": "sensor",
+          "label": "Temperature",
+          "position": {
+            "x": 250,
+            "y": 50
+          }
+        },
+        {
+          "id": "humidity",
+          "type": "sensor",
+          "label": "Humidity",
+          "position": {
+            "x": 250,
+            "y": 150
+          }
+        }
+      ]
+    },
+    "card_template": {
+      "layout_config": {
+        "h": 2,
+        "w": 2
+      },
+      "controls": [
+        {
+          "widget_type": "TEMPERATURE",
+          "label": "Temperature",
+          "variable_mapping": "temperature",
+          "unit": "\u00b0C"
+        },
+        {
+          "widget_type": "HUMIDITY",
+          "label": "Humidity",
+          "variable_mapping": "humidity",
+          "unit": "%"
+        }
+      ]
+    },
+    "firmware_code_file": "firmware/projects/ESP32_THERMOSTAT_DHT11/firmware.ino",
+    "wiring_diagram_text_file": "firmware/projects/ESP32_THERMOSTAT_DHT11/wiring.md",
+    "documentation_file": "firmware/projects/ESP32_THERMOSTAT_DHT11/README.md"
+  },
+  {
+    "name": "ESP32 Thermostat (BMP180)",
+    "definition": {
+      "name": "ESP32 Thermostat (BMP180)",
+      "structure": [
+        {
+          "id": "mcu-1",
+          "type": "mcu",
+          "label": "ESP32",
+          "position": {
+            "x": 50,
+            "y": 100
+          }
+        },
+        {
+          "id": "temperature",
+          "type": "sensor",
+          "label": "Temperature",
+          "position": {
+            "x": 250,
+            "y": 50
+          }
+        },
+        {
+          "id": "pressure",
+          "type": "sensor",
+          "label": "Pressure",
+          "position": {
+            "x": 250,
+            "y": 150
+          }
+        }
+      ]
+    },
+    "card_template": {
+      "layout_config": {
+        "h": 2,
+        "w": 2
+      },
+      "controls": [
+        {
+          "widget_type": "TEMPERATURE",
+          "label": "Temperature",
+          "variable_mapping": "temperature",
+          "unit": "\u00b0C"
+        },
+        {
+          "widget_type": "PRESSURE",
+          "label": "Pressure",
+          "variable_mapping": "pressure",
+          "unit": "hPa"
+        }
+      ]
+    },
+    "firmware_code_file": "firmware/projects/ESP32_THERMOSTAT_BMP180/firmware.ino",
+    "wiring_diagram_text_file": "firmware/projects/ESP32_THERMOSTAT_BMP180/wiring.md",
+    "documentation_file": "firmware/projects/ESP32_THERMOSTAT_BMP180/README.md"
+  },
+  {
+    "name": "ESP32 Weather Station (DHT11 + BMP180)",
+    "definition": {
+      "name": "ESP32 Weather Station (DHT11 + BMP180)",
+      "structure": [
+        {
+          "id": "mcu-1",
+          "type": "mcu",
+          "label": "ESP32",
+          "position": {
+            "x": 50,
+            "y": 100
+          }
+        },
+        {
+          "id": "temperature",
+          "type": "sensor",
+          "label": "Temperature",
+          "position": {
+            "x": 250,
+            "y": 50
+          }
+        },
+        {
+          "id": "humidity",
+          "type": "sensor",
+          "label": "Humidity",
+          "position": {
+            "x": 250,
+            "y": 150
+          }
+        },
+        {
+          "id": "pressure",
+          "type": "sensor",
+          "label": "Pressure",
+          "position": {
+            "x": 250,
+            "y": 250
+          }
+        }
+      ]
+    },
+    "card_template": {
+      "layout_config": {
+        "h": 3,
+        "w": 2
+      },
+      "controls": [
+        {
+          "widget_type": "TEMPERATURE",
+          "label": "Temperature",
+          "variable_mapping": "temperature",
+          "unit": "\u00b0C"
+        },
+        {
+          "widget_type": "HUMIDITY",
+          "label": "Humidity",
+          "variable_mapping": "humidity",
+          "unit": "%"
+        },
+        {
+          "widget_type": "PRESSURE",
+          "label": "Pressure",
+          "variable_mapping": "pressure",
+          "unit": "hPa"
+        }
+      ]
+    },
+    "firmware_code_file": "firmware/projects/ESP32_THERMOSTAT_DHT11_BMP180/firmware.ino",
+    "wiring_diagram_text_file": "firmware/projects/ESP32_THERMOSTAT_DHT11_BMP180/wiring.md",
+    "documentation_file": "firmware/projects/ESP32_THERMOSTAT_DHT11_BMP180/README.md"
+  }
+]
