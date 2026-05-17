@@ -104,7 +104,7 @@ HomeForge is an open-source smart home management system designed for DIY IoT en
 
 1. **Client** sends HTTP request with JWT token
 2. **JWT Authentication** validates token and extracts user
-3. **Permission Classes** check role-based access (Owner, Admin, User, Viewer)
+3. **Permission Classes** check role-based access (Owner, Admin, User)
 4. **Serializers** validate input and format output
 5. **Views** execute business logic
 6. **Models** interact with PostgreSQL via Django ORM
@@ -169,11 +169,12 @@ HomeForge is an open-source smart home management system designed for DIY IoT en
 | `owner` | Full system control, superuser access, Django admin |
 | `admin` | Manage users, rooms, device types, approve proposals |
 | `user` | Manage own devices, propose device types, control any device |
-| `viewer` | Read-only access to dashboard |
 
 ### 3. Room Management
 
 - Organize devices by physical location
+- FontAwesome icon per room (default: `fa-door-open`)
+- Unique room names per user (case-insensitive)
 - CRUD operations restricted to Admin/Owner roles
 - Cascade handling: deleted rooms → devices become "Unassigned"
 
@@ -190,21 +191,28 @@ HomeForge is an open-source smart home management system designed for DIY IoT en
 - **Node Builder Definition**: JSON schema for hardware structure
 - **UI Card Templates**: Define frontend widget layouts
 - **Control Mappings**: Link UI widgets to device state keys
+- **DB-stored Images**: Wiring diagrams and documentation images stored as base64 in the database (no filesystem)
+- **Export/Import**: Self-contained JSON export with all images embedded
 
-### 6. Device State Control (Home Assistant Style)
+### 6. Setup Wizard Support
+
+- **System Status Endpoint**: Public `GET /api/system-status/` returns `{is_fresh: true}` when no users exist
+- Used by frontend to show first-time setup wizard
+
+### 7. Device State Control (Home Assistant Style)
 
 - **Schema-less JSON State**: Flexible `current_state` field
 - **Partial Updates**: Merge new values with existing state
 - **Hardware Sync Hook**: Placeholder for MQTT/ESPHome integration
 - **Simulation Mode**: Commands auto-set device to "online"
 
-### 7. Network Topology Visualization
+### 8. Network Topology Visualization
 
 - **React Flow Compatible**: Returns nodes/edges graph structure
 - **Radial Layout**: Gateway at center, devices in circle
 - **Real-time Status**: Color-coded connections (green/red/amber)
 
-### 8. Notification System
+### 9. Notification System
 
 - **Multi-type Notifications**: Device events, approvals, system messages
 - **Priority Levels**: Low, normal, high, urgent
@@ -214,7 +222,7 @@ HomeForge is an open-source smart home management system designed for DIY IoT en
 - **Flexible References**: JSON field for related object IDs
 - **Rich Node Data**: IP, room, type, icon, current state
 
-### 9. Dashboard Layout Sync
+### 10. Dashboard Layout Sync
 
 - **Personal Layouts**: Per-user dashboard grid persistence
 - **Shared/Default Layout**: Admin-managed fallback for all users
@@ -224,7 +232,7 @@ HomeForge is an open-source smart home management system designed for DIY IoT en
 - **Upsert Semantics**: PUT creates or replaces in one call
 - **Device Order Preference**: Persisted grouping/sorting choice (`room`, `type`, `status`, `name`, `custom`) with user → admin → default fallback
 
-### 10. Device Control & State Management
+### 11. Device Control & State Management
 
 - **Optimistic UI Updates**: API returns *predicted* new state immediately (HTTP 202) for instant UI feedback.
 - **Async Hardware Sync**: Background MQTT process confirms actual device state later.
@@ -295,7 +303,7 @@ Extends Django's User model with smart home specific fields.
 |-------|------|-------------|
 | `user` | OneToOne → User | Link to auth user |
 | `avatar` | ImageField | Profile picture (UUID filename) |
-| `role` | CharField | owner / admin / user / viewer |
+| `role` | CharField | owner / admin / user |
 | `accent_color` | CharField | UI theme color (hex) |
 
 #### Room
@@ -303,8 +311,11 @@ Physical location grouping for devices.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `name` | CharField(100) | Room name |
+| `name` | CharField(100) | Room name (unique per user) |
+| `icon` | CharField(50) | FontAwesome icon class (default: `fa-door-open`) |
 | `user` | ForeignKey → User | Room creator |
+
+**Constraints:** `unique_together = ['name', 'user']`
 
 #### Device
 IoT device registered in the system.
@@ -313,12 +324,14 @@ IoT device registered in the system.
 |-------|------|-------------|
 | `name` | CharField(100) | Display name |
 | `ip_address` | GenericIPAddressField | IPv4 address |
+| `mac_address` | CharField(17) | MAC address (unique, auto-reported by device) |
 | `status` | CharField | online / offline / error |
 | `icon` | CharField | FontAwesome class |
 | `device_type` | ForeignKey → CustomDeviceType | Hardware type |
 | `room` | ForeignKey → Room | Physical location |
 | `user` | ForeignKey → User | Owner |
 | `current_state` | JSONField | Operational state |
+| `updated_at` | DateTimeField | Last time device reported state |
 
 #### CustomDeviceType
 Definition of a device category with hardware structure.
@@ -330,6 +343,11 @@ Definition of a device category with hardware structure.
 | `approved` | BooleanField | Admin approval status |
 | `rejection_reason` | TextField | Denial explanation |
 | `proposed_by` | ForeignKey → User | User who proposed this type |
+| `firmware_code` | TextField | Arduino/ESP firmware source code |
+| `wiring_diagram_base64` | TextField | Base64 data URI of wiring diagram image (stored in DB) |
+| `wiring_diagram_text` | TextField | Markdown wiring instructions |
+| `documentation` | TextField | Markdown documentation |
+| `documentation_images_base64` | JSONField | Array of `{filename, data}` for doc images (stored in DB) |
 | `created_at` | DateTimeField | Creation timestamp |
 
 #### DeviceCardTemplate
@@ -624,6 +642,8 @@ AUTH_PASSWORD_VALIDATORS = [
 
 User uploads (avatars) are stored in `/app/media/avatars/` with UUID filenames to prevent conflicts. Old avatars are automatically deleted when replaced.
 
+> **Note:** Device type images (wiring diagrams & documentation images) are stored as base64 data URIs directly in the database. No filesystem directories are used for these.
+
 ---
 
 ## API Reference
@@ -648,6 +668,10 @@ For complete API documentation including all endpoints, request/response schemas
 | **Denied Types** | `GET /admin/device-types/denied/`, `DELETE /admin/device-types/denied/{id}/`, `DELETE /admin/device-types/denied/delete/` |
 | **Notifications** | `GET /notifications/`, `GET /notifications/unread-count/`, `POST /notifications/{id}/read/`, `POST /notifications/read-all/` |
 | **Admin Notif** | `POST /admin/notifications/create/`, `POST /admin/notifications/broadcast/` |
+| **System** | `GET /system-status/` |
+| **Device Type Images** | `POST /device-types/{id}/wiring-image/`, `POST /device-types/doc-images/`, `GET /device-types/{id}/doc-image/{filename}` |
+| **Export/Import** | `GET /device-types/export/`, `POST /device-types/import/`, `GET/POST /device-types/import-defaults/` |
+| **Dashboard** | `GET/PUT/DELETE /dashboard-layout/`, `GET/PUT /admin/dashboard-layout/`, `GET/PATCH /device-order/` |
 | **Topology** | `GET /topology/` |
 
 ---
@@ -808,6 +832,43 @@ This project is open source. See LICENSE file for details.
 ---
 
 ## Changelog
+
+### v1.5.0 (May 17, 2026)
+
+#### New Features
+- **System Status Endpoint** - Public `GET /api/system-status/` for frontend setup wizard detection
+- **Room Icons** - Rooms now have a FontAwesome `icon` field (default: `fa-door-open`)
+- **Room Unique Names** - `unique_together = ['name', 'user']` prevents duplicate room names per user (case-insensitive validation)
+- **Viewer Role Removed** - Only 3 roles remain: `owner`, `admin`, `user`
+- **Device MAC Address** - New `mac_address` field for auto-discovery tracking
+- **Device `updated_at`** - Tracks last state report timestamp
+- **DB-stored Device Type Images** - Wiring diagrams and documentation images stored as base64 data URIs directly in the database
+  - No filesystem dependency for device type images
+  - Export/import is fully self-contained (images embedded in JSON)
+- **Device Type Export/Import** - `GET /device-types/export/` and `POST /device-types/import/`
+- **Documentation Image Upload** - `POST /device-types/doc-images/` stores images in DB, returns API-served URL
+- **Documentation Image Serving** - `GET /device-types/{id}/doc-image/{filename}` serves images from DB
+- **Import Defaults** - `GET/POST /device-types/import-defaults/` for platform-bundled device types
+
+#### Breaking Changes
+- `viewer` role removed from `Profile.ROLE_CHOICES`
+- `wiring_diagram_image` ImageField removed from `CustomDeviceType` model (replaced by `wiring_diagram_base64`)
+- `/media/wiring/` and `/media/doc-images/` directories no longer used
+
+#### Database Migrations
+- `0022_device_mac_address` - MAC address field on Device
+- `0023_device_updated_at` - Auto-updated timestamp on Device
+- `0024_add_device_collection_fields` - Additional device fields
+- `0025_seed_default_device_types` - Seed default device types
+- `0026_add_wiring_diagram_base64` - Base64 wiring diagram storage
+- `0027_migrate_wiring_images_to_base64` - Data migration: files → base64
+- `0028_add_documentation_images_base64` - Documentation images JSONField
+- `0029_remove_wiring_diagram_image_field` - Remove legacy ImageField
+- `0030_remove_viewer_role` - Remove viewer from role choices
+- `0031_add_room_icon` - Room icon field
+- `0032_dedupe_rooms_add_unique` - Deduplicate rooms + unique constraint
+
+---
 
 ### v1.4.0 (February 2, 2026)
 

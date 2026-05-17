@@ -188,6 +188,12 @@ export default function DraggableDeviceGrid({
     return room ? room.name : '';
   };
 
+  const getRoomIcon = (id: any) => {
+    const roomId = typeof id === 'object' && id !== null ? id.id : id;
+    const room = rooms.find((r: any) => r.id === roomId);
+    return room?.icon || '';
+  };
+
   // ── Can the middle zone merge? ────────────────────────────
   const canMerge = (() => {
     if (!activeId || !overId || activeId === overId) return false;
@@ -474,6 +480,7 @@ export default function DraggableDeviceGrid({
                       device={getDevice(item.deviceId) || { id: item.deviceId, name: 'Unknown', status: 'offline', current_state: {} }}
                       deviceType={getDeviceTypeObj(getDevice(item.deviceId)?.device_type)}
                       roomName={getRoomName(getDevice(item.deviceId)?.room)}
+                      roomIcon={getRoomIcon(getDevice(item.deviceId)?.room)}
                       animationIndex={index}
                       readOnly={editMode}
                     />
@@ -483,6 +490,7 @@ export default function DraggableDeviceGrid({
                       devices={item.deviceIds.map(getDevice).filter(Boolean)}
                       getDeviceType={getDeviceTypeObj}
                       getRoomName={getRoomName}
+                      getRoomIcon={getRoomIcon}
                       editMode={editMode}
                       onRename={onRenameFolder}
                       onRemoveDevice={onRemoveFromFolder}
@@ -513,6 +521,7 @@ export default function DraggableDeviceGrid({
                   device={getDevice(activeItem.deviceId) || { id: activeItem.deviceId, name: 'Unknown', status: 'offline', current_state: {} }}
                   deviceType={getDeviceTypeObj(getDevice(activeItem.deviceId)?.device_type)}
                   roomName={getRoomName(getDevice(activeItem.deviceId)?.room)}
+                  roomIcon={getRoomIcon(getDevice(activeItem.deviceId)?.room)}
                   readOnly
                 />
               ) : (

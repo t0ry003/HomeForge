@@ -9,9 +9,15 @@ from .serializers import (
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework import status
 from rest_framework.response import Response
-from .models import Device, Room, CustomDeviceType, Notification, DashboardLayout
+from .models import Device, Room, CustomDeviceType, DeviceCardTemplate, DeviceControl, Notification, DashboardLayout
 from .permissions import IsAdmin, IsOwner
 from django.core.cache import cache
+from django.conf import settings
+import json
+import os
+import re
+import base64
+import uuid
 
 class CustomDeviceTypeListCreateView(generics.ListCreateAPIView):
     serializer_class = CustomDeviceTypeSerializer
@@ -174,6 +180,20 @@ class RoomDetailView(generics.RetrieveUpdateDestroyAPIView):
              self.permission_denied(self.request, message="Only Admins/Owners can delete rooms.")
         instance.delete()
 
+
+
+class SystemStatusView(views.APIView):
+    """
+    GET /api/system-status/
+    Returns whether this is a fresh install (no users exist).
+    Public endpoint — used by the frontend setup wizard.
+    """
+    permission_classes = (AllowAny,)
+
+    def get(self, request):
+        return Response({
+            "is_fresh": not User.objects.exists(),
+        })
 
 
 class RegisterView(generics.CreateAPIView):
@@ -561,6 +581,536 @@ class DeviceTypeProposeView(generics.CreateAPIView):
         )
 
 
+class DeviceTypeWiringImageView(views.APIView):
+    """
+    POST /api/device-types/{id}/wiring-image/
+    Upload a wiring diagram image for a device type.
+    Only the proposer or an admin/owner can upload.
+    Stores the image as base64 directly in the database (no filesystem).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp']
+    MAX_SIZE = 5 * 1024 * 1024  # 5MB
+
+    def post(self, request, pk):
+        try:
+            instance = CustomDeviceType.objects.get(pk=pk)
+        except CustomDeviceType.DoesNotExist:
+            return Response({"detail": "Device Type not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # Permission: must be proposer or admin/owner
+        is_admin = IsAdmin().has_permission(request, self)
+        is_proposer = instance.proposed_by == request.user
+        if not (is_admin or is_proposer):
+            return Response(
+                {"detail": "Only the proposer or an admin can upload wiring images."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        image = request.FILES.get('image')
+        if not image:
+            return Response({"image": ["No image file provided."]}, status=status.HTTP_400_BAD_REQUEST)
+
+        if image.content_type not in self.ALLOWED_TYPES:
+            return Response(
+                {"image": ["Invalid file type. Allowed: PNG, JPEG, WEBP."]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if image.size > self.MAX_SIZE:
+            return Response(
+                {"image": ["File too large. Maximum size is 5MB."]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Read and encode as base64 data URI — stored directly in DB
+        image_content = image.read()
+        mime_type = image.content_type
+        encoded = base64.b64encode(image_content).decode('utf-8')
+        data_uri = f"data:{mime_type};base64,{encoded}"
+
+        instance.wiring_diagram_base64 = data_uri
+        instance.save(update_fields=['wiring_diagram_base64'])
+
+        return Response({
+            "status": "Image uploaded",
+            "wiring_diagram_image": data_uri,
+        })
+
+
+class DeviceTypeImportDefaultsView(views.APIView):
+    """
+    POST /api/device-types/import-defaults/
+    Import platform-default device types from the fixture file.
+    Skips types that already exist (by name). Admin/Owner only.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        """Return the list of available defaults and which are already imported."""
+        fixture_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            'api', 'fixtures', 'default_device_types.json'
+        )
+        if not os.path.exists(fixture_path):
+            return Response({"detail": "No defaults available."}, status=status.HTTP_404_NOT_FOUND)
+
+        with open(fixture_path, 'r') as f:
+            device_types = json.load(f)
+
+        existing_names = set(
+            CustomDeviceType.objects.filter(
+                name__in=[dt['name'] for dt in device_types]
+            ).values_list('name', flat=True)
+        )
+
+        result = []
+        for dt in device_types:
+            result.append({
+                'name': dt['name'],
+                'already_imported': dt['name'] in existing_names,
+            })
+
+        return Response({
+            'defaults': result,
+            'total': len(result),
+            'imported': len([r for r in result if r['already_imported']]),
+        })
+
+    def post(self, request):
+        if not IsAdmin().has_permission(request, self):
+            return Response(
+                {"detail": "Only Admins/Owners can import default device types."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        fixture_path = os.path.join(base_dir, 'api', 'fixtures', 'default_device_types.json')
+
+        if not os.path.exists(fixture_path):
+            return Response({"detail": "No defaults available."}, status=status.HTTP_404_NOT_FOUND)
+
+        with open(fixture_path, 'r') as f:
+            device_types = json.load(f)
+
+        created = []
+        skipped = []
+
+        for dt_data in device_types:
+            name = dt_data['name']
+            if CustomDeviceType.objects.filter(name=name).exists():
+                skipped.append(name)
+                continue
+
+            firmware_code = self._read_file(base_dir, dt_data.get('firmware_code_file', ''))
+            wiring_text = self._read_file(base_dir, dt_data.get('wiring_diagram_text_file', ''))
+            documentation = self._read_file(base_dir, dt_data.get('documentation_file', ''))
+
+            device_type = CustomDeviceType.objects.create(
+                name=name,
+                definition=dt_data['definition'],
+                approved=True,
+                firmware_code=firmware_code,
+                wiring_diagram_text=wiring_text,
+                documentation=documentation,
+            )
+
+            card_data = dt_data.get('card_template')
+            if card_data:
+                template = DeviceCardTemplate.objects.create(
+                    device_type=device_type,
+                    layout_config=card_data.get('layout_config', {}),
+                )
+                for ctrl in card_data.get('controls', []):
+                    DeviceControl.objects.create(
+                        template=template,
+                        widget_type=ctrl['widget_type'],
+                        label=ctrl['label'],
+                        variable_mapping=ctrl['variable_mapping'],
+                        unit=ctrl.get('unit', ''),
+                        min_value=ctrl.get('min_value'),
+                        max_value=ctrl.get('max_value'),
+                        step=ctrl.get('step'),
+                        variant=ctrl.get('variant', ''),
+                        size=ctrl.get('size', ''),
+                    )
+
+            created.append(name)
+
+        # Invalidate cache
+        cache.delete('approved_device_types_qs')
+
+        return Response({
+            "status": "Import complete",
+            "created": created,
+            "skipped": skipped,
+            "created_count": len(created),
+            "skipped_count": len(skipped),
+        })
+
+    def _read_file(self, base_dir, relative_path):
+        if not relative_path:
+            return ''
+        full_path = os.path.join(base_dir, relative_path)
+        if os.path.exists(full_path):
+            with open(full_path, 'r') as f:
+                return f.read()
+        return ''
+
+
+class DeviceTypeExportView(views.APIView):
+    """
+    GET /api/device-types/export/         — Export all approved device types as JSON
+    GET /api/device-types/export/?ids=1,2 — Export specific device types by ID
+    GET /api/device-types/{id}/export/    — Export a single device type
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pk=None):
+        if pk:
+            # Single export
+            try:
+                device_type = CustomDeviceType.objects.select_related(
+                    'card_template'
+                ).prefetch_related(
+                    'card_template__controls'
+                ).get(pk=pk)
+            except CustomDeviceType.DoesNotExist:
+                return Response({"detail": "Device Type not found."}, status=status.HTTP_404_NOT_FOUND)
+            data = [self._serialize_for_export(device_type)]
+        else:
+            # Bulk export
+            ids_param = request.query_params.get('ids')
+            qs = CustomDeviceType.objects.select_related(
+                'card_template'
+            ).prefetch_related(
+                'card_template__controls'
+            )
+            if ids_param:
+                try:
+                    ids = [int(i.strip()) for i in ids_param.split(',')]
+                except ValueError:
+                    return Response({"detail": "ids must be comma-separated integers."}, status=status.HTTP_400_BAD_REQUEST)
+                qs = qs.filter(pk__in=ids)
+            else:
+                qs = qs.filter(approved=True)
+
+            data = [self._serialize_for_export(dt) for dt in qs]
+
+        if not data:
+            return Response({"detail": "No device types found."}, status=status.HTTP_404_NOT_FOUND)
+
+        response = Response(data)
+        response['Content-Disposition'] = 'attachment; filename="device_types_export.json"'
+        return response
+
+    def _serialize_for_export(self, dt):
+        result = {
+            'name': dt.name,
+            'definition': dt.definition,
+            'firmware_code': dt.firmware_code,
+            'wiring_diagram_text': dt.wiring_diagram_text,
+            'documentation': dt.documentation,
+            # All images stored in DB — always included in exports
+            'wiring_diagram_base64': dt.wiring_diagram_base64 or '',
+            'documentation_images_base64': dt.documentation_images_base64 or [],
+        }
+
+        tmpl = getattr(dt, 'card_template', None)
+        if tmpl:
+            controls = []
+            for c in tmpl.controls.all().order_by('id'):
+                ctrl = {
+                    'widget_type': c.widget_type,
+                    'label': c.label,
+                    'variable_mapping': c.variable_mapping,
+                }
+                if c.unit: ctrl['unit'] = c.unit
+                if c.min_value is not None: ctrl['min_value'] = float(c.min_value)
+                if c.max_value is not None: ctrl['max_value'] = float(c.max_value)
+                if c.step is not None: ctrl['step'] = float(c.step)
+                if c.variant: ctrl['variant'] = c.variant
+                if c.size: ctrl['size'] = c.size
+                controls.append(ctrl)
+            result['card_template'] = {
+                'layout_config': tmpl.layout_config,
+                'controls': controls,
+            }
+        else:
+            result['card_template'] = None
+        return result
+
+
+class DeviceTypeDocImageUploadView(views.APIView):
+    """
+    POST /api/device-types/doc-images/
+    Upload a documentation image for a device type.
+    Accepts multipart/form-data with 'image' (file) and 'device_type_id' (integer).
+    Stores the image as base64 in the DB (no filesystem).
+    Returns a URL that serves the image from DB via DeviceTypeDocImageServeView.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif']
+    MAX_SIZE = 5 * 1024 * 1024  # 5MB
+
+    def post(self, request):
+        image = request.FILES.get('image')
+        if not image:
+            return Response(
+                {"image": ["No image file provided."]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if image.content_type not in self.ALLOWED_TYPES:
+            return Response(
+                {"image": ["Invalid file type. Allowed: PNG, JPEG, WEBP, GIF."]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if image.size > self.MAX_SIZE:
+            return Response(
+                {"image": ["File too large. Maximum size is 5MB."]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        device_type_id = request.data.get('device_type_id')
+        if not device_type_id:
+            return Response(
+                {"device_type_id": ["This field is required."]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            device_type_id = int(device_type_id)
+        except (ValueError, TypeError):
+            return Response(
+                {"device_type_id": ["Must be an integer."]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            device_type = CustomDeviceType.objects.get(pk=device_type_id)
+        except CustomDeviceType.DoesNotExist:
+            return Response(
+                {"device_type_id": ["Device type not found."]},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Read and encode as base64
+        image_content = image.read()
+        mime_type = image.content_type
+        encoded = base64.b64encode(image_content).decode('utf-8')
+        data_uri = f"data:{mime_type};base64,{encoded}"
+
+        ext = os.path.splitext(image.name)[1].lower() or '.png'
+        filename = f"{uuid.uuid4()}{ext}"
+
+        # Store in DB
+        images_list = device_type.documentation_images_base64 or []
+        images_list.append({
+            'filename': filename,
+            'data': data_uri,
+        })
+        device_type.documentation_images_base64 = images_list
+        device_type.save(update_fields=['documentation_images_base64'])
+
+        # Return URL that serves from DB
+        url = f"/api/device-types/{device_type_id}/doc-image/{filename}"
+        return Response({"url": url}, status=status.HTTP_201_CREATED)
+
+
+class DeviceTypeDocImageServeView(views.APIView):
+    """
+    GET /api/device-types/{id}/doc-image/{filename}
+    Serve a documentation image directly from the database (base64 stored in documentation_images_base64).
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, pk, filename):
+        try:
+            device_type = CustomDeviceType.objects.get(pk=pk)
+        except CustomDeviceType.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        images_list = device_type.documentation_images_base64 or []
+        for img in images_list:
+            if img.get('filename') == filename:
+                data_uri = img.get('data', '')
+                match = re.match(r'^data:(image/\w+);base64,(.+)$', data_uri, re.DOTALL)
+                if not match:
+                    return Response({"detail": "Invalid image data."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                mime_type = match.group(1)
+                image_bytes = base64.b64decode(match.group(2))
+                from django.http import HttpResponse
+                return HttpResponse(image_bytes, content_type=mime_type)
+
+        return Response({"detail": "Image not found."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class DeviceTypeImportView(views.APIView):
+    """
+    POST /api/device-types/import/
+    Import device types from an uploaded JSON file.
+    Accepts the same format as the export. Admin/Owner only.
+    Skips types whose name already exists.
+    All images are stored as base64 in the DB (no filesystem).
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def _import_documentation_images(self, device_type, doc_images_from_export):
+        """
+        Import documentation images from export format into the DB.
+        Handles both new format (documentation_images_base64 array) and
+        legacy format (documentation_images with original_url/data).
+        Rewrites markdown URLs to point to the API serving endpoint.
+        """
+        if not doc_images_from_export or not isinstance(doc_images_from_export, list):
+            return
+
+        images_list = []
+        documentation = device_type.documentation or ''
+
+        for img_entry in doc_images_from_export:
+            if not isinstance(img_entry, dict):
+                continue
+            data = img_entry.get('data', '')
+            if not data:
+                continue
+            filename = img_entry.get('filename', f"{uuid.uuid4()}.png")
+            filename = os.path.basename(filename)
+
+            images_list.append({
+                'filename': filename,
+                'data': data,
+            })
+
+            # Rewrite old URL references in documentation to new API-based URL
+            original_url = img_entry.get('original_url') or img_entry.get('url', '')
+            new_url = f"/api/device-types/{device_type.pk}/doc-image/{filename}"
+            if original_url and original_url in documentation:
+                documentation = documentation.replace(original_url, new_url)
+
+        if images_list:
+            device_type.documentation_images_base64 = images_list
+            update_fields = ['documentation_images_base64']
+            if documentation != (device_type.documentation or ''):
+                device_type.documentation = documentation
+                update_fields.append('documentation')
+            device_type.save(update_fields=update_fields)
+
+    def post(self, request):
+        if not IsAdmin().has_permission(request, self):
+            return Response(
+                {"detail": "Only Admins/Owners can import device types."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Accept either uploaded file or JSON body
+        uploaded = request.FILES.get('file')
+        if uploaded:
+            try:
+                content = uploaded.read().decode('utf-8')
+                device_types = json.loads(content)
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                return Response({"detail": "Invalid JSON file."}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            device_types = request.data
+            if isinstance(device_types, dict):
+                device_types = [device_types]
+
+        if not isinstance(device_types, list):
+            return Response(
+                {"detail": "Expected a JSON array of device types."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        created = []
+        skipped = []
+        errors = []
+
+        for i, dt_data in enumerate(device_types):
+            name = dt_data.get('name')
+            if not name:
+                errors.append(f"Item {i}: missing 'name' field.")
+                continue
+
+            if CustomDeviceType.objects.filter(name=name).exists():
+                skipped.append(name)
+                continue
+
+            definition = dt_data.get('definition', {})
+            if not isinstance(definition, dict):
+                errors.append(f"Item {i} ({name}): 'definition' must be an object.")
+                continue
+
+            firmware_code = dt_data.get('firmware_code', '')
+            wiring_text = dt_data.get('wiring_diagram_text', '')
+            documentation = dt_data.get('documentation', '')
+            wiring_base64 = dt_data.get('wiring_diagram_base64', '')
+            doc_images_base64 = dt_data.get('documentation_images_base64', [])
+
+            # Legacy support: if wiring_diagram_image_data exists but wiring_diagram_base64 doesn't
+            if not wiring_base64:
+                wiring_base64 = dt_data.get('wiring_diagram_image_data', '')
+
+            device_type = CustomDeviceType.objects.create(
+                name=name,
+                definition=definition,
+                approved=True,
+                proposed_by=request.user,
+                firmware_code=firmware_code,
+                wiring_diagram_text=wiring_text,
+                documentation=documentation,
+                wiring_diagram_base64=wiring_base64,
+                documentation_images_base64=doc_images_base64 if doc_images_base64 else [],
+            )
+
+            # Handle legacy format documentation_images (with original_url/data)
+            legacy_doc_images = dt_data.get('documentation_images')
+            if legacy_doc_images and not doc_images_base64:
+                self._import_documentation_images(device_type, legacy_doc_images)
+
+            card_data = dt_data.get('card_template')
+            if card_data and isinstance(card_data, dict):
+                template = DeviceCardTemplate.objects.create(
+                    device_type=device_type,
+                    layout_config=card_data.get('layout_config', {}),
+                )
+                for ctrl in card_data.get('controls', []):
+                    if not isinstance(ctrl, dict):
+                        continue
+                    DeviceControl.objects.create(
+                        template=template,
+                        widget_type=ctrl.get('widget_type', 'TOGGLE'),
+                        label=ctrl.get('label', ''),
+                        variable_mapping=ctrl.get('variable_mapping', ''),
+                        unit=ctrl.get('unit', ''),
+                        min_value=ctrl.get('min_value'),
+                        max_value=ctrl.get('max_value'),
+                        step=ctrl.get('step'),
+                        variant=ctrl.get('variant', ''),
+                        size=ctrl.get('size', ''),
+                    )
+
+            created.append(name)
+
+        cache.delete('approved_device_types_qs')
+
+        return Response({
+            "status": "Import complete",
+            "created": created,
+            "skipped": skipped,
+            "errors": errors,
+            "created_count": len(created),
+            "skipped_count": len(skipped),
+        })
+
+
 class AdminPendingDeviceTypeListView(generics.ListAPIView):
     """
     Admin: Get all pending (unapproved, not denied) device types with full details.
@@ -663,9 +1213,10 @@ class AdminDeviceTypeReviewView(views.APIView):
     Admin: Approve, Deny, or Edit a device type.
     POST /approve/ -> Sets approved=True
     POST /deny/ -> Sets rejection_reason
-    POST /edit/ -> Edit the device type definition and card_template
+    PUT/PATCH -> Edit the device type definition, card_template, and wiring image (via base64)
     """
     permission_classes = [permissions.IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def get(self, request, pk, action=None):
         """GET /admin/device-types/{pk}/ - Get full device type details for editing"""
@@ -677,7 +1228,7 @@ class AdminDeviceTypeReviewView(views.APIView):
         except CustomDeviceType.DoesNotExist:
             return Response({"detail": "Device Type not found."}, status=status.HTTP_404_NOT_FOUND)
         
-        return Response(CustomDeviceTypeSerializer(instance).data)
+        return Response(CustomDeviceTypeSerializer(instance, context={'request': request}).data)
 
     def put(self, request, pk, action=None):
         """PUT /admin/device-types/{pk}/ - Full update of device type (definition + card_template)"""
@@ -689,7 +1240,7 @@ class AdminDeviceTypeReviewView(views.APIView):
         except CustomDeviceType.DoesNotExist:
             return Response({"detail": "Device Type not found."}, status=status.HTTP_404_NOT_FOUND)
         
-        serializer = CustomDeviceTypeSerializer(instance, data=request.data, partial=False)
+        serializer = CustomDeviceTypeSerializer(instance, data=request.data, partial=False, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response({"status": "Updated", "data": serializer.data})
@@ -705,7 +1256,7 @@ class AdminDeviceTypeReviewView(views.APIView):
         except CustomDeviceType.DoesNotExist:
             return Response({"detail": "Device Type not found."}, status=status.HTTP_404_NOT_FOUND)
         
-        serializer = CustomDeviceTypeSerializer(instance, data=request.data, partial=True)
+        serializer = CustomDeviceTypeSerializer(instance, data=request.data, partial=True, context={'request': request})
         if serializer.is_valid():
             serializer.save()
             return Response({"status": "Updated", "data": serializer.data})
@@ -936,7 +1487,7 @@ class AdminNotificationBroadcastView(views.APIView):
     Admin: Broadcast a notification to multiple users.
     
     POST body:
-    - target: "all" | "admins" | "users" | "viewers"
+    - target: "all" | "admins" | "users"
     - notification_type: Type of notification
     - title: Notification title
     - message: Notification message
@@ -969,10 +1520,8 @@ class AdminNotificationBroadcastView(views.APIView):
             users = User.objects.filter(profile__role__in=[Profile.ROLE_ADMIN, Profile.ROLE_OWNER])
         elif target == 'users':
             users = User.objects.filter(profile__role=Profile.ROLE_USER)
-        elif target == 'viewers':
-            users = User.objects.filter(profile__role=Profile.ROLE_VIEWER)
         else:
-            return Response({"detail": "Invalid target. Use: all, admins, users, or viewers."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Invalid target. Use: all, admins, or users."}, status=status.HTTP_400_BAD_REQUEST)
         
         # Create notifications
         notifications = []

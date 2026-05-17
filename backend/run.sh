@@ -1,3 +1,8 @@
+#!/usr/bin/env bash
+set -eu
+# HomeForge Backend Startup Script
+# This script installs dependencies, applies migrations, and starts the server
+
 echo "🔧 Upgrading PIP ..."
 pip install --upgrade pip
 
@@ -13,6 +18,9 @@ fi
 
 # Ensure directories for services
 mkdir -p /run/dbus /var/run/dbus /run/avahi-daemon
+
+# Ensure media directories exist (avatars only - device type images are stored in DB)
+mkdir -p /app/media/avatars
 
 # Remove stale PIDs
 rm -f /run/dbus/pid /var/run/dbus/pid /run/avahi-daemon/pid /run/mosquitto/mosquitto.pid

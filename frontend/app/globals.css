@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -207,4 +208,3 @@
   0%, 100% { transform: rotate(-0.7deg); }
   50% { transform: rotate(0.7deg); }
 }
-

@@ -1,5 +1,183 @@
 # HomeForge Frontend Changelog
 
+## [2026-05-14] - Unified navigation labels, persistent device name, wiring image sync, mobile UX
+
+### Changed
+- **File**: `app/dashboard/device-builder/DeviceUICreator.tsx`
+- **Description**: Added `deviceName` and `onNameChange` props. Header now shows editable device name input and descriptive nav buttons: "Back: Topology" / "Next: Firmware". Mobile-responsive with hidden labels on small screens.
+- **Impact**: Device name is always editable; navigation clearly indicates destination.
+
+- **File**: `components/device-builder/FirmwareCodeEditor.tsx`
+- **Description**: Added `deviceName` and `onNameChange` props. Header now shows "Back: UI Designer" / "Next: Wiring" with responsive mobile labels.
+- **Impact**: Consistent navigation UX across all builder steps.
+
+- **File**: `components/device-builder/WiringDiagramEditor.tsx`
+- **Description**: Added `deviceName` and `onNameChange` props. Header shows "Back: Firmware" / "Next: Documentation". Replaced destructive remove button with "Replace" button (since wiring image is required). Cleaned up unused imports.
+- **Impact**: Users can replace but not remove the wiring image; navigation is descriptive.
+
+- **File**: `components/device-builder/DocumentationEditor.tsx`
+- **Description**: Added `deviceName` and `onNameChange` props. Header shows "Back: Wiring" with responsive submit button text. Cleaned up unused Badge/BookOpen imports.
+- **Impact**: Final step has descriptive back navigation and responsive mobile layout.
+
+- **File**: `app/dashboard/device-builder/page.tsx`
+- **Description**: Passes `deviceName` and `onNameChange={setDeviceName}` to all step components (UI, Firmware, Wiring, Docs). Step 1 header simplified with consistent sizing and mobile-friendly layout.
+- **Impact**: Device name is editable from any step without restarting the flow.
+
+### Fixed
+- **File**: `components/device-builder/WiringDiagramEditor.tsx`
+- **Description**: Added `useEffect` to sync `imagePreview` state when `initialImagePreview` prop changes after async data load in edit mode. Previously, editing a device would show blank wiring because `useState(initialImagePreview)` captured null before API data arrived.
+- **Impact**: Wiring diagram image now displays correctly when editing existing devices.
+
+## [2026-05-14] - Wiring editor image-only, markdown editor redesign, upload persistence fix
+
+### Changed
+- **File**: `components/device-builder/WiringDiagramEditor.tsx`
+- **Description**: Removed text instructions section entirely. Wiring step now only accepts an image upload (no textarea). Simplified validation to require only an image. Added `initialFile` prop to preserve the File object across back/forth navigation.
+- **Impact**: Wiring step is image-only; text field removed.
+
+- **File**: `components/ui/markdown-editor.tsx`
+- **Description**: Redesigned markdown editor with Write/Preview tab toggle (replacing side-by-side live preview). The full editor width is now used for writing. Added custom shadcn-styled tab buttons (Pencil/Eye icons). Preview renders full-width. Theme CSS variables use `var(--foreground)` etc. (oklch-compatible). Default height 600px.
+- **Impact**: Much larger writing area; consistent shadcn theming.
+
+- **File**: `app/globals.css`
+- **Description**: Added comprehensive CSS overrides for `@uiw/react-md-editor` to match shadcn theme (toolbar, text input, markdown preview, code blocks, blockquotes, tables, links). Uses oklch CSS variables directly.
+- **Impact**: Markdown editor looks native to the app theme in both light and dark modes.
+
+### Fixed
+- **File**: `app/dashboard/device-builder/page.tsx`
+- **Description**: Pass `initialFile={wiringDiagramFile}` to WiringDiagramEditor so the File object persists when navigating back/forth between steps. Previously, navigating away and back would lose the selected file (only the preview URL survived).
+- **Impact**: Wiring diagram uploads now persist correctly in both new and edit flows.
+
+## [2026-05-11] - Fix wiring upload, add hardware topology, improve markdown editor
+
+### Fixed
+- **File**: `app/dashboard/device-builder/page.tsx`
+- **Description**: Wiring diagram images were never actually uploaded to the backend. The `wiringDiagramFile` state was captured but `uploadWiringDiagramImage()` was never called after propose/update. Now calls `uploadWiringDiagramImage(id, file)` after `proposeDeviceType()`, `updateAdminDeviceType()`, and review-approve flows.
+- **Impact**: Wiring diagram images now persist and display correctly in device collection pages.
+
+### Added
+- **File**: `app/dashboard/device-collection/[id]/page.tsx`
+- **Description**: Added ReactFlow-based hardware topology diagram to the Overview tab. Shows node map alongside wiring diagram thumbnail in a side-by-side grid. Reuses `CustomNode`, `reconstructGraph()`, and `nodeTypes` patterns from admin page.
+- **Dependencies**: `reactflow` (already installed)
+
+### Changed
+- **File**: `components/ui/markdown-editor.tsx`
+- **Description**: Increased default editor height from 400px to 600px. Added additional CSS variable mappings for syntax highlighting tokens (`--color-prettylights-syntax-*`) for better code block theming.
+- **Impact**: Markdown editor is larger and has more consistent theme integration.
+
+## [2026-05-11] - Replace markdown renderer with @uiw/react-md-editor + Device Collection UX
+
+### Changed
+- **File**: `components/ui/markdown-editor.tsx`
+- **Description**: Replaced custom ReactMarkdown-based editor/renderer with `@uiw/react-md-editor` (MIT license). Editor now uses the library's built-in toolbar, live preview, syntax highlighting, and GFM support. CSS variables are mapped to shadcn theme tokens so the editor matches the app's light/dark theme. `MarkdownRenderer` and `MarkdownEditor` exports preserved with same API.
+- **Dependencies**: Added `@uiw/react-md-editor`. Removed direct usage of `react-markdown`, `remark-gfm`, `rehype-highlight`, `rehype-raw`, `highlight.js/styles/github-dark.css`
+
+- **File**: `app/dashboard/device-collection/[id]/page.tsx`
+- **Description**: Tabs now have fixed width (`flex-1 max-w-[180px]`) and span the full container. Wiring tab shows image only (removed wiring text/markdown section). Wiring image gets white/muted background for better visibility.
+- **Impact**: Tab layout consistent at all breakpoints. `wiring_diagram_text` no longer rendered.
+
+- **File**: `app/dashboard/device-collection/page.tsx`
+- **Description**: Added mini wiring diagram thumbnail on each device card (shows `wiring_diagram_image` in a 128px-tall preview). Added `getMediaUrl` import for proper backend URL resolution.
+- **Impact**: Users can preview wiring diagram at a glance from the collection grid.
+
+- **File**: `lib/apiClient.js`
+- **Description**: Added `getMediaUrl()` helper for resolving backend media paths (handles relative, http, data:, blob: URLs). Used by wiring diagram display.
+
+## [2026-05-11] - GitHub-style Markdown Editor
+
+### Added
+- **File**: `components/ui/markdown-editor.tsx`
+- **Description**: New reusable `MarkdownEditor` component with GitHub-style Write/Preview tabs, formatting toolbar (bold, italic, strikethrough, headings, lists, task lists, links, images, code, quotes, tables, horizontal rules), keyboard shortcuts (Ctrl+B/I/K, Tab for indent), image upload via drag-and-drop / paste / button click, and a shared `MarkdownRenderer` component with consistent prose styling
+- **Dependencies**: None (uses existing react-markdown, remark-gfm, shadcn/ui)
+
+### Changed
+- **File**: `components/device-builder/DocumentationEditor.tsx`
+- **Description**: Replaced plain Textarea + manual Tabs with the new `MarkdownEditor` component. Added `deviceTypeId` prop and image upload support via `uploadDocumentationImage` API call
+- **Impact**: Documentation step in Device Builder now has full formatting toolbar, image upload (drag/drop/paste/click), and keyboard shortcuts
+
+- **File**: `app/dashboard/device-collection/[id]/page.tsx`
+- **Description**: Replaced inline ReactMarkdown + duplicated prose CSS classes with shared `MarkdownRenderer` component for both wiring instructions and documentation tabs
+- **Impact**: Consistent markdown rendering, reduced code duplication
+
+- **File**: `lib/apiClient.js`
+- **Description**: Added `uploadDocumentationImage(imageFile, deviceTypeId)` function — POST multipart/form-data to `/api/device-types/doc-images/`
+
+- **File**: `app/dashboard/device-builder/page.tsx`
+- **Description**: Passes `deviceTypeId` prop to `DocumentationEditor` in edit mode
+
+---
+
+## [2026-05-09] - Import/Export Device Types
+
+### Changed
+- **File**: `lib/apiClient.js`
+- **Description**: Added 5 new API functions for import/export: `getImportDefaults()`, `importDefaults()`, `importDeviceTypesFromFile(file)`, `exportDeviceTypes(ids)`, `exportSingleDeviceType(id)`
+- **Impact**: Export functions return raw Response for browser file downloads
+
+- **File**: `app/dashboard/admin/device-types/page.tsx`
+- **Description**: Added Import Defaults button (opens dialog with preview of available defaults), Import File button (file picker for .json upload), Export All/Export Selected button, and per-type Export button in detail panel. Import buttons are admin/owner only; export is available to all users.
+- **Impact**: Admin toolbar has 3 new action buttons; detail panel has new Export button
+
+- **File**: `app/dashboard/device-collection/[id]/page.tsx`
+- **Description**: Added Export button to device type detail header, allowing any authenticated user to download a single device type as .json
+- **Impact**: New Export button appears next to "Use This Device" in the detail page header
+
+---
+
+## [2026-05-09] - Device Collection & Community Device Publishing
+
+### Added
+
+#### Firmware Code Editor (`components/device-builder/FirmwareCodeEditor.tsx`)
+- **Description**: New step in Device Builder — C++/Arduino code editor with syntax highlighting (PrismJS)
+- **Features**: Pre-populated ESP32 template, real-time validation of 3 required variables (`wifi_ssid`, `wifi_password`, `server_ip`), copy/reset actions, status sidebar showing variable presence
+- **Dependencies**: `react-simple-code-editor`, `prismjs`
+
+#### Wiring Diagram Editor (`components/device-builder/WiringDiagramEditor.tsx`)
+- **Description**: New step in Device Builder — image upload (drag & drop, 5MB max, PNG/JPG/WEBP) + markdown text instructions for wiring diagrams
+- **Features**: Image preview with remove, drag-and-drop zone, markdown textarea for pin-by-pin instructions
+
+#### Documentation Editor (`components/device-builder/DocumentationEditor.tsx`)
+- **Description**: New step in Device Builder — GitHub-style markdown editor with Write/Preview toggle
+- **Features**: Pre-populated template with suggested sections (Parts List, Assembly, Troubleshooting), styled markdown preview with GFM support (tables, strikethrough, etc.)
+- **Dependencies**: `react-markdown`, `remark-gfm`
+
+#### Device Collection Browse Page (`app/dashboard/device-collection/page.tsx`)
+- **Description**: New page to browse all approved community device types as cards
+- **Features**: Search by name/author/sensor type, sensor icon badges, content availability indicators (Code/Wiring/Docs), empty state with CTA to Device Builder
+
+#### Device Collection Detail Page (`app/dashboard/device-collection/[id]/page.tsx`)
+- **Description**: Full detail view for a single device type with tabbed layout
+- **Tabs**: Overview (components + controls + content availability), Code (syntax-highlighted read-only viewer), Wiring (image + markdown instructions), Documentation (rendered markdown)
+- **Features**: "Use This Device" deploy dialog — user enters WiFi SSID, WiFi Password, Server IP → generates personalized firmware code → copy or download as .ino file. Server IP auto-detected from browser hostname.
+
+#### Tabs Component (`components/ui/tabs.tsx`)
+- **Description**: shadcn/ui Tabs component (Radix UI) for Write/Preview toggle and detail page tabs
+
+### Changed
+
+#### Device Builder Flow (`app/dashboard/device-builder/page.tsx`)
+- **Description**: Extended from 2-step to 5-step wizard: Node Canvas → UI Designer → Firmware Code → Wiring Diagram → Documentation
+- **Impact**: All new fields (firmware_code, wiring_diagram_text, documentation) are included in the proposal/update payload. Edit and review modes load all new fields from the backend.
+
+#### API Client (`lib/apiClient.js`)
+- **Description**: Added `fetchDeviceType(id)` for single device type detail and `uploadWiringDiagramImage(id, file)` for wiring diagram image upload
+
+#### Sidebar Navigation (`components/app-sidebar.tsx`)
+- **Description**: Added "Device Collection" nav item with Package icon between Device Builder and Topology
+
+#### Dependencies (`package.json`)
+- **Added**: `react-simple-code-editor`, `prismjs`, `@types/prismjs`, `react-markdown`, `remark-gfm`, `@radix-ui/react-tabs`
+
+### Backend Requirements (for backend engineer)
+- Add fields to CustomDeviceType model: `firmware_code` (TextField), `wiring_diagram_image` (ImageField), `wiring_diagram_text` (TextField), `documentation` (TextField)
+- Update `POST /device-types/propose/` and `PUT/PATCH /admin/device-types/{id}/` to accept new fields
+- Update `GET /device-types/` and `GET /device-types/{id}/` to return new fields
+- Add `POST /device-types/{id}/wiring-image/` endpoint for multipart image upload
+- Validate firmware_code contains `wifi_ssid`, `wifi_password`, `server_ip` variable names
+
+---
+
 ## [2026-02-24] - Smart Device Card Synchronization & UX Improvements
 
 ### Changed

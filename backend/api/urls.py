@@ -1,5 +1,6 @@
 from django.urls import path
 from .views import (
+    SystemStatusView,
     RegisterView, 
     ProfileView, 
     TopologyView,
@@ -13,6 +14,12 @@ from .views import (
     DeviceDetailView,
     DeviceStateUpdateView,
     DeviceTypeProposeView,
+    DeviceTypeWiringImageView,
+    DeviceTypeDocImageUploadView,
+    DeviceTypeDocImageServeView,
+    DeviceTypeImportDefaultsView,
+    DeviceTypeExportView,
+    DeviceTypeImportView,
     RoomListCreateView,
     RoomDetailView,
     UserListView,
@@ -36,6 +43,7 @@ from rest_framework_simplejwt.views import (
 )
 
 urlpatterns = [
+    path('system-status/', SystemStatusView.as_view(), name='system-status'),
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),  # Login
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
@@ -43,6 +51,13 @@ urlpatterns = [
     path('topology/', TopologyView.as_view(), name='topology'),
     path('device-types/', CustomDeviceTypeListCreateView.as_view(), name='device-types-list'),
     path('device-types/propose/', DeviceTypeProposeView.as_view(), name='device-types-propose'),
+    path('device-types/import-defaults/', DeviceTypeImportDefaultsView.as_view(), name='device-types-import-defaults'),
+    path('device-types/export/', DeviceTypeExportView.as_view(), name='device-types-export'),
+    path('device-types/import/', DeviceTypeImportView.as_view(), name='device-types-import'),
+    path('device-types/doc-images/', DeviceTypeDocImageUploadView.as_view(), name='device-types-doc-images'),
+    path('device-types/<int:pk>/wiring-image/', DeviceTypeWiringImageView.as_view(), name='device-types-wiring-image'),
+    path('device-types/<int:pk>/doc-image/<str:filename>', DeviceTypeDocImageServeView.as_view(), name='device-types-doc-image-serve'),
+    path('device-types/<int:pk>/export/', DeviceTypeExportView.as_view(), name='device-types-export-single'),
     path('device-types/<int:pk>/', CustomDeviceTypeDetailView.as_view(), name='device-types-detail'),
     
     # Admin Review Endpoints

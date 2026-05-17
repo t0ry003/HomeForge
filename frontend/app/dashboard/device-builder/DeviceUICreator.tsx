@@ -107,6 +107,8 @@ interface DeviceUICreatorProps {
   initialCardTemplate?: CardTemplate | null;
   editMode?: boolean;
   reviewMode?: boolean;
+  deviceName?: string;
+  onNameChange?: (name: string) => void;
 }
 
 // Control widgets (for relays/switches)
@@ -494,7 +496,7 @@ function autoGenerateWidgets(nodes: Node[]): Widget[] {
   return widgets;
 }
 
-export default function DeviceUICreator({ nodes, onBack, onSave, isSubmitting, initialCardTemplate, editMode = false, reviewMode = false }: DeviceUICreatorProps) {
+export default function DeviceUICreator({ nodes, onBack, onSave, isSubmitting, initialCardTemplate, editMode = false, reviewMode = false, deviceName = '', onNameChange }: DeviceUICreatorProps) {
   const [widgets, setWidgets] = useState<Widget[]>(() => {
     // Initialize from card_template if provided
     if (initialCardTemplate?.controls && initialCardTemplate.controls.length > 0) {
@@ -630,37 +632,34 @@ export default function DeviceUICreator({ nodes, onBack, onSave, isSubmitting, i
   return (
     <div className="flex flex-col h-full bg-background">
       {/* Header Toolbar */}
-      <div className="h-14 flex items-center justify-between px-4 md:px-6 border-b border-border bg-background backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50 shrink-0">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 text-muted-foreground hover:text-foreground">
-             <ArrowLeft className="w-4 h-4 mr-2" />
-             Back
+      <div className="h-14 flex items-center justify-between px-3 md:px-6 border-b border-border bg-background backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50 shrink-0">
+        <div className="flex items-center gap-2 md:gap-4 min-w-0">
+          <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2 text-muted-foreground hover:text-foreground shrink-0">
+             <ArrowLeft className="w-4 h-4 mr-1 md:mr-2" />
+             <span className="hidden sm:inline">Back: Topology</span>
+             <span className="sm:hidden">Back</span>
           </Button>
           <div className="h-4 w-px bg-border hidden md:block" />
-          <div className="flex items-center gap-2 text-foreground">
-             <span className="font-semibold tracking-tight hidden sm:inline">UI Designer</span>
-             {reviewMode ? (
-               <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-500/10 text-blue-500 border border-blue-500/20 ml-2">
-                 REVIEW
-               </span>
-             ) : editMode ? (
-               <span className="hidden md:inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 ml-2">
-                 EDITING
-               </span>
-             ) : (
-               <Badge variant="outline" className="ml-2 font-mono text-[10px] hidden md:inline-flex">PREVIEW MODE</Badge>
-             )}
-          </div>
+          {onNameChange && (
+            <input
+              value={deviceName}
+              onChange={(e) => onNameChange(e.target.value)}
+              className="h-7 w-28 md:w-48 px-2 rounded-md border border-border bg-muted/50 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 truncate"
+              placeholder="Device Name"
+              readOnly={reviewMode}
+            />
+          )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
             <Button 
                 onClick={handleSave} 
                 className="bg-primary hover:bg-primary/90 text-primary-foreground border-0 shadow-lg shadow-primary/20"
                 size="sm"
                 disabled={isSubmitting || widgets.length === 0}
             >
-                {isSubmitting ? "Submitting..." : reviewMode ? "Approve Device" : editMode ? "Save Changes" : "Propose Device"}
-                <CheckCircle2 className="w-4 h-4 ml-2" />
+                <span className="hidden sm:inline">{isSubmitting ? "Submitting..." : "Next: Firmware"}</span>
+                <span className="sm:hidden">{isSubmitting ? "..." : "Next"}</span>
+                <CheckCircle2 className="w-4 h-4 ml-1 md:ml-2" />
             </Button>
         </div>
       </div>

@@ -3,7 +3,6 @@
 
 import * as React from "react"
 import { usePathname } from "next/navigation"
-import Image from "next/image"
 import {
   LayoutDashboard,
   Settings,
@@ -13,6 +12,7 @@ import {
   Home,
   Users,
   Bug,
+  Package,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/sidebar"
 import { getAvatarUrl } from "@/lib/apiClient"
 import { useUser } from "@/components/user-provider"
+import { HomeForgeLogo } from "@/components/homeforge-logo"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { user: contextUser } = useUser()
@@ -57,6 +58,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: "Device Builder",
         url: "/dashboard/device-builder",
         icon: Cpu,
+      },
+      {
+        title: "Device Collection",
+        url: "/dashboard/device-collection",
+        icon: Package,
       },
       {
         title: "Topology",
@@ -99,27 +105,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenuButton size="lg" asChild className="hover:bg-primary/10 transition-colors duration-300 group">
               <a href="#">
                 <div className="flex aspect-square size-12 items-center justify-center">
-                  <Image 
-                    src="/logos/homeforge-v2-color.svg" 
-                    alt="HomeForge Logo" 
-                    width={48} 
-                    height={48} 
-                    className="size-12 object-contain dark:block hidden"
-                    priority
-                  />
-                  <div 
-                    className="size-12 dark:hidden block bg-primary"
-                    style={{
-                      maskImage: 'url("/logos/homeforge-v2-bw.svg")',
-                      maskSize: 'contain',
-                      maskRepeat: 'no-repeat',
-                      maskPosition: 'center',
-                      WebkitMaskImage: 'url("/logos/homeforge-v2-bw.svg")',
-                      WebkitMaskRepeat: 'no-repeat',
-                      WebkitMaskPosition: 'center',
-                      WebkitMaskSize: 'contain',
-                    }}
-                  />
+                  <HomeForgeLogo size={48} />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight ml-2">
                   <span className="truncate font-bold text-lg tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">HomeForge</span>

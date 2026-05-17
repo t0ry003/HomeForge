@@ -1,6 +1,6 @@
 // apiClient.js - small helper for auth + profile usage
 
-function getBackendUrl() {
+export function getBackendUrl() {
   if (typeof window !== 'undefined') {
     return `${window.location.protocol}//${window.location.hostname}:8000`;
   }
@@ -53,6 +53,16 @@ export function getAvatarUrl(path) {
   const backendUrl = getBackendUrl();
   const url = path.startsWith('http') ? path : `${backendUrl}${path}`;
   return `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`;
+}
+
+export function getMediaUrl(path) {
+  if (!path) return undefined;
+  if (path.startsWith('http') || path.startsWith('data:') || path.startsWith('blob:')) return path;
+  // Detect raw base64 strings (not a URL path - typically very long, no slashes at start)
+  if (!path.startsWith('/') && path.length > 200) {
+    return `data:image/png;base64,${path}`;
+  }
+  return `${getBackendUrl()}${path}`;
 }
 
 export async function registerUser({ username, email, password, first_name, last_name, role }) {
@@ -520,5 +530,101 @@ export async function updateDeviceOrder(deviceOrder) {
     body: JSON.stringify({ device_order: deviceOrder }),
   });
   if (!res.ok) await handleApiError(res, 'Failed to update device order');
+  return res.json();
+}
+
+// --- Device Collection ---
+
+export async function fetchDeviceType(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/${id}/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch device type');
+  return res.json();
+}
+
+export async function uploadWiringDiagramImage(deviceTypeId, imageFile) {
+  const form = new FormData();
+  form.append('image', imageFile);
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/${deviceTypeId}/wiring-image/`, {
+    method: 'POST',
+    body: form,
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to upload wiring diagram image');
+  return res.json();
+}
+
+// --- Device Type Import/Export ---
+
+export async function getImportDefaults() {
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/import-defaults/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch default device types');
+  return res.json();
+}
+
+export async function importDefaults() {
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/import-defaults/`, {
+    method: 'POST',
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to import default device types');
+  return res.json();
+}
+
+export async function importDeviceTypesFromFile(file) {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/import/`, {
+    method: 'POST',
+    body: form,
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to import device types');
+  return res.json();
+}
+
+export async function exportDeviceTypes(ids = null) {
+  const params = ids && ids.length > 0 ? `?ids=${ids.join(',')}` : '';
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/export/${params}`);
+  if (!res.ok) await handleApiError(res, 'Failed to export device types');
+  return res;
+}
+
+export async function exportSingleDeviceType(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/${id}/export/`);
+  if (!res.ok) await handleApiError(res, 'Failed to export device type');
+  return res;
+}
+
+// --- Documentation Image Upload ---
+
+export async function uploadDocumentationImage(imageFile, deviceTypeId = null) {
+  const form = new FormData();
+  form.append('image', imageFile);
+  if (deviceTypeId) {
+    form.append('device_type_id', deviceTypeId);
+  }
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/doc-images/`, {
+    method: 'POST',
+    body: form,
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to upload image');
+  return res.json();
+}
+
+// --- System Setup ---
+
+export async function getSystemStatus() {
+  const res = await fetch(`${getApiBase()}/system-status/`);
+  if (!res.ok) {
+    // Fallback: if endpoint doesn't exist, assume system is configured
+    return { is_fresh: false };
+  }
+  return res.json();
+}
+
+export async function importSelectedDefaults(ids) {
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/import-defaults/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to import device types');
   return res.json();
 }

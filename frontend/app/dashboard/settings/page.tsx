@@ -20,6 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { updateProfile, getAvatarUrl } from "@/lib/apiClient"
 import { Badge } from "@/components/ui/badge"
 import { useUser, ACCENT_COLORS } from "@/components/user-provider"
+import { PageTooltip } from '@/components/onboarding/PageTooltip';
 
 export default function SettingsPage() {
   const { user, setUser, isLoading: isUserLoading, logout, updateAccentColor, refreshUser } = useUser()
@@ -160,7 +161,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="flex min-h-full w-full items-center justify-center p-4 py-8">
+    <div className="flex flex-col min-h-full w-full items-center justify-center p-4 py-8 gap-4">
+      <PageTooltip pageKey="settings" message="Personalize your experience — update your avatar, name, and accent color." className="max-w-2xl w-full" />
       <motion.div 
         initial="hidden"
         animate="visible"

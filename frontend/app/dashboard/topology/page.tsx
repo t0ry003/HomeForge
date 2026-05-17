@@ -13,6 +13,7 @@ import {
 import TopologyCanvas from '@/components/topology/TopologyCanvas';
 import { fetchTopology } from '@/lib/apiClient';
 import { toast } from 'sonner';
+import { PageTooltip } from '@/components/onboarding/PageTooltip';
 
 export default function TopologyPage() {
   const [nodes, setNodes] = useState([]); 
@@ -155,6 +156,8 @@ export default function TopologyPage() {
           </Button>
         </div>
       </div>
+
+      <PageTooltip pageKey="topology" message="Your network at a glance — see which devices are online and how they connect to each other." className="mx-4 md:mx-6 mt-2" />
 
       <div className="flex flex-1 overflow-hidden relative md:p-4 bg-background/20">
         <div className="flex w-full h-full md:rounded-xl overflow-hidden md:border md:border-border bg-background shadow-sm relative">

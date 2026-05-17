@@ -20,6 +20,8 @@ interface DeviceFolderProps {
   getDeviceType: (id: any) => any;
   /** Room name lookup */
   getRoomName: (id: any) => string;
+  /** Room icon lookup */
+  getRoomIcon?: (id: any) => string;
   /** Whether the grid is in edit/drag mode */
   editMode: boolean;
   /** Callbacks */
@@ -39,6 +41,7 @@ export default function DeviceFolder({
   devices,
   getDeviceType,
   getRoomName,
+  getRoomIcon,
   editMode,
   onRename,
   onRemoveDevice,
@@ -260,6 +263,7 @@ export default function DeviceFolder({
                         device={device}
                         deviceType={getDeviceType(device.device_type)}
                         roomName={getRoomName(device.room)}
+                        roomIcon={getRoomIcon ? getRoomIcon(device.room) : ''}
                         animationIndex={i}
                       />
                       {/* Remove from folder button */}
