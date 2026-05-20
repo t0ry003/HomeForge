@@ -1,42 +1,192 @@
-\chapter{Introducere}
+\chapter{Introducere în Arhitectura Platformei HomeForge}
 
-\section{Contextul actual al tehnologiilor IoT}
-În ultimul deceniu, conceptul de Internet of Things (IoT) a evoluat de la o paradigmă teoretică la o infrastructură omniprezentă, transformând radical modul în care interacționăm cu mediul înconjurător \cite{iot_smart_home_review}. Domeniul caselor inteligente (Smart Home) reprezintă una dintre cele mai vizibile și adoptate aplicații ale IoT. Aceste ecosisteme facilitează automatizarea, monitorizarea și controlul centralizat al echipamentelor, având ca scop final optimizarea resurselor și sporirea confortului utilizatorilor \cite{iot_energy_efficiency}.
+\section{Contextul actual al tehnologiilor IoT și Smart Home}
+Evoluția exponențială a tehnologiilor din sfera Internet of Things (IoT) din ultimul deceniu a transformat fundamental modul în care mediul fizic interacționează cu spațiul digital, generând o tranziție sistemică de la concepte teoretice de automatizare izolată la implementări ubiquitare ale inteligenței ambientale. În esența sa arhitecturală, paradigma IoT se referă la interconectarea dispozitivelor fizice, a sistemelor încorporate (\textit{embedded systems}), a vehiculelor și a infrastructurilor rezidențiale sau industriale, permițând acestor entități să colecteze, să proceseze și să schimbe volume masive de date la o scară globală. Această hiper-conectivitate, susținută de miniaturizarea senzorilor și de creșterea capacității de procesare a microcontrolerelor, a facilitat apariția și consolidarea conceptului de „Smart Home” (Casă Inteligentă). Un astfel de mediu rezidențial este definit ca un ecosistem integrat, echipat cu tehnologii capabile să anticipeze, să monitorizeze și să răspundă dinamic la cerințele ocupanților săi, având ca scop principal îmbunătățirea calității vieții, optimizarea consumului energetic și asigurarea unui nivel superior de securitate perimetrală \cite{iot_smart_home_review}.
 
-\section{Limitări ale soluțiilor comerciale}
-În ciuda progreselor tehnologice, piața actuală de echipamente Smart Home este dominată de soluții proprietare care prezintă dezavantaje majore pentru utilizatorii avansați. Principala provocare este fenomenul de „vendor lock-in”, prin care producătorii restricționează interoperabilitatea dispozitivelor cu alte platforme \cite{vendor_lockin_iot}. Mai mult, majoritatea sistemelor comerciale sunt puternic dependente de infrastructuri Cloud. Această abordare generează probleme de latență, vulnerabilități privind confidențialitatea datelor \cite{dorri2017privacy} și pierderea totală a funcționalității sistemului local în absența unei conexiuni la internet.
+O analiză exhaustivă a literaturii de specialitate relevă faptul că ecosistemul Smart Home operează la intersecția complexă a mai multor discipline științifice: ingineria sistemelor integrate, telecomunicațiile de bandă îngustă și largă, analiza volumelor masive de date (\textit{Big Data Analytics}), arhitectura software distribuită și interacțiunea om-calculator (\textit{Human-Computer Interaction} - HCI). Tehnologiile inteligente implementate în aceste medii fac posibilă monitorizarea continuă și controlul granular al parametrilor ambientali, promovând un nivel ridicat de independență pentru utilizatori. Acest aspect este deosebit de relevant în contextul asistenței medicale la domiciliu (mHealth) și al fenomenului demografic de îmbătrânire a populației (\textit{Ambient Assisted Living}), unde sistemele automate pot suplini asistența umană permanentă \cite{marikyan_smarthome_2019}.
 
-\section{Motivația și viziunea platformei HomeForge}
-Pentru a înțelege clar necesitatea unei platforme precum HomeForge, trebuie mai întâi să definim conceptul de casă inteligentă (\textit{Smart Home}). Conform cercetărilor recente, un Smart Home înseamnă mult mai mult decât o simplă rețea de dispozitive conectate la internet. Acesta reprezintă un mediu echipat cu inteligență ambientală (\textit{ambient intelligence}), capabil să anticipeze nevoile utilizatorului și să integreze automatizări, securitate și management energetic într-un mod natural și invizibil \cite{marikyan_smarthome_2019}.
+Din perspectivă funcțională și de servicii, sistemele Smart Home sunt clasificate în mod tradițional în patru piloni principali: confortul rezidențial (automatizarea sistemelor de iluminat, controlul climatizării, gestionarea sistemelor multimedia), securitatea fizică și logică (sisteme de supraveghere video bazate pe inteligență artificială, senzori de perimetru, controlul accesului biometric), managementul energetic (termostate inteligente cu funcții de învățare automată, integrarea cu rețele inteligente de tip Smart Grid, managementul panourilor fotovoltaice) și asistența pentru sănătate (monitorizarea semnelor vitale, detecția automată a căderilor, gestionarea medicației) \cite{marikyan_smarthome_2019}. Fiecare dintre acești piloni generează seturi de date heterogene, necesitând infrastructuri de prelucrare capabile să gestioneze atât fluxuri de date în timp real (\textit{streaming} de telemetrie), cât și stocarea pe termen lung pentru analize de tip batch.
 
-Deși aceasta este viziunea ideală, pasionații de tehnologie, inginerii la început de drum și comunitatea de creatori (\textit{makers}) se lovesc de o problemă majoră. Pe de o parte, soluțiile comerciale funcționează ca niște „cutii negre” (\textit{black boxes}). Ele ascund complexitatea tehnică, forțează utilizatorul să rămână în ecosistemul aceluiași producător (fenomenul de \textit{vendor lock-in}) și se bazează masiv pe servere externe (\textit{Cloud}). Această dependență de Cloud aduce probleme de întârziere a comenzilor (\textit{latență}) și riscuri legate de confidențialitatea datelor \cite{edge_computing_iot_2020}. 
+Adoptarea acestor tehnologii la nivel de masă nu este, însă, un proces strict tehnologic, ci un fenomen socio-tehnic extrem de complex, care implică o interacțiune profundă între factori tehnologici, psihologici, economici și sociali. Un studiu comprehensiv asupra comportamentului utilizatorilor demonstrează că succesul implementării soluțiilor Smart Home este direct proporțional cu nivelul de încredere al utilizatorilor în sistemul tehnologic și invers proporțional cu îngrijorările legate de confidențialitatea datelor personale \cite{marikyan_smarthome_2019}. Prin intermediul tehnicilor avansate de modelare cu ecuații structurale (\textit{Structural Equation Modeling} - SEM), cercetătorii au validat multiple ipoteze derivate din Teoria Unificată a Acceptării și Utilizării Tehnologiei (UTAUT). S-a demonstrat că variabile cognitive precum cunoștințele tehnologice prealabile și auto-eficacitatea (capacitatea percepută a utilizatorului de a opera un sistem informatic complex) joacă un rol mediator crucial în procesul decizional de adopție a tehnologiei. Mai mult, acceptarea pe scară largă a sistemelor casnice interconectate este puternic influențată de transparența arhitecturii software – mai precis, de gradul de claritate cu privire la modul în care datele ambientale și comportamentale sunt prelucrate, stocate și potențial partajate cu terțe părți.
 
-Pe de altă parte, platformele \textit{open-source} deja consacrate, deși sunt extrem de capabile, au devenit foarte complexe. Ele ascund prea mult din procesele de bază, ceea ce îi împiedică pe cei care vor să învețe (\textit{să construiască sisteme DIY - Do-It-Yourself}) să înțeleagă exact cum circulă datele de la senzor până la interfața de pe ecran.
+În paralel cu evoluția percepției și a cerințelor utilizatorilor, peisajul tehnic al protocolalelor de comunicație din cadrul IoT a suferit o transformare semnificativă, marcată de un efort continuu și adesea fragmentat de standardizare. Inițial, domeniul a fost dominat de rețele de senzori wireless (\textit{Wireless Sensor Networks} - WSN) care utilizau protocoale de comunicație de tip mesh, bazate pe standardul IEEE 802.15.4, precum Zigbee și Z-Wave. Deși aceste protocoale sunt remarcabil de eficiente din punct de vedere energetic și permit rutarea pachetelor prin noduri intermediare, ele au generat o fragmentare considerabilă a pieței hardware. Lipsa de interoperabilitate nativă la nivel de aplicație a forțat consumatorii să achiziționeze hub-uri sau gateway-uri specifice, adesea închise (\textit{proprietary}), pentru fiecare producător în parte, creând ecosisteme izolate („silos”). Eforturile recente, cum ar fi dezvoltarea și promovarea protocolului Matter de către Connectivity Standards Alliance (CSA), au încercat să unifice acest peisaj fragmentat construind un strat de aplicație universal peste straturile de transport bazate direct pe protocolul IP (Internet Protocol), cum ar fi Wi-Fi și Thread, promițând astfel o compatibilitate teoretică universală.
 
-Din această nevoie a apărut \textbf{HomeForge}. Platforma nu își propune să fie un produs comercial de masă, ci un „atelier digital” (\textit{forge}) pentru dezvoltatori. HomeForge face ca procesul de creare a unui ecosistem Smart Home să fie transparent, flexibil și educativ, bazându-se pe următoarele direcții cheie:
+Cu toate acestea, la nivelul dezvoltării arhitecturilor backend, în mediile industriale, comerciale de înaltă performanță și în platformele Open-Source, modelul de comunicație asincronă de tip publicare-abonare (\textit{Publish/Subscribe}) a devenit standardul \textit{de facto}. Acest model a propulsat protocoale precum MQTT (Message Queuing Telemetry Transport) în prim-planul ingineriei IoT \cite{mqtt_standard_iot}. Spre deosebire de arhitectura tradițională cerere-răspuns (Client-Server / HTTP REST), care necesită menținerea unei conexiuni sincrone și implică un overhead considerabil generat de antetele HTTP (\textit{headers}), modelul Pub/Sub decuplează spațial și temporal producătorii de date (senzorii) de consumatorii de date (aplicațiile de vizualizare sau bazele de date). Această decuplare este realizată prin intermediul unui server central denumit Broker MQTT. Brokerul are responsabilitatea exclusivă de a primi mesajele, de a filtra conținutul pe baza unor rute logice numite „topice” și de a distribui pachetele către toți clienții interesați, în timp real.
 
-\begin{itemize}
-    \item \textbf{Flexibilitate Hardware (\textit{Hardware Agnostic}):} Sistemul nu te obligă să folosești un anumit tip de placă sau senzor. Folosind protocolul standardizat MQTT pentru comunicare, orice dispozitiv construit de la zero (cum ar fi un microcontroler ESP32 programat în C++) se poate conecta instantaneu la server, atâta timp cât trimite datele într-un format text standard (\textit{JSON}).
-    \item \textbf{Interfață Vizuală Personalizabilă (\textit{Dynamic UI}):} Prin modulul \textit{Visual Device Builder}, creat cu tehnologiile React și Next.js, utilizatorii nu mai sunt limitați la ecrane predefinite. Ei își pot construi și aranja propriile butoane, grafice sau slidere direct din browser, legându-le vizual de funcțiile hardware-ului lor.
-    \item \textbf{Control Local și Securitate (\textit{Edge Computing}):} Întreaga aplicație – de la serverul backend scris în Django, la baza de date PostgreSQL – rulează pe propriul echipament al utilizatorului (\textit{self-hosted}). Prin eliminarea conexiunii obligatorii la Cloud, automatizările din casă funcționează instantaneu chiar și atunci când pică internetul, iar datele private nu părăsesc niciodată rețeaua locală.
-    \item \textbf{Spațiu de Învățare (\textit{Full-Stack Sandbox}):} Dincolo de a fi o aplicație utilă în casă, HomeForge este un mediu sigur pentru învățare. Utilizatorul trece prin toate etapele dezvoltării software moderne: scrierea codului direct pe microcontroler, transmiterea datelor prin rețea, stocarea lor într-o bază de date relațională și afișarea lor într-o interfață web reactivă.
-\end{itemize}
+Eficiența extremă a protocolului MQTT rezidă în structura sa binară minimală (un pachet de control de bază poate avea doar 2 octeți overhead) și în suportul nativ pentru niveluri de calitate a serviciului (\textit{Quality of Service} - QoS). Aceste mecanisme de confirmare garantează livrarea mesajelor chiar și în condițiile unor rețele cu lățime de bandă extrem de redusă sau cu latență și instabilitate ridicată. Datorită acestor caracteristici, MQTT a devenit protocolul ideal pentru a fi rulat pe microcontrolere cu resurse de procesare și memorie limitate, cum ar fi familiile ESP8266 și ESP32, facilitând o integrare perfectă între mediul hardware \textit{embedded} și sistemele informatice de nivel superior.
 
-Prin această abordare, HomeForge rezolvă problema automatizărilor pentru proiectele personale de electronică și redă utilizatorului controlul total asupra tehnologiei din propria casă.
+Complexitatea inerentă a acestor sisteme moderne – care trebuie să ruteze sute de mesaje pe secundă în timp real, să mențină securitatea la nivel de transport prin criptare asimetrică (TLS/SSL), să proceseze logici de automatizare deterministe și să gestioneze stocarea asincronă a unor volume masive de date extrem de heterogene – necesită o infrastructură software excepțional de robustă. O casă inteligentă contemporană nu mai este un simplu ansamblu de comutatoare controlate prin telecomandă, ci un sistem informatic distribuit complex. Arhitecturile software care deservesc aceste sisteme trebuie să integreze baze de date hibride, capabile să gestioneze eficient atât relațiile stricte între entități (utilizatori, roluri, locații), cât și structuri de date flexibile (NoSQL/JSON) pentru a acomoda schemele variabile ale senzorilor. Totodată, backend-urile trebuie să fie scalabile și capabile de procesare concurentă, în timp ce interfețele cu utilizatorul (frontend-urile) trebuie să asigure o sincronizare a stării în timp real, oferind un feedback vizual instantaneu.
+
+Prin urmare, contextul actual al tehnologiilor IoT cere nu doar inovație la nivel hardware și de comunicație radio, ci mai ales soluții software holistice, transparente și riguros arhitecturate. Construirea unei platforme Smart Home devine astfel o provocare inginerească de nivel enterprise, subliniind necesitatea unor platforme care să permită agregarea, procesarea și vizualizarea datelor într-un mod care este sigur, independent de cloud, rezilient la erori și, în mod esențial pentru mediul academic, educațional pentru viitoarea generație de ingineri software.
+
+\section{Limitări ale soluțiilor comerciale și tranziția spre Edge Computing}
+În ciuda expansiunii exponențiale a pieței de soluții IoT dedicate consumatorilor casnici și a penetrării profunde a dispozitivelor „inteligente” în viața cotidiană, ecosistemul comercial actual este guvernat de un set de limitări structurale, arhitecturale și operaționale profunde. Aceste limitări nu doar că degradează semnificativ experiența utilizatorului pe termen lung, dar compromit fundamental securitatea inerentă a datelor și reziliența infrastructurii rezidențiale. Majoritatea platformelor comerciale (precum ecosistemele dezvoltate de marii furnizori de tehnologie - Google Nest, Amazon Alexa, Tuya, Sonoff) se bazează în mod predominant pe o arhitectură sistemică profund dependentă de Cloud (\textit{Cloud-centric architecture}).
+
+În acest model topologic centralizat, dispozitivul hardware fizic amplasat în locuință acționează, în esență, ca un simplu terminal de achiziție de date și execuție a comenzilor (\textit{dumb terminal}). Când un senzor detectează o modificare a mediului, el transmite informațiile brute prin intermediul ruterului local către servere aflate adesea în centre de date situate la mii de kilometri distanță. Pe aceste servere externe este găzduită și executată întreaga logică decizională și de automatizare. Ulterior, serverul calculează acțiunea necesară și retransmite o comandă de acționare înapoi către locuință. Această dependență exclusivă de infrastructura de rețea externă introduce o serie de vulnerabilități critice.
+
+Prima și cea mai evidentă limitare, cu impact direct asupra gradului de acceptare a tehnologiei, este legată de latența comunicației și fiabilitatea conexiunii de rețea. O acțiune trivială, cum ar fi aprinderea unui bec inteligent sau declanșarea unei alarme la detecția mișcării, necesită un ciclu complet de transmisie-recepție a pachetelor de date (\textit{Round-Trip Time} - RTT) prin rețeaua publică de internet. În condițiile optime, acest proces introduce o latență perceptibilă de ordinul a sute de milisecunde. Totuși, în scenariile frecvente caracterizate printr-o conexiune instabilă la rețeaua locală, latențe mari (\textit{jitter}), congestii la nivelul furnizorului de servicii de internet (ISP) sau, mai grav, întreruperi temporare ale serverelor centrale ale producătorului, infrastructura locală devine complet inoperabilă \cite{vendor_lockin_iot}. Conceptul de „casă inteligentă” se transformă astfel într-un paradox tehnologic major: un mediu hiper-echipat, capabil să proceseze volume mari de date, dar care este complet paralizat și incapabil să își îndeplinească funcțiile primare de automatizare și securitate în absența unei legături active cu exteriorul. Defecțiunile de rețea generează adesea comportamente imprevizibile, mesaje de eroare criptice în aplicațiile mobile și imposibilitatea controlului manual al dispozitivelor \cite{vendor_lockin_iot}.
+
+A doua vulnerabilitate majoră, tratată intens în literatura academică recentă, derivă din aspectele de confidențialitate (\textit{privacy}) și securitate informatică a datelor \cite{dorri2017privacy}. Într-o arhitectură strict Cloud-centrică, producătorii de dispozitive captează, transmit și stochează în mod continuu volume masive de date cu un grad extrem de ridicat de intimitate. Acestea includ nu doar tiparele de consum energetic și stările dispozitivelor, ci și orarele precise de prezență/absență a locatarilor, înregistrări audio/video din interiorul locuinței și date biometrice. În multe situații, aceste agregări de date sunt utilizate pentru profilarea algoritmică a utilizatorilor, publicitate direcționată și monetizare secundară, adesea dincolo de consimțământul explicit și informat al consumatorului.
+
+Din perspectiva securității cibernetice, aceste baze de date masive, centralizate, reprezintă „honeypots” – ținte extrem de atractive și de mare valoare pentru atacurile informatice de tip Advanced Persistent Threat (APT) sau pentru breșele de date (\textit{data breaches}). Odată compromis un server central al unui producător, atacatorii pot câștiga acces la mii de locuințe simultan \cite{dorri2017privacy}. Pentru a mitiga aceste riscuri arhitecturale, cercetătorii au propus integrarea unor tehnologii de tip Distributed Ledger, precum Blockchain, în ecosistemul IoT \cite{dorri2017privacy}. Totuși, implementarea protocoalelor tradiționale de Blockchain implică provocări enorme și incompatibile cu resursele extrem de limitate ale microcontrolerelor IoT \cite{dorri2017privacy}.
+
+A treia și poate cea mai restrictivă problemă sistemică a soluțiilor comerciale, având consecințe economice și ecologice directe, este fenomenul de \textit{Vendor Lock-in} (captivitatea tehnologică față de un singur furnizor) \cite{vendor_lockin_iot}. Ecosistemele proprietare dezvoltate de corporații utilizează în mod deliberat protocoale de comunicare închise, firmware-uri blocate criptografic și API-uri nedocumentate pentru a garanta că dispozitivele lor hardware funcționează optim doar în propriul mediu software. Această strategie comercială, cunoscută sub denumirea de „Walled Garden” (grădină cu ziduri), interzice de facto interoperabilitatea orizontală nativă.
+
+Utilizatorii care doresc să combine un senzor de temperatură de la producătorul A cu un releu inteligent de la producătorul B sunt frecvent forțați să recurgă la integrări terțe prin servicii Cloud adiționale, introducând alte puncte potențiale de eșec și latență suplimentară. Mai mult, modelul Vendor Lock-in expune utilizatorul la riscul sever al obsolescenței programate sau al deprecierii forțate a serviciilor. Istoria recentă a industriei IoT abundă în exemple notabile în care corporațiile au decis închiderea serverelor Cloud, decizie ce transformă instantaneu hardware-ul rezidențial în deșeuri electronice inerte (e-waste) \cite{vendor_lockin_iot}.
+
+Pentru a contracara fundamental aceste trei deficiențe critice (latența/dependența, vulnerabilitatea intimității și Vendor Lock-in-ul), cercetarea academică și ingineria sistemelor IoT cunosc o tranziție accelerată către paradigma Edge Computing (Calculul la Marginea Rețelei) \cite{edge_computing_iot_2020}. Spre deosebire de Cloud Computing, Edge Computing propune relocarea puterii de procesare, a stocării bazelor de date și a logicii de automatizare cât mai aproape de sursa generatoare de date – fizic în interiorul rețelei locale (LAN) a locuinței.
+
+\begin{table}[htbp]
+    \centering
+    \caption{Comparație arhitecturală între abordările Cloud-Centric și Edge Computing}
+    \label{tab:cloud_vs_edge}
+    \renewcommand{\arraystretch}{1.4}
+    \small
+    \begin{tabular}{|p{4cm}|p{5cm}|p{5cm}|}
+        \hline
+        \textbf{Parametru de Arhitectură} & \textbf{Arhitectură Cloud-Centric (Comercial)} & \textbf{Arhitectură Edge Computing (Local)} \\ \hline
+        \textbf{Locația Procesării Logice} & Servere externe, deținute de furnizor & Dispozitiv hardware local (Home Server) \\ \hline
+        \textbf{Dependența de Internet} & Critică; sistem inoperabil offline & Nulă; autonomie operațională completă \\ \hline
+        \textbf{Latența Comunicației} & Ridicată (50ms - 1000ms+), variabilă & Foarte redusă (< 5ms), predictibilă \\ \hline
+        \textbf{Proprietatea și Intimitatea Datelor} & Date agregate și stocate de terți (risc privacy ridicat) & Suveranitatea datelor (\textit{Data Sovereignty}) - stocate exclusiv local \\ \hline
+        \textbf{Interoperabilitate hardware} & Limitată artificial (\textit{Vendor Lock-in}) & Nelimitată, bazată pe protocoale standard deschise (MQTT, REST) \\ \hline
+        \textbf{Vulnerabilitate Cibernetică} & Expus atacurilor globale, breșelor masive & Restrânsă la perimetrul rețelei locale (LAN) \\ \hline
+    \end{tabular}
+\end{table}
+
+După cum se evidențiază în Tabelul \ref{tab:cloud_vs_edge}, din perspectiva securității și a reglementărilor privind confidențialitatea datelor, arhitectura Edge asigură principiul „Data Sovereignty” (suveranitatea datelor). Informațiile senzoriale brute nu mai părăsesc perimetrul fizic și logic al casei. Astfel, tranziția către Edge Computing nu reprezintă o simplă decizie de optimizare a lățimii de bandă, ci o necesitate arhitecturală și etică fundamentală.
+
+\section{Analiza ecosistemelor Open-Source (Cazul Home Assistant)}
+Pe fondul conștientizării profunde a limitărilor arhitecturilor comerciale dependente de Cloud și a riscurilor inerente pierderii confidențialității datelor, comunitatea globală a reacționat prin crearea unor ecosisteme Open-Source dedicate automatizării locuințelor, orientate fundamental spre principiul execuției locale (\textit{Local-First}). Cel mai de succes și complex exemplu global în acest domeniu este platforma software Home Assistant.
+
+Concepută inițial ca un proiect în limbajul Python pentru a rula pe sisteme hardware accesibile, Home Assistant acționează ca un creier central unificator. Prin intermediul miilor de componente dezvoltate de comunitate, platforma reușește să conecteze și să traducă protocoalele a sute de standarde de comunicație și a mii de dispozitive de la producători diferiți într-o singură interfață unificată și centralizată \cite{vendor_lockin_iot}.
+
+Meritele tehnice și funcționale ale Home Assistant sunt incontestabile. Prin mutarea completă a logicii de procesare pe hardware-ul Edge al utilizatorului, platforma elimină latența, neutralizează Vendor Lock-in-ul și garantează intimitatea absolută a datelor. Mai mult, Home Assistant oferă un motor de automatizare extrem de flexibil, bazat pe concepte de "Trigger", "Condition" și "Action" \cite{vendor_lockin_iot}.
+
+Cu toate acestea, pe măsură ce platforma a evoluat pentru a acomoda un public considerabil mai puțin tehnic, arhitectura sa internă a suferit o transformare orientată spre o simplificare extremă a interfeței grafice (UI) \cite{vendor_lockin_iot}. Această evoluție funcțională a generat însă o deficiență tehnică structurală majoră din perspectiva transparenței, pe care o putem conceptualiza drept „Problema Abstractizării”.
+
+În nucleul său arhitectural, motorul Home Assistant se confruntă cu necesitatea de a gestiona stările a zeci de mii de variații de dispozitive cu comportamente asincrone \cite{vendor_lockin_iot}. Singura modalitate de normalizare este construirea unui strat generalizat de abstractizare hardware. Orice componentă fizică își pierde identitatea tehnică specifică și este forțată într-o reprezentare standardizată, tratată exclusiv ca o „entitate” care deține o „stare” discretă (ex. o lampă din sufragerie devine entitatea logică \texttt{light.living\_room\_lamp} cu starea binară \texttt{on} sau \texttt{off}) \cite{vendor_lockin_iot}. Totul comunică intern printr-o magistrală de evenimente (\textit{Event Bus}) la nivel de sistem de operare abstractizat.
+
+Deși această abordare \textit{high-level} permite construirea rapidă a unor interfețe grafice unitare, ea transformă inevitabil platforma într-o cutie neagră sistemică (\textit{black box}) din perspectiva unui dezvoltator software emergent sau a unui student în informatică \cite{vendor_lockin_iot}. Când o entitate își schimbă starea în panoul de control, mecanismele subiacente – protocolul de transport utilizat, structura payload-ului JSON transmis pe rețea, logica TCP/IP sau modul în care dispozitivul fizic parsează pachetul – sunt complet ascunse și opace \cite{vendor_lockin_iot}.
+
+Această izolare față de codul și comunicarea de la nivelul de bază a fost puternic agravată de deciziile recente de arhitectură, care au mutat configurațiile din fișiere YAML transparente direct în baze de date interne ascunse (în directorul \texttt{.storage}) \cite{vendor_lockin_iot}.
+
+„Problema Abstractizării” este deosebit de critică în contextul academic și educațional \cite{vendor_lockin_iot}. Interacțiunea cognitivă a individului cu tehnologia prin intermediul simbolurilor supra-abstractizate (precum iconițele UI care ascund fluxurile de rețea) duce la o cunoaștere superficială a sistemului \cite{vendor_lockin_iot}. Când sistemul funcționează perfect, tehnologia pare „magică”; însă, în momentul unui eșec de rețea, procesul de diagnosticare (\textit{debugging}) devine extrem de dificil, tocmai pentru că lanțul de execuție real este ascuns în straturi de abstractizare \cite{vendor_lockin_iot}.
+
+Astfel, se poate concluziona că, prin concentrarea resurselor pe rezolvarea nevoilor consumatorului de rând privind funcționalitatea plug-and-play, platformele mature de tipul Home Assistant sacrifică utilitatea lor ca laboratoare educaționale transparente. Această analiză critică a servit drept motivare principală pentru dezvoltarea platformei alternative HomeForge.
+
+\section{Viziunea și inovația platformei HomeForge}
+HomeForge nu este conceput exclusiv ca un sistem de control rezidențial comercial, ci ca o platformă de cercetare inginerească și un ecosistem educațional IoT de tip "sandbox", construită cu intenția explicită de a de-mistifica arhitectura sistemelor Smart Home. Viziunea centrală a proiectului este de a oferi o arhitectură de tip „White-Box” (cutie complet transparentă), în care dezvoltatorii software, inginerii hardware și studenții pot inspecta, audita, modifica și înțelege profund fiecare componentă a stivei tehnologice.
+
+Pentru a realiza această fuziune între performanța unui controller Edge Computing viabil și transparența unui instrument educațional de top, designul arhitectural al platformei HomeForge se sprijină pe patru piloni inovaționali esențiali, detaliați tehnic în continuare.
+
+\subsection{Flexibilitate Hardware Agnostic prin protocolul MQTT ca Magistrală Centrală}
+Spre deosebire de arhitecturile tradiționale de tip middleware care necesită scrierea și mentenanța unor componente de cod specifice în interiorul backend-ului pentru fiecare producător introdus în rețea, HomeForge implementează o paradigmă hardware-agnostică pură. Această flexibilitate este obținută prin decuplarea completă a stratului de dispozitive fizice de stratul de procesare logică, utilizând exclusiv protocolul MQTT ca magistrală centrală unică de mesaje (\textit{Message Bus}) \cite{mqtt_standard_iot}.
+
+În ecosistemul arhitectural HomeForge, orice microcontroler (spre exemplu, plăcile ESP32) devine automat un cetățean de primă clasă, condiția unică fiind respectarea unui contract de comunicație predictibil, bazat pe topice MQTT \cite{mqtt_standard_iot}. Nu este necesară intervenția manuală a utilizatorului în baza de date pentru "adăugarea" unui dispozitiv. Dispozitivele hardware se "auto-anunță" în rețea și publică ciclic telemetrie senzorială.
+
+De exemplu, un modul ESP32 va publica datele sale pe topicul MQTT: \texttt{homeforge/devices/esp32\_living\_rgb/state}. În momentul publicării, platforma backend dezvoltată în Django – care rulează un serviciu asincron de tip MQTT Client Daemon – interceptează instantaneu mesajul și actualizează stocarea de date complet transparent.
+Pentru fluxul de comandă, serverul backend publică instrucțiunile pe un topic distinct: \texttt{homeforge/devices/\{device\_id\}/command}, forțând microcontrolerul să rămână abonat la această magistrală.
+
+\subsection{Gestiunea stării "Schema-less" folosind PostgreSQL și coloane de tip JSONB}
+O provocare structurală majoră în modelarea unei baze de date IoT este variabilitatea extremă a structurilor de date senzoriale (de la relee binare ON/OFF la stații meteo care transmit zeci de parametri \textit{float}).
+
+În abordarea tradițională bazată pe sisteme RDBMS complet schematizate, adăugarea de coloane SQL fixe pentru fiecare tip de parametru este extrem de ineficientă. Pe de altă parte, o bază de date NoSQL pură (precum MongoDB) introduce compromisuri severe la nivelul integrității relaționale, necesară pentru mecanismele de control al accesului bazat pe roluri (RBAC) și maparea locațiilor fizice.
+
+HomeForge inovează prin abordarea conceptului de bază de date "Schema-less" în interiorul unei baze de date relaționale puternice: PostgreSQL. Platforma capitalizează pe tipul avansat de coloană JSONB (\textit{JSON Binary}). Spre deosebire de o stocare clasică de caractere, JSONB parsează documentul și îl convertește într-un format binar ierarhic intern, permițând crearea indexurilor de tip GIN (\textit{Generalized Inverted Index}).
+
+Când un dispozitiv hardware nou se conectează pentru prima dată, backend-ul Django asimilează dinamic structura sa. De exemplu, starea unui dispozitiv de iluminat RGB complex se prezintă astfel:
+
+\begin{minted}{json}
+{
+  "device_id": "esp32_living_rgb",
+  "state": {
+    "power": "ON",
+    "brightness": 85,
+    "color": {
+      "r": 255,
+      "g": 100,
+      "b": 0
+    }
+  },
+  "timestamp": "2026-04-14T17:39:00Z"
+}
+\end{minted}
+
+Prin această metodologie, API-ul preia payload-ul asincron, îl validează și îl injectează direct în coloana flexibilă de tip JSONB a bazei de date.
+
+\subsection{UI dinamic sincronizat pe server și arhitectura "Optimistic UI Updates"}
+Componenta de Frontend, dezvoltată pe fundația Next.js și React, abordează problema latenței percepute a rețelei (\textit{perceived latency}) prin implementarea unui mecanism de \textit{Optimistic UI Update}.
+
+Într-un flux naiv, interfața web ar aștepta ca cererea HTTP POST să fie procesată, trimisă prin MQTT, executată de ESP32, confirmată și returnată sub formă de HTTP 200 OK înainte de a schimba culoarea unui buton, generând latență percepută. În platforma HomeForge, algoritmul funcționează complet diferit:
+
+\begin{enumerate}
+    \item Utilizatorul declanșează un eveniment fizic în interfață (ex. apasă \textit{Toggle Light}).
+    \item Interfața React își modifică imediat starea internă locală, schimbând instantaneu culoarea butonului și oferind feedback vizual în 0 milisecunde.
+    \item Concomitent, un proces de fundal expediază payload-ul către endpoint-ul API-ului backend:
+\end{enumerate}
+
+\begin{minted}{json}
+{
+  "command": "power",
+  "value": "ON"
+}
+\end{minted}
+
+Dacă interogarea eșuează (ex. API-ul returnează HTTP 503 deoarece dispozitivul este offline), funcția de interceptare a erorilor din frontend declanșează un eveniment critic de tip \textit{Rollback}, forțând butonul să revină la starea anterioară demonstrabil validă și avertizând utilizatorul printr-o notificare. Această tehnică inginerească avansată maschează complet latențele firești de comunicație din rețea.
+
+\subsection{Platformă Educațională / Sandbox Full-Stack}
+Cel de-al patrulea pilon inovațional al arhitecturii HomeForge derivă din natura sa intrinsec transparentă și pedagogică. Platforma expune intenționat infrastructura de rutare internă: portul 1883 este vizibil pentru comunicația MQTT necriptată, platforma auto-generează documentația Swagger/Redoc pentru API-ul Django REST, iar fișierele de jurnalizare detaliază granular operațiunile.
+
+La nivel de cod sursă, proiectul este riguros modularizat. Această vizibilitate absolută \textit{end-to-end} facilitează o formare educațională profundă în domeniul ingineriei rețelelor IoT și arhitecturii microserviciilor.
+
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.4\textwidth]{figuri/HomeForge_v2_color.pdf}
-    \caption{Logo-ul platformei HomeForge}
+    \caption{Identitatea vizuală a platformei HomeForge}
     \label{fig:homeforge-logo}
 \end{figure}
 
-Pentru a adresa aceste limitări, prezenta lucrare propune HomeForge, o platformă open-source și self-hosted destinată managementului ecosistemelor Smart Home. HomeForge este concepută cu un accent puternic pe procesarea locală (Edge Computing) și pe eliminarea dependenței de servicii externe, oferind utilizatorului control absolut asupra datelor și hardware-ului. Pe lângă utilitatea practică, platforma servește drept un laborator personal de testare pentru pasionații de electronica de tip Do-It-Yourself (DIY). Sistemul facilitează exersarea conceptelor avansate de comunicație IoT, în special protocolul MQTT \cite{mqtt_performance}, a dezvoltării firmware pe microcontrolere (ESP32) și a arhitecturilor software moderne full-stack.
+\section{Obiectivele cercetării și implementării}
+Obiectivul general al prezentei cercetări este proiectarea la nivel teoretic, dezvoltarea practică și implementarea completă a unui prototip funcțional de platformă Smart Home la nivel de rețea locală (\textit{Edge Computing}) – denumită HomeForge. Aceasta trebuie să demonstreze capacitatea de interconectare bidirecțională fiabilă a echipamentelor hardware IoT eterogene printr-o stivă stratificată de tehnologii web și un sistem de mesagerie asincronă, dovedind concomitent valențe educaționale superioare.
 
-\section{Obiectivele lucrării}
-Obiectivul principal al acestei lucrări este proiectarea, implementarea și validarea platformei HomeForge. Pentru atingerea acestui scop, au fost definite următoarele obiective specifice:
+Pentru atingerea acestui țel inginereasc, procesul a fost descompus în următoarele obiective specifice:
+
+\textbf{Obiective la nivel Hardware și Comunicații de tip Embedded:}
 \begin{itemize}
-    \item Proiectarea unei arhitecturi decuplate de tip Client-Server-Hardware, capabilă să integreze dispozitive IoT eterogene.
-    \item Dezvoltarea unui backend robust bazat pe Python și Django REST Framework.
-    \item Implementarea unei interfețe grafice web interactive folosind Next.js și React.
-    \item Configurarea nodurilor hardware bazate pe ESP32 pentru demonstrarea comunicării bidirecționale prin protocolul MQTT.
+    \item Proiectarea unui firmware de bază robust, modular și eficient energetic pentru microcontrolerele din familia Espressif ESP32.
+    \item Dezvoltarea mecanismelor software de reconectare automată (\textit{watchdog logic}) pentru a asigura reziliența la căderea routerului Wi-Fi sau resetarea brokerului MQTT.
+    \item Implementarea rutinelor deterministe de citire a datelor din senzori digitali (ex. temperatura DHT11) și analogici (ex. gaze MQ4), translatarea lor în format JSON și încapsularea cu overhead minim.
+    \item Configurarea unui sistem de operare pentru timp real (FreeRTOS) pe ESP32 care să asculte continuu un topic MQTT specific (\texttt{homeforge/devices/\{id\}/command}) pentru a intercepta și executa instrucțiunile primite de la server.
 \end{itemize}
+
+\textbf{Obiective Software - Arhitectura Backend și Structuri de Baze de Date:}
+\begin{itemize}
+    \item Conceperea unei platforme web centrale performante bazate pe framework-ul Python Django și Django REST Framework, acționând ca \textit{Single Source of Truth}.
+    \item Instanțierea unui serviciu asincron de tip demon utilizând \texttt{paho-mqtt}, capabil să transforme automat mesajele de telemetrie în interogări SQL optimizate stocate în tabelele PostgreSQL.
+    \item Implementarea unui model "schema-less" eficient utilizând tipul JSONB pentru a asigura o toleranță la diferențele de payload dintre senzori variați.
+    \item Dezvoltarea unui sistem de control a accesului bazat pe roluri (RBAC) garantat prin criptografia token-urilor JWT, pentru autorizare granulară pe fiecare resursă solicitată.
+\end{itemize}
+
+\textbf{Obiective Software - Dezvoltarea Frontend și Construirea Interfeței cu Utilizatorul:}
+\begin{itemize}
+    \item Proiectarea grafică și programarea unei interfețe \textit{Single Page Application} (SPA) moderne bazate exclusiv pe framework-ul Next.js și React.
+    \item Integrarea unui sistem complex de management al stării globale la nivel de client (ex. React Context API / Redux) pentru sincronizarea bidirecțională și în timp real a datelor vizualizate.
+    \item Implementarea detaliată a algoritmului de operare predictivă "Optimistic UI Update", incluzând logici avansate de recuperare (\textit{rollback routines}) în caz de defecțiune a rețelei.
+    \item Crearea unei interfețe grafice profund responsive implementate prin clasele utilitare Tailwind CSS, capabile să randeze panouri de control și dashboard-uri analitice cu vizualizări de date din seturile de telemetrie.
+\end{itemize}
+
+\section{Justificarea stivei tehnologice (Tech Stack)}
+Dezvoltarea sistemelor distribuite din spectrul IoT necesită un proces de luare a deciziilor arhitecturale excepțional de riguros pentru a gestiona natura inerent concurentă a sistemului și volumul ridicat al fluxurilor de date. 
+
+\subsection{Sistemul Backend: Python și Django REST Framework}
+Alegerea limbajului Python a fost determinată de maturitatea ecosistemului său de module orientate către procesarea protocoalelor de rețea. Adoptarea framework-ului Django a fost argumentată de soliditatea arhitecturii sale interne MVT (\textit{Model-View-Template}) care oferă scuturi implicite anti SQL Injection, XSS și CSRF. Extensia Django REST Framework accelerează prototiparea endpoint-urilor prin utilizarea mecanismelor de serializare, în timp ce sistemul ORM integrat elimină complexitatea scrierii directe de interogări SQL.
+
+\subsection{Sistemul central de baze de date: PostgreSQL}
+Deși platformele IoT generează predominant documente cu aspect ne-structurat sugerând utilizarea unor soluții NoSQL precum MongoDB, platforma HomeForge necesită implementarea simultană a unei structuri relaționale stricte pentru autentificare și control (RBAC). PostgreSQL oferă compromisul tehnic optim: o bază de date relațională stabilă (\textit{ACID-compliant}) ce oferă capabilități extinse de stocare NoSQL prin extensia sa nativă JSONB, permițând crearea indexurilor GIN pentru căutări ultra-rapide în arborele JSON.
+
+\subsection{Rețeaua și Magistrala de mesagerie: MQTT}
+Opțiunea de a selecta MQTT ca magistrală centrală de transport bidirecțional este susținută de standardizarea sa internațională OASIS/ISO \cite{mqtt_standard_iot}. Designul său asimetric extrem de simplificat permite un pachet tehnic cu un overhead de sub 2 bytes, esențial pentru modulele ieftine dotate cu microcontrolere ESP32 predispuse la fluctuații de conexiune. Mai mult, suportul nativ pentru Quality of Service (QoS) și mecanismul \textit{Last Will and Testament} (LWT) oferă o siguranță operațională completă, anunțând instantaneu backend-ul în cazul în care un nod hardware s-a deconectat neașteptat.
+
+\subsection{Ciclul Frontend: React și Next.js}
+Stratul interfeței manipulează componente cu volum ridicat și o face neîntrerupt, în bucle de randare de fracțiuni de secundă, ca răspuns la volatilitatea stărilor electrice ale senzorilor. Selectarea bibliotecii React a fost fundamentată pe inovația modelului \textit{Virtual DOM}, care anulează penalizările vizuale de redare temporală calculând și aplicând strict diferența exactă pe Documentul Object Model real. Adoptarea framework-ului Next.js deasupra React optimizează generarea pre-build și permite utilizarea componentelor avansate \textit{Server-Side Rendering} (SSR), scăzând indicatorul metric de calitate denumit \textit{First Contentful Paint} (FCP) pe interfețele portabile.

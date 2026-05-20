@@ -1,0 +1,212 @@
+\chapter{Arhitectura Sistemului HomeForge}
+
+\section{Arhitectura generală și paradigma decuplării}
+Pentru a garanta o scalabilitate ridicată și o mentenanță eficientă, platforma HomeForge adoptă o arhitectură orientată pe servicii (\textit{Service-Oriented Architecture}). În mod tradițional, aplicațiile web erau monolitice, serverul fiind responsabil atât de logica de business, cât și de generarea interfeței grafice (HTML). HomeForge abandonează acest model în favoarea unei decuplări totale: logica de prelucrare a datelor (\textit{backend-ul}) acționează ca un punct central de adevăr (\textit{Single Source of Truth}) și expune exclusiv un API (\textit{Application Programming Interface}) de tip RESTful.
+
+\subsection{Justificarea alegerii framework-ului backend}
+Pentru implementarea backend-ului, s-a optat pentru limbajul Python 3.12+ și framework-ul Django, acompaniat de \textit{Django REST Framework} (DRF). Această alegere tehnologică a fost motivată de două aspecte fundamentale: maturitatea ecosistemului Python în manipularea datelor (esențială pentru parsarea telemetriei IoT) și securitatea robustă oferită \textit{out-of-the-box} de Django împotriva vulnerabilităților web comune (SQL Injection, XSS).
+
+Importanța utilizării standardului REST în acest context este subliniată de Pautasso et al.: \textit{„Serviciile web RESTful oferă un set de constrângeri arhitecturale care garantează scalabilitatea, performanța independentă și portabilitatea, elemente vitale pentru ecosistemele IoT unde nodurile hardware au putere de calcul limitată”} \cite{rest_api_architecture}. Prin această decuplare, API-ul dezvoltat poate servi nu doar interfața web actuală (Next.js), ci și viitoare aplicații mobile sau scripturi de automatizare, fără a necesita modificări ale codului de bază.
+
+\section{Modelarea datelor: Puterea PostgreSQL și JSONB}
+Sistemul de gestiune a bazelor de date (SGBD) ales este PostgreSQL 15. Într-un mediu IoT, provocarea principală a stocării datelor este eterogenitatea senzorilor. Bazele de date relaționale clasice sunt rigide, în timp ce bazele de date NoSQL (precum MongoDB) sacrifică integritatea relațională (\textit{referential integrity}) pentru flexibilitate.
+
+PostgreSQL a fost ales deoarece oferă „cel mai bun din ambele lumi” prin intermediul tipului de date \texttt{JSONB}. Conform cercetărilor conduse de Izquierdo et al., \textit{„Tipul de date JSONB din PostgreSQL oferă performanțe de interogare și indexare comparabile cu bazele de date NoSQL dedicate, menținând în același timp garanțiile tranzacționale ACID necesare unui sistem de producție”} \cite{jsonb_postgresql}.
+
+\subsection{Abordarea \textit{Schema-less} pentru starea dispozitivelor}
+HomeForge folosește o structură hibridă de date. Entitatea principală păstrează relațiile stricte (către cameră, tip de dispozitiv, utilizator), dar starea hardware-ului este stocată într-un câmp flexibil denumit \texttt{current\_state}. Pentru a demonstra această flexibilitate, prezentăm modul în care sistemul stochează stările pentru dispozitive complet diferite în aceeași coloană, evitând necesitatea unor noi migrații SQL la adăugarea unui senzor DIY nou:
+
+\begin{minted}{json}
+// 1. Modul releu simplu (Bec inteligent)
+{"relay_1": true, "brightness": 75}
+
+// 2. Termostat inteligent (Senzor + Actuator)
+{"target_temp": 22.5, "current_temp": 21.3, "mode": "heat"}
+
+// 3. Placă de dezvoltare DIY cu 4 relee
+{"relay_1": false, "relay_2": true, "relay_3": true, "relay_4": false}
+\end{minted}
+
+La nivel de backend, această schemă este definită clar prin ORM-ul (\textit{Object-Relational Mapping}) din Django:
+
+\begin{minted}{python}
+from django.db import models
+
+class Device(models.Model):
+    name = models.CharField(max_length=100)
+    ip_address = models.GenericIPAddressField()
+    status = models.CharField(max_length=20, default='offline')
+    # Relații FK către entitățile organizatorice (Relațional pur)
+    room = models.ForeignKey('Room', on_delete=models.SET_NULL, null=True)
+    device_type = models.ForeignKey('CustomDeviceType', on_delete=models.PROTECT)
+    # Stocarea dinamică a stării (NoSQL hibrid)
+    current_state = models.JSONField(default=dict)
+\end{minted}
+
+\section{Securitate, Optimizare și Structura API-ului}
+
+\subsection{Securitate și Controlul Accesului (JWT \& RBAC)}
+Metoda tradițională de autentificare web, bazată pe sesiuni și \textit{cookies}, este ineficientă pentru aplicațiile decuplate și vulnerabilă la atacuri de tip CSRF (\textit{Cross-Site Request Forgery}). Prin urmare, HomeForge a implementat standardul \textit{JSON Web Tokens} (JWT).
+
+Referitor la securitatea arhitecturilor IoT moderne, Ali et al. notează: \textit{„Autentificarea bazată pe token-uri JSON elimină necesitatea stocării stării sesiunii pe server (stateless authentication), reducând semnificativ consumul de memorie centrală și oferind o metodă securizată și ușoară de verificare a identității la nivelul nodurilor din rețea”} \cite{jwt_security_iot}.
+
+Sistemul integrează un mecanism ierarhic de tip RBAC (\textit{Role-Based Access Control}): primul utilizator înregistrat devine \texttt{owner} (cu privilegii de administrare a infrastructurii hardware și software), următorii putând fi asociați rolurilor de \texttt{admin}, \texttt{user} sau \texttt{viewer} (acces \textit{read-only} la rețea).
+
+\subsection{Optimizarea interogărilor SQL (Problema N+1)}
+În dezvoltarea cu ORM-uri, o greșeală comună care degradează masiv latența este "Problema N+1". Fără optimizări, pentru a afișa 50 de dispozitive pe ecranul principal, backend-ul ar efectua o interogare pentru lista dispozitivelor și încă 50 de interogări distincte pentru a afla camera fiecăruia. 
+
+Platforma rezolvă matematic această ineficiență prin dictarea explicită a preluării anticipate a datelor, generând sub capotă interogări SQL complexe de tip \texttt{INNER JOIN}:
+
+\begin{minted}{python}
+# Optimizare a interogărilor pentru modelul Device
+Device.objects.select_related(
+    'room', 'user', 'device_type', 'device_type__card_template'
+).prefetch_related(
+    'device_type__card_template__controls'
+)
+\end{minted}
+Prin această arhitectură, timpul de procesare rămâne constant O(1) la nivel de accesare a bazei de date, indiferent de dimensiunea rețelei fizice.
+
+\section{Arhitectura și Specificațiile Interfeței de Programare (API)}
+
+Pentru expunerea completă a capabilităților sistemului, API-ul platformei HomeForge a fost proiectat conform standardelor RESTful, operând ca strat intermediar între baza de date PostgreSQL, nodurile IoT și interfața utilizatorului. Această secțiune detaliază contractele de date (\textit{endpoints}), permisiunile asociate și logica de business implementată.
+
+\subsection{Sistemul de Control al Accesului (RBAC)}
+Întregul API este securizat prin intermediul \textit{JSON Web Tokens} (JWT), necesitând prezența antetului \texttt{Authorization: Bearer <token>} pentru rutele protejate. Spre deosebire de sistemele simple cu un singur nivel de administrare, platforma utilizează o ierarhie complexă bazată pe roluri (RBAC):
+\begin{itemize}
+    \item \textbf{Owner (Proprietar):} Cel mai înalt nivel de privilegii. Primul utilizator care apelează ruta de înregistrare primește automat acest rol, având control absolut.
+    \item \textbf{Admin:} Poate gestiona utilizatorii, camerele, echipamentele și aprobările pentru noile tipuri de hardware.
+    \item \textbf{User (Standard):} Poate controla starea dispozitivelor proprii și poate propune (fără a aproba) arhitecturi noi de hardware.
+    \item \textbf{Viewer:} Are acces strict de citire (\textit{read-only}) asupra panoului de control.
+\end{itemize}
+
+\subsection{Autentificare și Gestiunea Utilizatorilor}
+Acest modul expune funcționalitățile de creare a conturilor, emitere a token-urilor și administrare a profilurilor.
+
+\begin{description}
+    \item[\textbf{POST} \texttt{/register/} și \textbf{POST} \texttt{/login/}] \hfill \\
+    \textit{Acces: Public.} Rutele procesează credențialele (impunând o politică de parole de minimum 4 caractere și o majusculă) și returnează perechea de token-uri \texttt{access} (valabilitate scurtă, 5 minute) și \texttt{refresh} (valabilitate lungă, 1 zi).
+    \item[\textbf{POST} \texttt{/token/refresh/}] \hfill \\
+    \textit{Acces: Public.} Permite reînnoirea token-ului de acces fără re-autentificare, vital pentru menținerea unei sesiuni fluide în aplicația de tip \textit{Single Page Application} (SPA).
+    \item[\textbf{GET / PUT} \texttt{/me/}] \hfill \\
+    \textit{Acces: Orice utilizator autentificat.} Permite utilizatorului curent să își gestioneze preferințele, inclusiv încărcarea unei imagini de profil (\textit{avatar}) de tip \textit{multipart/form-data} și definirea unei culori de accent (\texttt{accent\_color}) pentru personalizarea interfeței.
+    \item[\textbf{GET / PUT} \texttt{/users/\{id\}/}] \hfill \\
+    \textit{Acces: Admin sau Owner.} Oferă administratorilor posibilitatea de a vizualiza toți utilizatorii din ecosistem și de a suprascrie (\textit{override}) datele sau rolul oricărui cont.
+\end{description}
+
+\subsection{Topologia Fizică: Camere și Dispozitive}
+Aceste endpoint-uri gestionează partiționarea fizică și înregistrarea senzorilor în rețeaua locală.
+
+\begin{description}
+    \item[\textbf{GET/POST/PUT/DELETE} \texttt{/rooms/}] \hfill \\
+    \textit{Acces modificare: Admin/Owner.} Permite organizarea hardware-ului pe camere. Sistemul implementează un mecanism de siguranță: la apelarea metodei \texttt{DELETE} pe o cameră, dispozitivele asociate nu sunt șterse, ci câmpul lor devine \texttt{room = null}, fiind transferate în starea „Neasignat”.
+    \item[\textbf{GET/POST} \texttt{/devices/}] \hfill \\
+    \textit{Acces: Orice utilizator autentificat.} Permite înregistrarea unui nou nod IoT. Validarea backend-ului asigură că adresa \texttt{ip\_address} este un IPv4 valid și că \texttt{device\_type}-ul asociat a fost aprobat anterior de un administrator.
+\end{description}
+
+\subsection{Mecanismul principal de gestiune a stării (\textit{State Control})}
+Modulul de control reprezintă componenta critică a arhitecturii IoT, fiind optimizat pentru a masca latența inerentă rețelelor hardware.
+
+\begin{description}
+    \item[\textbf{PATCH} \texttt{/devices/\{id\}/state/}] \hfill \\
+    \textit{Acces: Orice utilizator autentificat.} Recepționează comenzi parțiale (ex. doar \texttt{\{"brightness": 75\}}). Backend-ul aplică logica de îmbinare (\textit{merge}) cu starea curentă din baza de date și returnează un cod \texttt{HTTP 202 Accepted}, semnalând interfeței să se actualizeze instantaneu (\textit{Optimistic UI}), în timp ce comanda reală este transmisă asincron prin MQTT. De asemenea, API-ul efectuează maparea dinamică automată: o comandă trimisă către un identificator generic precum \texttt{relay\_1} este rutată corect către widget-ul hardware specific (ex. \texttt{switch-177}).
+\end{description}
+
+\subsection{Platforma de Crowdsourcing: Fluxul Tipului de Dispozitive}
+Pentru a evita fenomenul de \textit{vendor lock-in}, HomeForge permite comunității să propună definiții pentru echipamente DIY (ex. plăci cu ESP32), implementând un flux de aprobare riguros.
+
+\begin{description}
+    \item[\textbf{POST} \texttt{/device-types/propose/}] \hfill \\
+    \textit{Acces: Orice utilizator autentificat.} Receptează o structură JSON complexă care include atât arhitectura nodurilor (microcontroler, senzori, pini PWM), cât și tiparul vizual pentru UI (\texttt{card\_template}). Starea inițială este setată forțat la \texttt{approved: false}.
+    \item[\textbf{GET} \texttt{/admin/device-types/pending/} și \textbf{GET} \texttt{.../denied/}] \hfill \\
+    \textit{Acces: Admin/Owner.} Listează separat definițiile care așteaptă revizuirea și cele care au fost respinse.
+    \item[\textbf{PUT / PATCH} \texttt{/admin/device-types/\{id\}/}] \hfill \\
+    \textit{Acces: Admin/Owner.} Permite administratorului să corecteze erorile dintr-o propunere (ex. o mapare greșită a unui widget) înainte de a o aproba.
+    \item[\textbf{POST} \texttt{.../approve/} și \textbf{POST} \texttt{.../deny/}] \hfill \\
+    \textit{Acces: Admin/Owner.} Tranzitează starea propunerii. La respingere, API-ul solicită obligatoriu un motiv (\texttt{rejection\_reason}) pentru a oferi feedback utilizatorului inițiator. Tipurile respinse pot fi ulterior curățate în bloc (\textit{Bulk Delete}) via ruta \texttt{/admin/device-types/denied/delete/}.
+\end{description}
+
+\subsection{Sistemul Multi-Nivel de Notificări}
+Infrastructura de alertare a fost dezvoltată pentru a monitoriza proactiv starea rețelei și a utilizatorilor, generând 10 tipuri distincte de evenimente (de la informații de sistem la deconectări critice de hardware).
+
+\begin{description}
+    \item[\textbf{GET} \texttt{/notifications/} și \textbf{GET} \texttt{/notifications/unread-count/}] \hfill \\
+    \textit{Acces: Orice utilizator autentificat.} Returnează alerte filtrate pe niveluri de prioritate (\texttt{low, normal, high, urgent}). Ruta de contorizare (\texttt{unread-count}) a fost special optimizată pentru a fi interogată periodic (\textit{polling}) la fiecare 30 de secunde de către interfața web.
+    \item[\textbf{POST} \texttt{/notifications/read-all/} și \textbf{DELETE} \texttt{/notifications/bulk-delete/}] \hfill \\
+    \textit{Acces: Orice utilizator autentificat.} Permit operațiuni în bloc asupra alertelor.
+    \item[\textbf{POST} \texttt{/admin/notifications/broadcast/}] \hfill \\
+    \textit{Acces: Admin/Owner.} Permite difuzarea unui mesaj global, având ca țintă toți utilizatorii (\texttt{all}), doar administratorii (\texttt{admins}) sau doar vizitatorii (\texttt{viewers}).
+\end{description}
+
+\subsection{Persistența Interfeței și Randarea Topologiei}
+HomeForge nu depinde de stocarea locală a browserului (\textit{localStorage}), ci implementează un motor propriu de sincronizare a preferințelor vizuale pe server.
+
+\begin{description}
+    \item[\textbf{GET} \texttt{/topology/}] \hfill \\
+    \textit{Acces: Orice utilizator autentificat.} Procesează datele din PostgreSQL și le formatează direct în standardul cerut de librăria React Flow (matrice de Noduri și Muchii), calculând poziția radială, statusul de conectare și culorile specifice (\texttt{\#10B981} pentru online, \texttt{\#EF4444} pentru offline).
+    \item[\textbf{PUT} \texttt{/dashboard-layout/}] \hfill \\
+    \textit{Acces: Orice utilizator autentificat.} Salvează configurația personalizată de grilă (\textit{Grid}) a utilizatorului. JSON-ul stochează ordinea cardurilor și permite gruparea dispozitivelor în dosare (\textit{Folders}) de 2-4 elemente, simulând comportamentul aplicațiilor mobile native. Endpoint-ul folosește o semantică de tip \textit{upsert} și validează strict integritatea ID-urilor transmise.
+
+\begin{minted}{json}
+{
+  "version": 1,
+  "items": [
+    { "type": "device", "deviceId": 5 },
+    {
+      "type": "folder",
+      "folderId": "folder-m1kx2j-a3b7",
+      "name": "Living Room",
+      "deviceIds": [1, 3]
+    }
+  ]
+}
+\end{minted}
+
+    \item[\textbf{GET} \texttt{/dashboard-layout/} (Lanțul de Fallback)] \hfill \\
+    La interogare, sistemul aplică un lanț inteligent de rezoluție: încearcă returnarea \textit{Layout-ului Personal} $\rightarrow$ dacă nu există, returnează \textit{Layout-ul Partajat (Shared)} setat de Admin $\rightarrow$ dacă nu există, returnează \texttt{null}.
+    \item[\textbf{PATCH} \texttt{/device-order/}] \hfill \\
+    \textit{Acces: Orice utilizator autentificat.} Permite actualizarea exclusivă a preferinței de sortare a echipamentelor pe ecran (\texttt{room}, \texttt{type}, \texttt{status}, \texttt{name} sau \texttt{custom}), fără a necesita re-salvarea întregii structuri JSON a panoului de control.
+\end{description}
+
+\section{Mecanisme Avansate: UX și Persistență}
+
+\subsection{Mascarea latenței prin Actualizări Optimiste (\textit{Optimistic UI})}
+În IoT-ul bazat pe Edge Computing, dispozitivele fizice (microcontrolerele) pot fi în modul \textit{Deep Sleep} sau pot suferi întârzieri de rețea. Dacă serverul ar bloca firul de execuție până la comutarea fizică a unui releu, experiența utilizatorului ar fi considerată lentă și defectuoasă. 
+
+Acest fenomen este contracarat conceptual prin arhitectura \textit{Optimistic UI}. Literatura de specialitate referitoare la interacțiunea om-calculator sugerează că: \textit{„Mascarea latenței rețelei prin prezentarea imediată a stării vizuale anticipate, înainte de validarea finală a serverului, crește masiv nivelul de fluiditate perceput și reduce frustrarea utilizatorului în sistemele distribuite”} \cite{latency_ux_optimistic}.
+
+Implementarea tehnică constă în procesarea asincronă: o cerere \texttt{PATCH} către \texttt{/devices/\{id\}/state/} nu așteaptă senzorul. Backend-ul îmbină datele, validează structura logică și răspunde imediat cu starea previzionată (\texttt{HTTP 202 Accepted}), în timp ce confirmarea MQTT operează independent în fundal:
+
+\begin{minted}{json}
+{
+  "status": "Command sent",
+  "detail": "State will update when device confirms.",
+  "device_status": "online",
+  "current_state": {
+    "relay_1": true,
+    "brightness": 75
+  }
+}
+\end{minted}
+
+\subsection{Motorul de Sincronizare a Interfeței (\textit{Dashboard Layout Sync})}
+Spre deosebire de aplicațiile simple care salvează aranjamentul elementelor grafice pe memoria locală a browser-ului (\textit{localStorage}), HomeForge folosește un sistem de \textit{upsert} pe server. Această alegere asigură coerența interfeței (utilizatorul găsește butoanele exact în aceeași ordine atât pe laptop, cât și pe mobil).
+
+Configurația interfeței, reprezentată mai jos, stochează nu doar ordinea absolută, ci și grupările logice (\textit{Folders}):
+
+\begin{minted}{json}
+{
+  "version": 1,
+  "items": [
+    { "type": "device", "deviceId": 5 },
+    {
+      "type": "folder",
+      "folderId": "folder-abc-123",
+      "name": "Living Room",
+      "deviceIds": [1, 3]
+    }
+  ]
+}
+\end{minted}
+
+Motorul de backend nu execută doar o stocare oarbă a acestui JSON, ci rulează un \textit{Sanity Check}: validează unicitatea fiecărui \texttt{deviceId} și aplică un lanț de rezervă (\textit{fallback chain}). Dacă un cont nou nu posedă o configurație proprie, backend-ul îi servește automat varianta \textit{Shared Layout}, definită în prealabil de administratorul sistemului.
