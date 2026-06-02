@@ -5,7 +5,8 @@
 
 \usepackage{babel}
 \usepackage{graphicx}
-\usepackage{svg}
+% \usepackage{svg}  % dezactivat: inkscape nu este disponibil ca subproces;
+                    % oricum nu sunt includeri \includesvg în lucrare
 \usepackage{xcolor}
 \usepackage{setspace}
 \usepackage[
@@ -13,8 +14,9 @@
   bookmarksopen=true,
   pdftitle={HomeForge. Platforma pentru automatizare rezidentiala si experimentare IoT},
   linktocpage]{hyperref}
-\usepackage[outputdir=build]{minted}
+\usepackage{minted}
 \usepackage{csquotes}
+\usepackage{xurl}
 \usepackage[backend=biber,style=ieee]{biblatex}
 \addbibresource{referinte/referinte.bib}
 
@@ -25,9 +27,18 @@
 \providecommand*{\toclevel@unnumberedsection}{1}
 \makeatother
 
-\setlength{\emergencystretch}{2em}
+% Toleranță sporită pentru spargerea liniilor — evită overfull boxes la
+% identificatori monospace lungi (căi de fișiere, nume de funcții).
+\setlength{\emergencystretch}{4em}
+\tolerance=3000
+\hbadness=3000
+\sloppy
+\renewcommand{\UrlBreaks}{\do\/\do\.\do\:\do\_\do\-\do\?\do\=\do\&\do\#}
 
-\singlespacing
+% Spațiere conformă cu regulile UPB pentru lucrări de licență:
+% one-half spacing (1.5) pentru corpul textului. Tabele, figuri, blocuri
+% minted și bibliografia rămân la single spacing prin definițiile din clasă.
+\onehalfspacing
 
 \setminted{
   linenos,
@@ -39,7 +50,7 @@
   encoding=utf8
 }
 
-\svgsetup{inkscapelatex=true,inkscapeexe=inkscape,inkscapepath=build/svg-inkscape/}
+% \svgsetup{...}  % dezactivat odată cu pachetul svg
 
 \input{capitole/00_config_resurse}
 
@@ -79,13 +90,18 @@
 \include{capitole/1_introducere}
 \include{capitole/2_stadiul_actual_si_analiza_tehnologiilor}
 \include{capitole/3_arhitectura_sistemului_homeforge}
-% \include{capitole/4_frontend}
-% \include{capitole/5_integrare_api}
-% \include{capitole/6_rulare_testare_deployment}
-% \include{capitole/7_concluzii}
+\include{capitole/4_frontend}
+\include{capitole/5_firmware_esp32}
+\include{capitole/6_deployment_testare}
+\include{capitole/7_concluzii}
 
 % \nocite{*}
+% Bibliografia se afișează cu spațiere simplă, conform cerințelor UPB
+% (în teza-upb.cls, mediul \thebibliography setează \baselinestretch{1} —
+% biblatex are propriul mediu, deci aplicăm setarea explicit).
+{\singlespacing
 \printbibliography[heading=bibintoc,title={Bibliografie}]
+}
 
 \include{capitole/A_anexa_comenzi}
 
