@@ -1,12 +1,12 @@
-@article{docker_iot_edge,
-  TITLE     = {Containerization in the Internet of Things and Edge Computing: A Review},
-  AUTHOR    = {Bellavista, P. and Zanni, A.},
-  JOURNAL   = {IEEE Internet of Things Journal},
-  VOLUME    = {8},
-  NUMBER    = {10},
-  PAGES     = {8118--8136},
-  YEAR      = {2021},
-  PUBLISHER = {IEEE}
+@inproceedings{docker_iot_edge,
+  TITLE        = {Feasibility of Fog Computing Deployment based on {Docker} Containerization over {RaspberryPi}},
+  AUTHOR       = {Bellavista, Paolo and Zanni, Alessandro},
+  BOOKTITLE    = {Proceedings of the 18th International Conference on Distributed Computing and Networking (ICDCN '17)},
+  PAGES        = {1--10},
+  YEAR         = {2017},
+  ORGANIZATION = {ACM},
+  ADDRESS      = {Hyderabad, India},
+  DOI          = {10.1145/3007748.3007777}
 }
 
 @inproceedings{dorri2017privacy,
@@ -19,25 +19,14 @@
 }
 
 @article{edge_computing_iot_2020,
-  TITLE     = {Edge computing for the Internet of Things: A case study},
-  AUTHOR    = {Sitt{\'o}n-Candanedo, I. and Alonso, R. S. and Corchado, J. M. and Rodr{\'\i}guez-Gonz{\'a}lez, S. and Casado-Lumbreras, C.},
-  JOURNAL   = {Information Processing \& Management},
-  VOLUME    = {56},
-  NUMBER    = {6},
-  PAGES     = {102076},
+  TITLE     = {A review of edge computing reference architectures and a new global edge proposal},
+  AUTHOR    = {Sitt{\'o}n-Candanedo, In{\'e}s and Alonso, Ricardo S. and Corchado, Juan M. and Rodr{\'\i}guez-Gonz{\'a}lez, Sara and Casado-Vara, Roberto},
+  JOURNAL   = {Future Generation Computer Systems},
+  VOLUME    = {99},
+  PAGES     = {278--294},
   YEAR      = {2019},
-  PUBLISHER = {Elsevier}
-}
-
-@article{iot_energy_efficiency,
-  TITLE     = {Internet of Things for smart homes: An overview},
-  AUTHOR    = {Stolojescu-Crisan, Cristina and Crisan, Calin and Butunoi, Bogdan-Peniel},
-  JOURNAL   = {Sensors},
-  VOLUME    = {21},
-  NUMBER    = {16},
-  PAGES     = {5381},
-  YEAR      = {2021},
-  PUBLISHER = {MDPI}
+  PUBLISHER = {Elsevier},
+  DOI       = {10.1016/j.future.2019.04.016}
 }
 
 @article{iot_smart_home_review,
@@ -50,34 +39,31 @@
   PUBLISHER = {Elsevier}
 }
 
-@inproceedings{jsonb_postgresql,
-  TITLE        = {Evaluating the performance of PostgreSQL's JSONB data type in IoT architectures},
-  AUTHOR       = {Izquierdo, J. and M{\'a}rquez, C. and Others},
-  BOOKTITLE    = {2020 15th Iberian Conference on Information Systems and Technologies (CISTI)},
-  PAGES        = {1--6},
-  YEAR         = {2020},
-  ORGANIZATION = {IEEE}
+@manual{postgresql_jsonb_docs,
+  TITLE        = {{PostgreSQL 15 Documentation}: Chapter 8.14, JSON Types},
+  AUTHOR       = {{PostgreSQL Global Development Group}},
+  YEAR         = {2023},
+  URL          = {https://www.postgresql.org/docs/15/datatype-json.html},
+  NOTE         = {Accessed: 2026-05}
 }
 
-@article{jwt_security_iot,
-  TITLE     = {Secure and lightweight authentication protocol for IoT using JSON Web Token},
-  AUTHOR    = {Ali, S. and Others},
-  JOURNAL   = {Journal of Information Security and Applications},
-  VOLUME    = {53},
-  PAGES     = {102509},
-  YEAR      = {2020},
-  PUBLISHER = {Elsevier}
+@misc{rfc_jwt,
+  TITLE        = {{RFC 7519}: JSON Web Token (JWT)},
+  AUTHOR       = {Jones, M. and Bradley, J. and Sakimura, N.},
+  HOWPUBLISHED = {{IETF Standards Track}},
+  YEAR         = {2015},
+  MONTH        = {5},
+  DOI          = {10.17487/RFC7519},
+  URL          = {https://datatracker.ietf.org/doc/html/rfc7519}
 }
 
-@article{latency_ux_optimistic,
-  TITLE     = {The Effects of Network Latency on User Experience in Distributed Systems},
-  AUTHOR    = {Bargas-Avila, J. A. and Brenzikofer, O. and Roth, S. P. and Tuch, A. N. and Orsini, S. and Opwis, K.},
-  JOURNAL   = {International Journal of Human-Computer Studies},
-  VOLUME    = {69},
-  NUMBER    = {10},
-  PAGES     = {627--637},
-  YEAR      = {2011},
-  PUBLISHER = {Elsevier}
+@misc{nielsen_response_times,
+  TITLE        = {Response Times: The 3 Important Limits},
+  AUTHOR       = {Nielsen, J.},
+  HOWPUBLISHED = {Nielsen Norman Group},
+  YEAR         = {1993},
+  NOTE         = {Originally published in \emph{Usability Engineering}, Morgan Kaufmann, 1993; reprinted online 2010.},
+  URL          = {https://www.nngroup.com/articles/response-times-3-important-limits/}
 }
 
 @article{marikyan_smarthome_2019,
@@ -91,73 +77,55 @@
   DOI       = {10.1016/j.techfore.2018.08.015}
 }
 
-@inproceedings{mqtt_performance,
-  TITLE        = {Performance Evaluation of MQTT Broker in Smart Home System},
-  AUTHOR       = {Mishra, B. and Kertesz, A.},
-  BOOKTITLE    = {2020 IEEE 14th International Symposium on Applied Computational Intelligence and Informatics (SACI)},
-  PAGES        = {155--160},
-  YEAR         = {2020},
-  ORGANIZATION = {IEEE}
-}
-
 @article{mqtt_standard_iot,
-  TITLE     = {MQTT protocol: fundamentals, tools and future directions},
-  AUTHOR    = {Mishra, B. and Kertesz, A.},
+  TITLE     = {The Use of {MQTT} in {M2M} and {IoT} Systems: A Survey},
+  AUTHOR    = {Mishra, Biswajeeban and Kert{\'e}sz, Attila},
   JOURNAL   = {IEEE Access},
   VOLUME    = {8},
-  PAGES     = {164104--164121},
+  PAGES     = {201071--201086},
   YEAR      = {2020},
-  PUBLISHER = {IEEE}
-}
-
-@article{mqtt_vs_http_iot_perf,
-  TITLE     = {Performance evaluation of MQTT and HTTP protocols for IoT applications},
-  AUTHOR    = {Naik, N.},
-  JOURNAL   = {2017 IEEE International Symposium on Systems Engineering (ISSE)},
-  PAGES     = {1--6},
-  YEAR      = {2017},
   PUBLISHER = {IEEE},
-  DOI       = {10.1109/SysEng.2017.8088251}
+  DOI       = {10.1109/ACCESS.2020.3035849}
 }
 
-@article{opensource_smarthome_platforms,
-  TITLE     = {A comparative analysis of open source smart home platforms},
-  AUTHOR    = {Ferdoush, S. and Li, X.},
-  JOURNAL   = {IEEE Transactions on Consumer Electronics},
-  VOLUME    = {60},
-  NUMBER    = {4},
-  PAGES     = {616--621},
-  YEAR      = {2014},
-  PUBLISHER = {IEEE}
+@inproceedings{mqtt_vs_http_iot_perf,
+  TITLE        = {Choice of effective messaging protocols for {IoT} systems: {MQTT}, {CoAP}, {AMQP} and {HTTP}},
+  AUTHOR       = {Naik, Nitin},
+  BOOKTITLE    = {2017 IEEE International Systems Engineering Symposium (ISSE)},
+  PAGES        = {1--7},
+  YEAR         = {2017},
+  ORGANIZATION = {IEEE},
+  ADDRESS      = {Vienna, Austria},
+  DOI          = {10.1109/SysEng.2017.8088251}
 }
 
-@inproceedings{react_nextjs_ui,
-  TITLE        = {Performance Evaluation of React and Next.js Frameworks for Web Application Development},
-  AUTHOR       = {Kaur, P. and Singh, M.},
-  BOOKTITLE    = {2021 International Conference on Computing, Communication, and Intelligent Systems (ICCCIS)},
-  PAGES        = {315--320},
-  YEAR         = {2021},
-  ORGANIZATION = {IEEE}
+@inproceedings{pautasso_rest_vs_ws,
+  TITLE        = {{RESTful Web Services vs. ``Big'' Web Services}: Making the Right Architectural Decision},
+  AUTHOR       = {Pautasso, Cesare and Zimmermann, Olaf and Leymann, Frank},
+  BOOKTITLE    = {Proceedings of the 17th International Conference on World Wide Web (WWW '08)},
+  PAGES        = {805--814},
+  YEAR         = {2008},
+  ORGANIZATION = {ACM},
+  ADDRESS      = {Beijing, China},
+  DOI          = {10.1145/1367497.1367606}
 }
 
-@article{rest_api_architecture,
-  TITLE     = {RESTful Web Services: A Tutorial},
-  AUTHOR    = {Pautasso, Cesare and Zimmermann, Olaf and Leymann, Frank},
-  JOURNAL   = {IEEE Internet Computing},
-  VOLUME    = {18},
-  NUMBER    = {1},
-  PAGES     = {65--71},
-  YEAR      = {2014},
-  PUBLISHER = {IEEE}
+@phdthesis{fielding_rest_dissertation,
+  TITLE        = {Architectural Styles and the Design of Network-based Software Architectures},
+  AUTHOR       = {Fielding, Roy T.},
+  YEAR         = {2000},
+  SCHOOL       = {University of California, Irvine},
+  URL          = {https://roy.gbiv.com/pubs/dissertation/top.htm}
 }
 
 @article{vendor_lockin_iot,
-  TITLE     = {Interoperability in the Internet of Things: Context, challenges, and future directions},
-  AUTHOR    = {Noura, Maha and Atiquzzaman, Mohammed and Gaedke, Martin},
-  JOURNAL   = {IEEE Internet of Things Journal},
-  VOLUME    = {6},
-  NUMBER    = {2},
-  PAGES     = {2738--2759},
+  TITLE     = {Interoperability in {Internet of Things}: Taxonomies and Open Challenges},
+  AUTHOR    = {Noura, Mahda and Atiquzzaman, Mohammed and Gaedke, Martin},
+  JOURNAL   = {Mobile Networks and Applications},
+  VOLUME    = {24},
+  NUMBER    = {3},
+  PAGES     = {796--809},
   YEAR      = {2019},
-  PUBLISHER = {IEEE}
+  PUBLISHER = {Springer},
+  DOI       = {10.1007/s11036-018-1089-9}
 }

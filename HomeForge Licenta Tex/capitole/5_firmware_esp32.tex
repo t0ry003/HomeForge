@@ -1,0 +1,209 @@
+\chapter{Firmware-ul ESP32 și integrarea hardware}
+
+\section{Alegerea platformei: de ce ESP32}
+Tot firmware-ul livrat cu HomeForge este țintit pe familia Espressif ESP32. Decizia se bazează pe patru argumente practice, nu pe vreo afinitate de brand:
+\begin{enumerate}
+    \item \textbf{Cost.} Modulele ESP32-WROOM-32 (DevKit V1) costă aproximativ 5 euro la achiziție unitară — un termen acceptabil pentru un proiect didactic în care studentul probabil va arde măcar o placă învățând.
+    \item \textbf{Wi-Fi integrat.} Spre deosebire de Arduino UNO, ESP32 include nativ Wi-Fi (802.11 b/g/n), Bluetooth Low Energy și un dual-core la 240 MHz. Nu este nevoie de niciun \textit{shield} adițional pentru conectarea la LAN.
+    \item \textbf{Compatibilitate cu Arduino IDE.} Toolchain-ul ESP-IDF este pentru cei care vor să meargă în profunzime; pentru un demonstrator didactic este suficient framework-ul Arduino-ESP32, cu funcții familiare (\texttt{setup()}, \texttt{loop()}).
+    \item \textbf{Comunitate vastă.} Biblioteci precum \texttt{PubSubClient} (pentru MQTT), \texttt{ArduinoJson} (pentru parsing/serializare JSON) și \texttt{DHT} sunt utilizate de zeci de mii de proiecte și au documentație abundentă.
+\end{enumerate}
+
+% FIGURĂ DE ADĂUGAT: o fotografie sau ilustrație a unui ESP32 DevKit V1 alături de
+% un DHT11, un releu și o breadboard, eventual cu o etichetare a pinilor folosiți.
+% Se poate face un photo simplu pe birou sau o ilustrație Fritzing.
+\begin{figure}[htbp]
+    \centering
+    % \includegraphics[width=0.7\textwidth]{figuri/esp32_devkit_overview.jpg}
+    \caption{Modulul ESP32 DevKit V1 utilizat în prototipurile HomeForge (fotografie de adăugat)}
+    \label{fig:esp32_devkit}
+\end{figure}
+
+\section{Anatomia unui sketch HomeForge}
+Toate firmware-urile din directorul \texttt{backend/firmware/} urmează aceeași structură. Pentru a face explicații concrete, mă voi referi în această secțiune la \texttt{esp32\_mqtt.ino}, care este cea mai completă variantă (suportă simultan DHT11, BMP180 și un releu).
+
+\subsection{Variabile de configurare (placeholder-uri)}
+Primele linii ale fiecărui sketch conțin trei constante marcate cu placeholder-uri Mustache-like:
+\begin{minted}{cpp}
+const char* wifi_ssid = "{{WIFI_SSID}}";
+const char* wifi_password = "{{WIFI_PASSWORD}}";
+const char* server_ip = "{{SERVER_IP}}";
+const int mqtt_port = 1883;
+\end{minted}
+Aceste valori sunt înlocuite în clar de către utilizator înainte de compilare. Numele variabilelor sunt obligatorii — backend-ul refuză să accepte un \texttt{firmware\_code} în care nu se găsesc toate trei (vezi \texttt{CustomDeviceTypeSerializer.validate\_firmware\_code} în \texttt{serializers.py:71-81}). Această verificare împiedică un utilizator să publice un tip de dispozitiv cu un firmware care nu se va putea conecta vreodată la HomeForge.
+
+\subsection{Identitatea dispozitivului: \texttt{deviceMac}}
+La pornire, după conectarea la Wi-Fi, sketch-ul citește adresa MAC a interfeței Wi-Fi a chip-ului și o normalizează:
+\begin{minted}{cpp}
+void setup_wifi() {
+  // ...
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(wifi_ssid, wifi_password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  deviceIp = WiFi.localIP().toString();
+  deviceMac = WiFi.macAddress();
+  deviceMac.replace(":", "");
+  commandTopic = String("homeforge/devices/") + deviceMac + "/command";
+  stateTopic = String("homeforge/devices/") + deviceMac + "/state";
+}
+\end{minted}
+Patru detalii merită semnalate:
+\begin{itemize}
+    \item \texttt{WiFi.mode(WIFI\_STA)} forțează modul \emph{station-only}, oprind orice activitate de soft-AP rămasă din încercări anterioare;
+    \item adresa MAC este formatată implicit de Arduino-ESP32 cu separatori (\texttt{:}); o eliminăm pentru ca topicul MQTT să fie un singur token alfanumeric — același format pe care îl așteaptă \texttt{mqtt\_listener} pe partea de Django;
+    \item topicele MQTT (\texttt{state} și \texttt{command}) sunt construite o singură dată, la pornire, și păstrate ca \texttt{String}-uri globale pentru a evita alocări repetate;
+    \item adresa MAC servește ca identificator unic la nivel de platformă — un dispozitiv care își schimbă IP-ul își păstrează identitatea către backend.
+\end{itemize}
+
+\subsection{Conectarea la broker și subscribe}
+Funcția \texttt{reconnect()} este apelată din \texttt{loop()} ori de câte ori clientul \texttt{PubSubClient} pierde legătura:
+\begin{minted}{cpp}
+void reconnect() {
+  while (!client.connected()) {
+    Serial.print("Connecting to MQTT broker...");
+    String clientId = "ESP32-Full-" + deviceMac;
+    if (client.connect(clientId.c_str())) {
+      Serial.println(" connected!");
+      client.subscribe(commandTopic.c_str());
+      publishState();
+    } else {
+      Serial.print(" failed (rc=");
+      Serial.print(client.state());
+      Serial.println("). Retrying in 5s...");
+      delay(5000);
+    }
+  }
+}
+\end{minted}
+\texttt{clientId} este unic per placă (prefix \texttt{ESP32-Full-} + MAC fără separatori), ceea ce evită deconectările bizare în cazul în care un alt dispozitiv ar folosi același ID. Imediat după conectare, dispozitivul se abonează la topicul propriu de comandă \emph{și} trimite o publicare \texttt{publishState()} — acest mesaj joacă rolul unui \emph{check-in}, suficient pentru ca \texttt{mqtt\_listener} să facă auto-binding-ul descris în Capitolul 3.
+
+\subsection{Telemetria: \texttt{publishState()}}
+Funcția care construiește mesajul de stare folosește \texttt{ArduinoJson} pentru a serializa un document static:
+\begin{minted}{cpp}
+void publishState() {
+  if (!client.connected()) return;
+  StaticJsonDocument<512> doc;
+  doc["ip"] = deviceIp;
+  doc["mac"] = deviceMac;
+  doc[VAR_RELAY] = relayState;
+  doc[VAR_TEMP] = temperature;
+  doc[VAR_HUMID] = humidity;
+  doc[VAR_PRESSURE] = pressure;
+  char buffer[512];
+  serializeJson(doc, buffer);
+  client.publish(stateTopic.c_str(), buffer);
+}
+\end{minted}
+\texttt{StaticJsonDocument<512>} alocă memoria în stivă (nu pe heap), ceea ce este preferat pe microcontrolere unde fragmentarea heap-ului poate cauza eșecuri intermitente după ore de funcționare. Câmpurile \texttt{ip} și \texttt{mac} sunt incluse în payload chiar dacă brokerul le-ar putea infera din topic — sunt utile pentru auto-binding-ul când backend-ul nu cunoaște încă MAC-ul. Constantele \texttt{VAR\_TEMP}, \texttt{VAR\_HUMID}, \texttt{VAR\_PRESSURE}, \texttt{VAR\_RELAY} sunt definite la începutul sketch-ului:
+\begin{minted}{cpp}
+const char* VAR_RELAY = "relay_1";
+const char* VAR_TEMP = "temperature";
+const char* VAR_HUMID = "humidity";
+const char* VAR_PRESSURE = "pressure";
+\end{minted}
+Aceste nume sunt cele „standard”, pe care \texttt{mqtt\_listener.map\_standard\_key()} le translatează către cheile dinamice ale widget-urilor (vezi Capitolul 3).
+
+\subsection{Recepția comenzilor: \texttt{callback()}}
+Callback-ul \texttt{PubSubClient} este apelat de fiecare dată când brokerul publică un mesaj pe un topic la care suntem abonați:
+\begin{minted}{cpp}
+void callback(char* topic, byte* payload, unsigned int length) {
+  String message;
+  for (unsigned int i = 0; i < length; i++) {
+    message += (char)payload[i];
+  }
+  StaticJsonDocument<256> doc;
+  if (deserializeJson(doc, message)) return;
+
+  if (doc.containsKey(VAR_RELAY)) {
+    relayState = doc[VAR_RELAY];
+    digitalWrite(RELAY_PIN, relayState ? HIGH : LOW);
+    publishState();
+  }
+}
+\end{minted}
+Logica este voit redusă: parsarea documentului JSON, identificarea câmpului recunoscut și acționarea pinului GPIO corespunzător. La final, dispozitivul publică imediat starea actualizată prin \texttt{publishState()}, închizând astfel bucla de feedback: backend-ul primește confirmarea că funcția a fost executată și actualizează câmpul \texttt{current\_state} în baza de date, iar frontend-ul preia noua valoare la următoarea iterație a \texttt{refetchInterval} (configurat la 3 secunde).
+
+În varianta extinsă din \texttt{ESP32\_RELAY/firmware.ino}, callback-ul iterează peste toate cheile JSON-ului și acceptă, pe lângă \texttt{relay\_1}, identificatori care încep cu prefixul \texttt{switch-} (folosit de device builder atunci când utilizatorul nu redenumește controlul). De asemenea, parser-ul acceptă valori boolene, string-uri (\texttt{"true"}, \texttt{"on"}, \texttt{"1"}) și întregi, pentru a fi compatibil cu diferite stiluri de payload pe care le poate genera UI-ul:
+\begin{minted}{cpp}
+JsonObject root = doc.as<JsonObject>();
+for (JsonPair kv : root) {
+  String key = kv.key().c_str();
+  if (key == VAR_RELAY || key.startsWith("switch-")) {
+    if (kv.value().is<bool>()) {
+      relayState = kv.value().as<bool>();
+    } else if (kv.value().is<const char*>()) {
+      String val = kv.value().as<String>();
+      val.toLowerCase();
+      relayState = (val == "true" || val == "on" || val == "1");
+    } else if (kv.value().is<int>()) {
+      relayState = kv.value().as<int>() == 1;
+    }
+    break;
+  }
+}
+\end{minted}
+
+\subsection{Bucla principală}
+\texttt{loop()} este structurată în doi pași:
+\begin{minted}{cpp}
+void loop() {
+  if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+
+  unsigned long now = millis();
+  if (now - lastMsg > interval) {
+    lastMsg = now;
+    // citește senzorii și actualizează variabilele
+    temperature = dht.readTemperature();
+    humidity = dht.readHumidity();
+    if (bmp.begin()) pressure = bmp.readPressure() / 100.0;
+    publishState();
+  }
+}
+\end{minted}
+Constanta \texttt{interval = 5000} (5 secunde) este sincronizată cu pragul din \texttt{mqtt\_listener.check\_offline\_devices()} (30 de secunde): primim 6 oportunități de heartbeat ratate înainte ca dispozitivul să fie declarat offline. Pe DHT11 specific, este important să nu mărim frecvența — senzorul are nevoie de minim 1 secundă între citiri pentru o valoare validă; 5 secunde oferă o marjă confortabilă.
+
+\section{Cele patru proiecte template}
+În folderul \texttt{backend/firmware/projects/} există patru proiecte gata pregătite, fiecare cu propriul \texttt{firmware.ino}, fișier de \texttt{wiring.md} (descriere a pinilor) și \texttt{README.md} (descriere tehnică). Acestea sunt referențiate din \texttt{fixtures/default\_device\_types.json} și sunt importate de \texttt{POST /api/device-types/import-defaults/} în prima sesiune cu administratorul.
+
+Cele patru proiecte cresc gradual în complexitate. \textbf{ESP32\_RELAY} este cel mai simplu: un singur releu pe GPIO 5, expus printr-un widget \texttt{TOGGLE} mapat pe \texttt{relay\_1}. \textbf{ESP32\_THERMOSTAT\_DHT11} adaugă un senzor DHT11 pe GPIO 5 și un releu pe GPIO 4 (trei widget-uri: \texttt{TEMPERATURE}, \texttt{HUMIDITY}, \texttt{TOGGLE}). \textbf{ESP32\_THERMOSTAT\_BMP180} înlocuiește DHT11-ul cu un BMP180 pe I2C (SDA = GPIO 21, SCL = GPIO 22) și expune \texttt{TEMPERATURE}, \texttt{PRESSURE}, \texttt{TOGGLE}. \textbf{ESP32\_THERMOSTAT\_DHT11\_BMP180} este versiunea combinată — DHT11 pe GPIO 5, BMP180 pe I2C, releu pe GPIO 4 — cu un card care afișează temperatură, umiditate, presiune și un toggle.
+
+Fiecare \texttt{wiring.md} conține un tabel standard cu pini, plus o listă de biblioteci Arduino necesare și sugestii de siguranță. Exemplu pentru ESP32\_RELAY:
+\begin{table}[htbp]
+    \centering
+    \caption{Conexiunile pinilor pentru proiectul ESP32\_RELAY}
+    \label{tab:esp32_relay_pinout}
+    \renewcommand{\arraystretch}{1.2}
+    \small
+    \begin{tabular}{|l|l|l|l|}
+        \hline
+        \textbf{Modul} & \textbf{Pin} & \textbf{ESP32} & \textbf{Descriere} \\ \hline
+        Releu & VCC & 3V3 & Alimentare 3.3 V \\ \hline
+        Releu & GND & GND & Masă \\ \hline
+        Releu & IN  & GPIO 5 & Semnal de control \\ \hline
+    \end{tabular}
+\end{table}
+
+% FIGURĂ DE ADĂUGAT: schemele electrice (wiring diagrams) ale celor 4 proiecte
+% template — pot fi exportate din KiCad sau desenate în Fritzing. Sugestie:
+% câte o sub-figură mică în două coloane, sau o singură imagine combinată.
+\begin{figure}[htbp]
+    \centering
+    % \includegraphics[width=0.95\textwidth]{figuri/wiring_diagrams.pdf}
+    \caption{Schemele electrice ale celor patru proiecte template (figură de adăugat)}
+    \label{fig:wiring_diagrams}
+\end{figure}
+
+\section{Bibliotecile Arduino utilizate}
+Pentru a compila firmware-ul, IDE-ul Arduino are nevoie de șase biblioteci, instalate prin \emph{Library Manager}: \texttt{WiFi.h} și \texttt{Wire.h} (built-in cu pachetul ESP32 Arduino Core de la Espressif), \texttt{PubSubClient} (Nick O'Leary, client MQTT cu suport QoS 0 și 1), \texttt{ArduinoJson} (Benoit Blanchon, parsing/serializare JSON cu suport pentru documente statice), \texttt{DHT sensor library} (Adafruit, pentru DHT11/DHT22) și \texttt{Adafruit BMP085 Library} (Adafruit, compatibilă cu BMP180). ESP32 Arduino Core se instalează adăugând în \emph{File → Preferences → Additional Boards Manager URLs} adresa \texttt{https://espressif.github.io/arduino-esp32/package\_esp32\_index.json}.
+
+\section{Limitări ale implementării curente}
+Pentru claritate, sunt enumerate în continuare aspectele \emph{neimplementate} în firmware-ul curent: nu sunt utilizate task-uri FreeRTOS create explicit, întrucât bucla \texttt{loop()} împreună cu \texttt{PubSubClient.loop()} este suficientă pentru volumul actual de logică; nu este implementat un \texttt{Captive Portal} pentru configurarea Wi-Fi la prima pornire, SSID-ul și parola fiind înlocuite în cod prin placeholder-uri; comunicarea MQTT nu folosește TLS, ceea ce este acceptabil în context LAN privat, dar pentru un deployment de producție ar trebui adăugate certificate și \texttt{WiFiClientSecure}; nu este implementată actualizarea OTA, re-flash-area realizându-se prin USB-UART. Niciuna dintre aceste limitări nu împiedică utilizarea curentă a platformei și sunt menționate ca direcții posibile de extindere.
+
+\section{Recapitulare}
+Firmware-ul ESP32 reprezintă, ca volum de cod, cea mai redusă componentă a platformei — fiecare sketch are între 150 și 200 de linii. Cu toate acestea, este nivelul la care decizia arhitecturală a HomeForge — comunicare exclusivă prin MQTT, format de mesaje transparent — devine direct observabilă: traficul generat de o placă poate fi inspectat prin \texttt{mosquitto\_sub -t "homeforge/devices/+/state"}, iar conținutul mesajelor recepționate de backend este identificabil cu corespondentul lor de pe placă. În contextul unui proiect cu obiective didactice, această observabilitate constituie un atribut central al platformei, conform argumentelor prezentate în Capitolul 1.
