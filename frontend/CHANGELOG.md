@@ -1,5 +1,51 @@
 # HomeForge Frontend Changelog
 
+## [2026-06-05] - Solar power-flow feature
+
+### Added
+- **File**: `app/dashboard/solar/page.tsx`
+- **Description**: New top-level Solar page showing a live, Fronius SolarWeb / Tesla-style power-flow view for a registered solar system. Polls the normalized overview endpoint every 5s (paused in background), renders loading skeletons, an empty state, and an offline banner driven by `status.message`. Admins/owners can add, edit, and delete the system; all roles can view.
+- **Impact**: New route reachable from the sidebar; breadcrumb auto-derives "Dashboard › Solar".
+
+- **File**: `components/solar/PowerFlowDiagram.tsx`
+- **Description**: Animated SVG power-flow diagram with PV, Grid, Home, and (conditional) Battery nodes around a central hub. Flow direction/visibility derive from signed `power.*` values; battery node only renders when `battery.present`.
+- **Dependencies**: None (uses existing CSS keyframe animation).
+
+- **File**: `components/solar/SolarStatCards.tsx`
+- **Description**: Stat card grid for production, consumption, grid, battery SOC, energy today/year/total, self-consumption %, and autonomy %. Null energy/ratio values render as "—".
+
+- **File**: `components/solar/LivePowerChart.tsx`
+- **Description**: Session-only live power chart that accumulates polled overview samples in memory (backend exposes no time-series history yet). Built with the shadcn chart wrapper over recharts.
+- **Dependencies**: `recharts`, `components/ui/chart.tsx`.
+
+- **File**: `components/solar/SolarSystemDialog.tsx`
+- **Description**: Admin add/edit dialog with name, API URL, and provider fields. Surfaces the backend connectivity validation error via toast.
+
+- **File**: `components/solar/SolarEmptyState.tsx`
+- **Description**: Empty state with an admin-only "Add solar system" CTA.
+
+- **File**: `components/solar/solar-utils.ts`
+- **Description**: Power/energy/percent formatting helpers and `deriveFlows` for power-flow leg derivation.
+
+- **File**: `lib/solar-types.ts`
+- **Description**: TypeScript interfaces for `SolarSystem`, `SolarOverview`, and related types matching the backend contract (API_GUIDE §10).
+
+- **File**: `components/ui/chart.tsx`
+- **Description**: shadcn chart wrapper (`ChartContainer`, `ChartTooltip`, etc.). Tooltip/legend prop typings adjusted for recharts 3.8 compatibility.
+- **Dependencies**: `recharts`.
+
+### Changed
+- **File**: `lib/apiClient.js`
+- **Description**: Added Solar API functions `fetchSolarSystems`, `createSolarSystem`, `updateSolarSystem`, `deleteSolarSystem`, and `fetchSolarOverview(id)` mirroring the existing Rooms CRUD style.
+- **Impact**: Enables the Solar page data layer.
+
+- **File**: `components/app-sidebar.tsx`
+- **Description**: Added a "Solar" nav item (Sun icon) to the base navigation, visible to all roles.
+- **Impact**: Solar page is now discoverable in the sidebar.
+
+- **File**: `package.json`
+- **Description**: Added `recharts` dependency for solar charts.
+
 ## [2026-05-14] - Unified navigation labels, persistent device name, wiring image sync, mobile UX
 
 ### Changed

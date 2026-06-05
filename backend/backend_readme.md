@@ -240,6 +240,15 @@ HomeForge is an open-source smart home management system designed for DIY IoT en
 - **State Persistence**: Firmware saves state to NVS (flash) to restore ON/OFF status after power loss.
 - **Auto-Discovery**: Devices self-report capabilities and IP/MAC via mDNS and MQTT.
 
+### 12. Solar / Energy Integration
+
+- **Link-only storage**: A `SolarSystem` stores only the base URL to an external vendor API (e.g. Fronius) plus a provider key — no credentials or scraped data.
+- **Backend proxy + normalizer**: The backend fetches vendor raw JSON server-side (avoiding browser CORS and private-IP limitations) and maps it to a provider-agnostic schema.
+- **Reusable provider adapters**: `api/solar/` uses an adapter/registry pattern (`FroniusProvider` first) so new vendors require only a new adapter — the API contract and UI stay unchanged.
+- **Normalized power flow**: `/solar/systems/{id}/overview/` returns solar/grid/load/battery power (W), SOC, energy counters (Wh), and self-consumption/autonomy ratios with consistent sign conventions for a reusable Tesla-style flow UI.
+- **Rate-limit aware**: Realtime overview responses are cached (~8s) to respect vendor throttling; clients poll every 5–10s.
+- **Graceful offline state**: Unreachable/disabled systems return `online: false` with a status message instead of a hard error.
+
 ---
 
 ## Data Models
