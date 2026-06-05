@@ -37,6 +37,11 @@ from .views import (
     AdminDashboardLayoutView,
     DeviceOrderView,
 )
+from .views_solar import (
+    SolarSystemListCreateView,
+    SolarSystemDetailView,
+    SolarOverviewView,
+)
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -92,4 +97,9 @@ urlpatterns = [
     path('dashboard-layout/', DashboardLayoutView.as_view(), name='dashboard-layout'),
     path('admin/dashboard-layout/', AdminDashboardLayoutView.as_view(), name='admin-dashboard-layout'),
     path('device-order/', DeviceOrderView.as_view(), name='device-order'),
+
+    # Solar Endpoints
+    path('solar/systems/', SolarSystemListCreateView.as_view(), name='solar-system-list-create'),
+    path('solar/systems/<int:pk>/', SolarSystemDetailView.as_view(), name='solar-system-detail'),
+    path('solar/systems/<int:pk>/overview/', SolarOverviewView.as_view(), name='solar-system-overview'),
 ]

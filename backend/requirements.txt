@@ -6,3 +6,4 @@ psycopg2-binary
 djangorestframework-simplejwt
 Pillow
 paho-mqtt
+requests

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from .models import Profile, Device, Room, CustomDeviceType, DeviceCardTemplate, DeviceControl, Notification, DashboardLayout
+from .models import Profile, Device, Room, CustomDeviceType, DeviceCardTemplate, DeviceControl, Notification, DashboardLayout, SolarSystem
 
 
 class DeviceControlSerializer(serializers.ModelSerializer):
@@ -517,4 +517,35 @@ class DashboardLayoutSerializer(serializers.Serializer):
         if user:
             self._check_devices_exist(all_device_ids, user, skip_ownership=skip_ownership)
 
+        return value
+
+
+class SolarSystemSerializer(serializers.ModelSerializer):
+    """Serializer for registered solar/energy data sources."""
+
+    class Meta:
+        model = SolarSystem
+        fields = [
+            'id',
+            'name',
+            'base_url',
+            'provider',
+            'enabled',
+            'api_version',
+            'capabilities',
+            'last_seen',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'api_version', 'capabilities', 'last_seen', 'created_at', 'updated_at']
+
+    def validate_name(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("Name cannot be empty.")
+        return value.strip()
+
+    def validate_base_url(self, value):
+        value = value.strip().rstrip('/')
+        if not value:
+            raise serializers.ValidationError("Base URL cannot be empty.")
         return value
