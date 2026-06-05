@@ -450,3 +450,182 @@ class DashboardLayoutAPITest(APITestCase):
     def test_device_order_unauthenticated(self):
         response = self.client.get('/api/device-order/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+
+# --- Solar feature tests -------------------------------------------------
+
+from unittest import mock
+
+from .models import SolarSystem
+from .solar.client import SolarApiError, SolarDisabled, SolarUnreachable
+from .solar.providers.fronius import FroniusProvider
+
+
+# Sample GetPowerFlowRealtimeData.fcgi payload: hybrid system with battery + meter.
+FRONIUS_HYBRID = {
+    "Head": {"Status": {"Code": 0, "Reason": "", "UserMessage": ""},
+             "Timestamp": "2026-06-04T12:00:00+00:00"},
+    "Body": {"Data": {
+        "Site": {
+            "Mode": "bidirectional",
+            "P_Grid": -1500.0,      # exporting 1500 W
+            "P_Load": -800.0,       # consuming 800 W (Fronius sign)
+            "P_Akku": 500.0,        # charging 500 W
+            "P_PV": 2800.0,
+            "rel_SelfConsumption": 46.4,
+            "rel_Autonomy": 100.0,
+            "E_Day": 12345.0,
+            "E_Year": 1234567.0,
+            "E_Total": 12345678.0,
+            "BatteryStandby": False,
+        },
+        "Inverters": {"1": {"DT": 1, "P": 2800.0, "SOC": 87.0, "Battery_Mode": "normal"}},
+    }},
+}
+
+# GEN24 produce-only: no meter, energy counters null.
+FRONIUS_PRODUCE_ONLY = {
+    "Head": {"Status": {"Code": 0, "Reason": "", "UserMessage": ""},
+             "Timestamp": "2026-06-04T12:00:00+00:00"},
+    "Body": {"Data": {
+        "Site": {
+            "Mode": "produce-only",
+            "P_Grid": None,
+            "P_Load": None,
+            "P_Akku": None,
+            "P_PV": 1200.0,
+            "rel_SelfConsumption": None,
+            "rel_Autonomy": None,
+            "E_Day": None,
+            "E_Year": None,
+            "E_Total": None,
+        },
+        "Inverters": {"1": {"DT": 1, "P": 1200.0}},
+    }},
+}
+
+FRONIUS_ERROR = {
+    "Head": {"Status": {"Code": 255, "Reason": "Internal error", "UserMessage": "Device busy"}},
+    "Body": {"Data": {}},
+}
+
+
+class FroniusProviderTest(TestCase):
+    """Maps raw Fronius JSON onto the normalized schema (no live network)."""
+
+    def setUp(self):
+        self.provider = FroniusProvider('http://fronius.local:9999')
+
+    def test_hybrid_overview_mapping(self):
+        with mock.patch('api.solar.providers.fronius.fetch_json', return_value=FRONIUS_HYBRID):
+            ov = self.provider.get_overview()
+
+        self.assertTrue(ov['online'])
+        self.assertEqual(ov['provider'], 'fronius')
+        self.assertEqual(ov['mode'], FroniusProvider.MODE_BIDIRECTIONAL)
+        self.assertEqual(ov['power']['solarW'], 2800.0)
+        self.assertEqual(ov['power']['gridW'], -1500.0)
+        # Load is normalized to positive consumption.
+        self.assertEqual(ov['power']['loadW'], 800.0)
+        self.assertEqual(ov['power']['batteryW'], 500.0)
+        self.assertTrue(ov['battery']['present'])
+        self.assertEqual(ov['battery']['socPct'], 87.0)
+        self.assertEqual(ov['energy']['totalWh'], 12345678.0)
+        self.assertTrue(ov['capabilities']['battery'])
+        self.assertTrue(ov['capabilities']['meter'])
+
+    def test_produce_only_nulls_and_mode(self):
+        with mock.patch('api.solar.providers.fronius.fetch_json', return_value=FRONIUS_PRODUCE_ONLY):
+            ov = self.provider.get_overview()
+
+        self.assertEqual(ov['mode'], FroniusProvider.MODE_PRODUCE_ONLY)
+        self.assertEqual(ov['power']['solarW'], 1200.0)
+        self.assertIsNone(ov['power']['gridW'])
+        self.assertIsNone(ov['power']['loadW'])
+        self.assertIsNone(ov['energy']['todayWh'])
+        self.assertFalse(ov['battery']['present'])
+        self.assertFalse(ov['capabilities']['meter'])
+
+    def test_error_envelope_raises(self):
+        with mock.patch('api.solar.providers.fronius.fetch_json', return_value=FRONIUS_ERROR):
+            with self.assertRaises(SolarApiError):
+                self.provider.get_overview()
+
+
+class SolarSystemAPITest(APITestCase):
+    """Tests for SolarSystem CRUD + overview endpoints."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='soluser', password='TestPass1')
+        self.admin = User.objects.create_user(username='soladmin', password='TestPass1')
+        self.admin.profile.role = Profile.ROLE_ADMIN
+        self.admin.profile.save()
+        self.client = APIClient()
+
+    def test_create_requires_admin(self):
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post('/api/solar/systems/', {
+            'name': 'My PV', 'base_url': 'http://fronius.local:9999', 'provider': 'fronius',
+        }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_create_validates_link(self):
+        self.client.force_authenticate(user=self.admin)
+        discovery = {'api_version': '1', 'capabilities': {'battery': True, 'meter': True, 'history': True}}
+        with mock.patch('api.views_solar.get_provider') as gp:
+            gp.return_value.discover.return_value = discovery
+            response = self.client.post('/api/solar/systems/', {
+                'name': 'My PV', 'base_url': 'http://fronius.local:9999', 'provider': 'fronius',
+            }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(SolarSystem.objects.count(), 1)
+        self.assertEqual(SolarSystem.objects.first().api_version, '1')
+
+    def test_admin_create_unreachable_returns_400(self):
+        self.client.force_authenticate(user=self.admin)
+        with mock.patch('api.views_solar.get_provider') as gp:
+            gp.return_value.discover.side_effect = SolarUnreachable('nope')
+            response = self.client.post('/api/solar/systems/', {
+                'name': 'My PV', 'base_url': 'http://bad.local:9999', 'provider': 'fronius',
+            }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('base_url', response.data)
+
+    def test_overview_offline_when_unreachable(self):
+        system = SolarSystem.objects.create(
+            name='PV', base_url='http://fronius.local:9999', provider='fronius', user=self.admin,
+        )
+        self.client.force_authenticate(user=self.user)
+        with mock.patch('api.views_solar.get_provider') as gp:
+            gp.return_value.get_overview.side_effect = SolarUnreachable('down')
+            response = self.client.get(f'/api/solar/systems/{system.id}/overview/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertFalse(response.data['online'])
+
+    def test_overview_disabled_state(self):
+        system = SolarSystem.objects.create(
+            name='PV', base_url='http://fronius.local:9999', provider='fronius', user=self.admin,
+        )
+        self.client.force_authenticate(user=self.user)
+        with mock.patch('api.views_solar.get_provider') as gp:
+            gp.return_value.get_overview.side_effect = SolarDisabled('disabled')
+            response = self.client.get(f'/api/solar/systems/{system.id}/overview/')
+        self.assertFalse(response.data['online'])
+        self.assertIn('disabled', response.data['status']['message'].lower())
+
+    def test_list_accessible_to_any_authenticated(self):
+        SolarSystem.objects.create(
+            name='PV', base_url='http://fronius.local:9999', provider='fronius', user=self.admin,
+        )
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get('/api/solar/systems/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data['results'] if isinstance(response.data, dict) else response.data
+        self.assertEqual(len(results), 1)
+
+    def test_overview_unauthenticated_denied(self):
+        system = SolarSystem.objects.create(
+            name='PV', base_url='http://fronius.local:9999', provider='fronius', user=self.admin,
+        )
+        response = self.client.get(f'/api/solar/systems/{system.id}/overview/')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
