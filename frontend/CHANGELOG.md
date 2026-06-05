@@ -1,5 +1,19 @@
 # HomeForge Frontend Changelog
 
+## [2026-06-05] - Solar diagram polish, chart scaling, mobile sidebar
+
+### Changed
+- **File**: `components/solar/PowerFlowDiagram.tsx`
+- **Description**: Removed the "Inverter" center label (it was crossed by the flow lines). Idle detection now uses a 1 W magnitude threshold for all sides (solar, home, grid, battery), so any ~0 W reading greys out consistently — not just the grid. Inactive nodes now render a clearly muted, dashed state with dimmed value text instead of a subtle grayscale.
+- **Impact**: Clearer at-a-glance read of which legs are actually flowing.
+
+- **File**: `components/solar/LivePowerChart.tsx`
+- **Description**: Chart now stretches to fill the card height (flex column + `aspect-auto h-full`) instead of a fixed 220px, so it no longer occupies only half the card on large screens. Retains a 220px minimum.
+
+- **File**: `components/nav-main.tsx`
+- **Description**: Clicking a sidebar nav item (top-level or sub-item) now auto-closes the mobile off-canvas sidebar via `useSidebar().setOpenMobile(false)`.
+- **Impact**: On phones the menu dismisses itself on navigation instead of requiring a tap elsewhere.
+
 ## [2026-06-05] - Solar power-flow refinements
 
 ### Changed
