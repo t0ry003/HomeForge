@@ -1,9 +1,9 @@
 # HomeForge API Guide
 
-> **Version:** 1.9.0  
+> **Version:** 1.9.2  
 > **Base URL:** `http://localhost:8000/api/`  
 > **Authentication:** JWT (JSON Web Tokens)  
-> **Last Updated:** June 4, 2026
+> **Last Updated:** June 5, 2026
 
 A comprehensive API reference for the HomeForge smart home management platform. This guide is designed for frontend developers and AI agents to build complete user interfaces.
 
@@ -1673,6 +1673,30 @@ Get a visual representation of the smart home network for rendering with graph l
         "borderRadius": "5px",
         "background": "white"
       }
+    },
+    {
+      "id": "solar-3",
+      "type": "solar",
+      "data": {
+        "label": "Rooftop PV",
+        "ip": "http://192.168.1.50",
+        "status": "online",
+        "room": "Solar",
+        "device_type": "Solar System",
+        "provider": "fronius",
+        "icon": "fa-sun",
+        "is_solar": true
+      },
+      "position": { "x": -388.9, "y": 388.9 },
+      "style": {
+        "width": 180,
+        "borderColor": "#10B981",
+        "borderWidth": "2px",
+        "borderStyle": "solid",
+        "padding": "10px",
+        "borderRadius": "5px",
+        "background": "white"
+      }
     }
   ],
   "edges": [
@@ -1695,6 +1719,9 @@ Get a visual representation of the smart home network for rendering with graph l
 |------|-------------|
 | `input` | Central gateway/server node |
 | `device` | IoT device node |
+| `solar` | Registered solar system. Always rendered with a single sun icon (`fa-sun`) and `is_solar: true`. Online/offline reflects the most recent successful overview poll. |
+
+> **Solar nodes:** Each registered solar system (see [Section 10](#10-solar--energy-integration)) appears as one node with id `solar-{id}`. Its `online`/`offline` status is derived from a recent successful `/overview/` poll (cached snapshot or `last_seen` within the last 90 seconds) — the topology endpoint never makes a blocking vendor API call, so it respects provider rate limits. Disabled systems always show as `offline`.
 
 **Status Colors:**
 | Status | Color |
@@ -1703,7 +1730,7 @@ Get a visual representation of the smart home network for rendering with graph l
 | `offline` | `#EF4444` (red) |
 | `error` | `#F59E0B` (amber) |
 
-**Layout:** Radial positioning with gateway at center (0, 0) and devices distributed in a circle.
+**Layout:** Radial positioning with gateway at center (0, 0), devices distributed in an inner circle (radius 350), and solar systems on an outer ring (radius 550).
 
 ---
 
@@ -1986,7 +2013,7 @@ Returns a paginated list of registered solar systems.
       "provider": "fronius",
       "enabled": true,
       "api_version": "1",
-      "capabilities": { "history": true, "battery": true, "meter": true },
+      "capabilities": { "battery": true, "meter": true },
       "last_seen": "2026-06-04T12:00:00+00:00",
       "created_at": "2026-06-04T10:00:00+00:00",
       "updated_at": "2026-06-04T12:00:00+00:00"
@@ -2071,7 +2098,7 @@ Returns the live, normalized power-flow snapshot. The backend caches the result 
     "selfConsumptionPct": 46.4,
     "autonomyPct": 100.0
   },
-  "capabilities": { "history": true, "battery": true, "meter": true },
+  "capabilities": { "battery": true, "meter": true },
   "status": { "code": 0, "message": "OK" }
 }
 ```
@@ -2102,7 +2129,7 @@ Any unavailable datapoint is `null`. Drive animated flow arrows from `power.*`: 
   "battery": { "present": false, "socPct": null, "mode": null, "standby": null },
   "energy": { "todayWh": null, "yearWh": null, "totalWh": null },
   "ratios": { "selfConsumptionPct": null, "autonomyPct": null },
-  "capabilities": { "history": true, "battery": true, "meter": true },
+  "capabilities": { "battery": true, "meter": true },
   "status": { "code": null, "message": "System is unreachable." }
 }
 ```
@@ -2325,7 +2352,6 @@ interface SolarSystem {
 }
 
 interface SolarCapabilities {
-  history: boolean;
   battery: boolean;
   meter: boolean;
 }
@@ -2366,7 +2392,7 @@ interface SolarOverview {
 ```typescript
 interface TopologyNode {
   id: string;
-  type: 'input' | 'device';
+  type: 'input' | 'device' | 'solar';
   data: {
     label: string;
     ip: string;
@@ -2375,6 +2401,8 @@ interface TopologyNode {
     device_type?: string;
     icon?: string;
     current_state?: Record<string, any>;
+    provider?: string;       // solar nodes only
+    is_solar?: boolean;      // true for solar system nodes
   };
   position: { x: number; y: number };
   style: Record<string, any>;

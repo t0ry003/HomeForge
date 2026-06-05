@@ -1,5 +1,21 @@
 # HomeForge Frontend Changelog
 
+## [2026-06-05] - Solar power-flow refinements
+
+### Changed
+- **File**: `components/solar/PowerFlowDiagram.tsx`
+- **Description**: Center hub now renders an inverter icon (CircuitBoard) instead of a plain dot. Node icons are anchored precisely on their center so connecting traces meet the circle centers; node labels/values were repositioned (solar text above its icon) to stop traces overlapping the value text. Inactive sides (0 W — e.g. solar at night) now render a greyed/blurred icon and a dimmed, slow-pulsing idle trace. Sizing is responsive for mobile.
+- **Impact**: Clearer, correctly-aligned, mobile-friendly power-flow diagram.
+
+- **File**: `components/solar/SolarStatCards.tsx`
+- **Description**: Removed cumulative energy cards (today / this year / total) — unreliable for Fronius. Only live "now" values remain (production, consumption, grid, battery, self-consumption, autonomy).
+
+- **File**: `components/solar/LivePowerChart.tsx`
+- **Description**: Added an always-visible legend so the Solar/Home/Grid lines are identifiable without hovering; updated copy to "Data collected since this page was opened".
+
+- **File**: `app/dashboard/solar/page.tsx`
+- **Description**: Title now matches the Topology page style (icon + "Solar") with equivalent top spacing; header and action buttons made mobile-friendly; diagram card padding is responsive.
+
 ## [2026-06-05] - Solar power-flow feature
 
 ### Added
