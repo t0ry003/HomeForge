@@ -9,7 +9,7 @@ from .serializers import (
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework import status
 from rest_framework.response import Response
-from .models import Device, Room, CustomDeviceType, DeviceCardTemplate, DeviceControl, Notification, DashboardLayout
+from .models import Device, Room, CustomDeviceType, DeviceCardTemplate, DeviceControl, Notification, DashboardLayout, SolarSystem
 from .permissions import IsAdmin, IsOwner
 from django.core.cache import cache
 from django.conf import settings
@@ -365,6 +365,82 @@ class TopologyView(views.APIView):
                 "target": node_id,
                 "animated": device.status == Device.STATUS_ONLINE,
                 "style": { 
+                    "stroke": status_color,
+                    "strokeWidth": 2
+                },
+            })
+
+        # Solar System Nodes (one sun icon per registered system)
+        # Online/offline is derived from the most recent successful overview
+        # (cached) or a recent ``last_seen`` timestamp, so the topology never
+        # triggers a blocking vendor API call (respecting provider rate limits).
+        from django.utils import timezone
+        from datetime import timedelta
+
+        solar_systems = list(
+            SolarSystem.objects.only(
+                'id', 'name', 'base_url', 'provider', 'enabled', 'last_seen'
+            )
+        )
+        solar_count = len(solar_systems)
+        solar_radius = 550
+        liveness_window = timedelta(seconds=90)
+        now = timezone.now()
+
+        for index, system in enumerate(solar_systems):
+            angle = (2 * math.pi * index) / solar_count if solar_count > 0 else 0
+            # Offset slightly so solar nodes sit between device spokes
+            angle += math.pi / (solar_count * 2) if solar_count > 0 else 0
+            x_pos = solar_radius * math.cos(angle)
+            y_pos = solar_radius * math.sin(angle)
+
+            node_id = f"solar-{system.id}"
+
+            cached_overview = cache.get(f"solar_overview_{system.id}")
+            if not system.enabled:
+                solar_status = Device.STATUS_OFFLINE
+            elif cached_overview is not None and cached_overview.get("online"):
+                solar_status = Device.STATUS_ONLINE
+            elif system.last_seen and (now - system.last_seen) <= liveness_window:
+                solar_status = Device.STATUS_ONLINE
+            else:
+                solar_status = Device.STATUS_OFFLINE
+
+            status_color = status_colors.get(solar_status, "#EF4444")
+            is_online = solar_status == Device.STATUS_ONLINE
+
+            nodes.append({
+                "id": node_id,
+                "type": "solar",
+                "data": {
+                    "label": system.name,
+                    "ip": system.base_url,
+                    "status": solar_status,
+                    "room": "Solar",
+                    "device_type": "Solar System",
+                    "provider": system.provider,
+                    "icon": "fa-sun",
+                    "is_solar": True,
+                },
+                "position": { "x": x_pos, "y": y_pos },
+                "style": {
+                    "width": 180,
+                    "borderColor": status_color,
+                    "borderWidth": "2px",
+                    "borderStyle": "solid",
+                    "padding": "10px",
+                    "borderRadius": "5px",
+                    "background": "white",
+                    "opacity": 1.0 if is_online else 0.6
+                }
+            })
+
+            edges.append({
+                "id": f"edge-{gateway_id}-{node_id}",
+                "source": gateway_id,
+                "target": node_id,
+                "animated": is_online,
+                "style": {
                     "stroke": status_color,
                     "strokeWidth": 2
                 },
