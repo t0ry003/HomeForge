@@ -13,6 +13,7 @@ import {
   Users,
   Bug,
   Package,
+  Sun,
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -68,6 +69,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         title: "Topology",
         url: "/dashboard/topology",
         icon: Network,
+      },
+      {
+        title: "Solar",
+        url: "/dashboard/solar",
+        icon: Sun,
       },
       {
         title: "Settings",

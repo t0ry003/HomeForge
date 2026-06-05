@@ -210,6 +210,48 @@ export async function deleteRoom(id) {
   return true;
 }
 
+// --- Solar ---
+
+export async function fetchSolarSystems() {
+  const res = await fetchWithAuth(`${getApiBase()}/solar/systems/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch solar systems');
+  return res.json();
+}
+
+export async function createSolarSystem(data) {
+  const res = await fetchWithAuth(`${getApiBase()}/solar/systems/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to create solar system');
+  return res.json();
+}
+
+export async function updateSolarSystem(id, data) {
+  const res = await fetchWithAuth(`${getApiBase()}/solar/systems/${id}/`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to update solar system');
+  return res.json();
+}
+
+export async function deleteSolarSystem(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/solar/systems/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to delete solar system');
+  return true;
+}
+
+export async function fetchSolarOverview(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/solar/systems/${id}/overview/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch solar overview');
+  return res.json();
+}
+
 // --- Users (Admin) ---
 
 export async function fetchUsers() {
