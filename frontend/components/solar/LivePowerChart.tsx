@@ -70,20 +70,23 @@ export function LivePowerChart({ overview }: { overview: SolarOverview }) {
   }, [overview])
 
   return (
-    <Card>
+    <Card className="flex h-full flex-col">
       <CardHeader>
         <CardTitle>Live power</CardTitle>
         <CardDescription>
           Data collected since this page was opened
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex min-h-0 flex-1 flex-col">
         {samples.length < 2 ? (
-          <div className="flex h-[220px] items-center justify-center text-sm text-muted-foreground">
+          <div className="flex min-h-[220px] flex-1 items-center justify-center text-sm text-muted-foreground">
             Collecting live data…
           </div>
         ) : (
-          <ChartContainer config={chartConfig} className="h-[220px] w-full">
+          <ChartContainer
+            config={chartConfig}
+            className="aspect-auto h-full min-h-[220px] w-full flex-1"
+          >
             <AreaChart data={samples} margin={{ left: 4, right: 4, top: 8 }}>
               <CartesianGrid vertical={false} />
               <XAxis

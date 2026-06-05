@@ -13,7 +13,7 @@ interface NodeProps {
   x: number
   y: number
   icon: React.ReactNode
-  label: string
+  label?: string
   value?: string
   accent: string
   active: boolean
@@ -46,26 +46,35 @@ function FlowNode({
               : "h-12 w-12 sm:h-14 sm:w-14",
             active
               ? accent
-              : "border-muted text-muted-foreground opacity-40 grayscale"
+              : "border-dashed border-muted-foreground/25 bg-muted/40 text-muted-foreground/40"
           )}
         >
           {icon}
         </div>
-        <div
-          className={cn(
-            "absolute flex flex-col items-center gap-0.5 whitespace-nowrap text-center",
-            textPos === "top" ? "bottom-full mb-1.5" : "top-full mt-1.5"
-          )}
-        >
-          <span className="text-[10px] font-medium text-muted-foreground sm:text-xs">
-            {label}
-          </span>
-          {value && (
-            <span className="text-xs font-semibold tabular-nums sm:text-sm">
-              {value}
-            </span>
-          )}
-        </div>
+        {(label || value) && (
+          <div
+            className={cn(
+              "absolute flex flex-col items-center gap-0.5 whitespace-nowrap text-center",
+              textPos === "top" ? "bottom-full mb-1.5" : "top-full mt-1.5"
+            )}
+          >
+            {label && (
+              <span className="text-[10px] font-medium text-muted-foreground sm:text-xs">
+                {label}
+              </span>
+            )}
+            {value && (
+              <span
+                className={cn(
+                  "text-xs font-semibold tabular-nums sm:text-sm",
+                  !active && "text-muted-foreground/50"
+                )}
+              >
+                {value}
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -107,12 +116,14 @@ const BATTERY: [number, number] = [50, 84]
 export function PowerFlowDiagram({ overview }: { overview: SolarOverview }) {
   const { power, battery, online } = overview
 
-  const solarActive = (power.solarW ?? 0) > 0
-  const homeActive = (power.loadW ?? 0) > 0
-  const importing = (power.gridW ?? 0) > 0
-  const exporting = (power.gridW ?? 0) < 0
-  const charging = (power.batteryW ?? 0) > 0
-  const discharging = (power.batteryW ?? 0) < 0
+  // Treat anything below 1 W (in magnitude) as idle so near-zero readings
+  // grey out the same way an exact 0 W does.
+  const solarActive = (power.solarW ?? 0) >= 1
+  const homeActive = (power.loadW ?? 0) >= 1
+  const importing = (power.gridW ?? 0) >= 1
+  const exporting = (power.gridW ?? 0) <= -1
+  const charging = (power.batteryW ?? 0) >= 1
+  const discharging = (power.batteryW ?? 0) <= -1
   const showBattery = battery.present
 
   return (
@@ -170,7 +181,6 @@ export function PowerFlowDiagram({ overview }: { overview: SolarOverview }) {
         y={HUB[1]}
         hub
         icon={<CircuitBoard className="h-7 w-7 sm:h-8 sm:w-8" />}
-        label="Inverter"
         accent="border-primary text-primary"
         active={online}
       />
