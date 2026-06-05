@@ -495,7 +495,7 @@ class SolarSystem(models.Model):
     capabilities = models.JSONField(
         default=dict,
         blank=True,
-        help_text="Cached capability flags, e.g. {'history': false, 'battery': true}"
+        help_text="Cached capability flags, e.g. {'battery': true, 'meter': true}"
     )
     last_seen = models.DateTimeField(null=True, blank=True, help_text="Last successful fetch")
 

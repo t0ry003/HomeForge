@@ -131,7 +131,6 @@ class FroniusProvider(BaseSolarProvider):
                 'autonomyPct': _to_float(site.get('rel_Autonomy')),
             },
             'capabilities': {
-                'history': True,   # classic loggers support GetArchiveData
                 'battery': has_battery,
                 'meter': has_meter,
             },

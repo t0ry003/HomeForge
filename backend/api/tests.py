@@ -571,7 +571,7 @@ class SolarSystemAPITest(APITestCase):
 
     def test_admin_create_validates_link(self):
         self.client.force_authenticate(user=self.admin)
-        discovery = {'api_version': '1', 'capabilities': {'battery': True, 'meter': True, 'history': True}}
+        discovery = {'api_version': '1', 'capabilities': {'battery': True, 'meter': True}}
         with mock.patch('api.views_solar.get_provider') as gp:
             gp.return_value.discover.return_value = discovery
             response = self.client.post('/api/solar/systems/', {

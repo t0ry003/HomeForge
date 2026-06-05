@@ -34,7 +34,7 @@ Normalized "overview" schema (the frontend contract)::
             "selfConsumptionPct": 100.0 | null,
             "autonomyPct": 100.0 | null
         },
-        "capabilities": {"history": false, "battery": true, "meter": true},
+        "capabilities": {"battery": true, "meter": true},
         "status": {"code": 0, "message": "OK"}
     }
 
@@ -80,8 +80,4 @@ class BaseSolarProvider:
 
     def get_inverters(self) -> List[Dict[str, Any]]:
         """Return a list of per-inverter detail dicts (Phase 2)."""
-        raise NotImplementedError
-
-    def get_history(self, start: str, end: str) -> Dict[str, Any]:
-        """Return normalized historical/archive data (Phase 2)."""
         raise NotImplementedError
