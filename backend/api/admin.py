@@ -1,7 +1,7 @@
 from django.contrib import admin
 
 from django.contrib import admin
-from .models import Profile, Device, Room, CustomDeviceType, DeviceCardTemplate, DeviceControl, DashboardLayout
+from .models import Profile, Device, Room, CustomDeviceType, DeviceCardTemplate, DeviceControl, DashboardLayout, SolarSystem
 
 @admin.register(Device)
 class DeviceAdmin(admin.ModelAdmin):
@@ -38,5 +38,14 @@ class DashboardLayoutAdmin(admin.ModelAdmin):
 
     def is_personal(self, obj):
         return obj.user is not None
+
     is_personal.boolean = True
     is_personal.short_description = 'Personal'
+
+
+@admin.register(SolarSystem)
+class SolarSystemAdmin(admin.ModelAdmin):
+    list_display = ('name', 'provider', 'base_url', 'enabled', 'user', 'last_seen')
+    list_filter = ('provider', 'enabled')
+    search_fields = ('name', 'base_url')
+    readonly_fields = ('api_version', 'capabilities', 'last_seen', 'created_at', 'updated_at')

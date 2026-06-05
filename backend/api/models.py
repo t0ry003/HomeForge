@@ -455,3 +455,56 @@ class DashboardLayout(models.Model):
     @property
     def is_personal(self):
         return self.user is not None
+
+
+class SolarSystem(models.Model):
+    """
+    A registered external solar/energy data source (e.g. a Fronius inverter).
+
+    We store ONLY the base link to the vendor's raw-JSON API plus a provider
+    discriminator. The backend fetches and normalizes the vendor JSON into a
+    provider-agnostic schema (see api/solar/), so a single reusable power-flow
+    UI works across providers.
+    """
+    PROVIDER_FRONIUS = 'fronius'
+    PROVIDER_CHOICES = [
+        (PROVIDER_FRONIUS, 'Fronius Solar API V1'),
+    ]
+
+    name = models.CharField(max_length=100, help_text="Friendly name for the solar system")
+    base_url = models.URLField(
+        max_length=500,
+        help_text="Base link to the vendor API, e.g. http://fronius-server:9999"
+    )
+    provider = models.CharField(
+        max_length=30,
+        choices=PROVIDER_CHOICES,
+        default=PROVIDER_FRONIUS,
+        help_text="Vendor adapter used to normalize the raw JSON"
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='solar_systems',
+        db_index=True
+    )
+    enabled = models.BooleanField(default=True, db_index=True)
+
+    # Non-authoritative cached discovery metadata (populated on register/refresh)
+    api_version = models.CharField(max_length=20, blank=True, default='')
+    capabilities = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Cached capability flags, e.g. {'history': false, 'battery': true}"
+    )
+    last_seen = models.DateTimeField(null=True, blank=True, help_text="Last successful fetch")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = ['base_url', 'user']
+
+    def __str__(self):
+        return f"{self.name} ({self.provider})"
