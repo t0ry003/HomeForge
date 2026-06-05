@@ -10,19 +10,6 @@ export function formatPower(watts: number | null | undefined): string {
   return `${Math.round(watts)} W`
 }
 
-/** Format a cumulative energy value in Wh to a human-readable string (Wh / kWh / MWh). */
-export function formatEnergy(wh: number | null | undefined): string {
-  if (wh === null || wh === undefined) return "—"
-  const abs = Math.abs(wh)
-  if (abs >= 1_000_000) {
-    return `${(wh / 1_000_000).toFixed(2)} MWh`
-  }
-  if (abs >= 1000) {
-    return `${(wh / 1000).toFixed(2)} kWh`
-  }
-  return `${Math.round(wh)} Wh`
-}
-
 /** Format a percentage value. */
 export function formatPercent(pct: number | null | undefined): string {
   if (pct === null || pct === undefined) return "—"

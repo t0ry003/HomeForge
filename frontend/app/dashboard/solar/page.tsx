@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Plus, Pencil, Trash2, WifiOff, RefreshCw } from "lucide-react"
+import { Plus, Pencil, Trash2, WifiOff, RefreshCw, Sun } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -131,21 +131,20 @@ export default function SolarPage() {
   )
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">Solar</h2>
-          <p className="text-sm text-muted-foreground">
-            Live power flow for your solar system.
-          </p>
+    <div className="space-y-6 py-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2 text-foreground">
+          <Sun className="h-5 w-5 text-primary" />
+          <span className="text-lg font-semibold tracking-tight">Solar</span>
         </div>
         {system && canManage && (
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handleEdit}>
+            <Button variant="outline" size="sm" onClick={handleEdit}>
               <Pencil className="mr-2 h-4 w-4" /> Edit
             </Button>
             <Button
               variant="outline"
+              size="sm"
               onClick={() => setConfirmDelete(true)}
               className="text-destructive hover:text-destructive"
             >
@@ -154,7 +153,7 @@ export default function SolarPage() {
           </div>
         )}
         {!system && canManage && !systemsLoading && (
-          <Button onClick={handleAdd}>
+          <Button size="sm" onClick={handleAdd}>
             <Plus className="mr-2 h-4 w-4" /> Add solar system
           </Button>
         )}
@@ -207,7 +206,7 @@ export default function SolarPage() {
           ) : overview ? (
             <div className="grid gap-6 lg:grid-cols-2">
               <Card>
-                <CardContent className="p-6">
+                <CardContent className="p-4 sm:p-6">
                   <PowerFlowDiagram overview={overview} />
                 </CardContent>
               </Card>

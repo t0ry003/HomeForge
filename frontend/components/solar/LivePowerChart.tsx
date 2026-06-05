@@ -14,6 +14,8 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
   type ChartConfig,
 } from "@/components/ui/chart"
 import type { SolarOverview } from "@/lib/solar-types"
@@ -72,7 +74,7 @@ export function LivePowerChart({ overview }: { overview: SolarOverview }) {
       <CardHeader>
         <CardTitle>Live power</CardTitle>
         <CardDescription>
-          Session view — samples collected while this page is open
+          Data collected since this page was opened
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -98,6 +100,7 @@ export function LivePowerChart({ overview }: { overview: SolarOverview }) {
                 tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`}
               />
               <ChartTooltip content={<ChartTooltipContent />} />
+              <ChartLegend content={<ChartLegendContent />} verticalAlign="top" />
               <defs>
                 {(["solar", "load", "grid"] as const).map((key) => (
                   <linearGradient

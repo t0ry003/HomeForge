@@ -1,20 +1,11 @@
 "use client"
 
 import * as React from "react"
-import {
-  Sun,
-  House,
-  Zap,
-  BatteryCharging,
-  Gauge,
-  Leaf,
-  CalendarDays,
-  Infinity as InfinityIcon,
-} from "lucide-react"
+import { Sun, House, Zap, BatteryCharging, Gauge, Leaf } from "lucide-react"
 
 import { Card, CardContent } from "@/components/ui/card"
 import type { SolarOverview } from "@/lib/solar-types"
-import { formatPower, formatEnergy, formatPercent } from "./solar-utils"
+import { formatPower, formatPercent } from "./solar-utils"
 
 interface StatProps {
   icon: React.ReactNode
@@ -39,7 +30,7 @@ function Stat({ icon, label, value, hint }: StatProps) {
 }
 
 export function SolarStatCards({ overview }: { overview: SolarOverview }) {
-  const { power, battery, energy, ratios } = overview
+  const { power, battery, ratios } = overview
   const gridLabel =
     power.gridW === null
       ? "Grid"
@@ -50,7 +41,7 @@ export function SolarStatCards({ overview }: { overview: SolarOverview }) {
           : "Grid"
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       <Stat
         icon={<Sun className="h-5 w-5" />}
         label="Production"
@@ -74,21 +65,6 @@ export function SolarStatCards({ overview }: { overview: SolarOverview }) {
           hint={formatPower(power.batteryW === null ? null : Math.abs(power.batteryW))}
         />
       )}
-      <Stat
-        icon={<CalendarDays className="h-5 w-5" />}
-        label="Energy today"
-        value={formatEnergy(energy.todayWh)}
-      />
-      <Stat
-        icon={<CalendarDays className="h-5 w-5" />}
-        label="Energy this year"
-        value={formatEnergy(energy.yearWh)}
-      />
-      <Stat
-        icon={<InfinityIcon className="h-5 w-5" />}
-        label="Energy total"
-        value={formatEnergy(energy.totalWh)}
-      />
       <Stat
         icon={<Leaf className="h-5 w-5" />}
         label="Self-consumption"

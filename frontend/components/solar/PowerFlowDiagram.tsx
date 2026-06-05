@@ -1,38 +1,72 @@
 "use client"
 
 import * as React from "react"
-import { Sun, Zap, House, BatteryCharging } from "lucide-react"
+import { Sun, Zap, House, BatteryCharging, CircuitBoard } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import type { SolarOverview } from "@/lib/solar-types"
 import { formatPower, formatPercent } from "./solar-utils"
+
+type TextPos = "top" | "bottom"
 
 interface NodeProps {
   x: number
   y: number
   icon: React.ReactNode
   label: string
-  value: string
+  value?: string
   accent: string
   active: boolean
+  textPos?: TextPos
+  hub?: boolean
 }
 
-function FlowNode({ x, y, icon, label, value, accent, active }: NodeProps) {
+function FlowNode({
+  x,
+  y,
+  icon,
+  label,
+  value,
+  accent,
+  active,
+  textPos = "bottom",
+  hub = false,
+}: NodeProps) {
   return (
     <div
-      className="absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center gap-1 text-center"
+      className="absolute z-10 -translate-x-1/2 -translate-y-1/2"
       style={{ left: `${x}%`, top: `${y}%` }}
     >
-      <div
-        className={cn(
-          "flex h-14 w-14 items-center justify-center rounded-full border-2 bg-card shadow-sm transition-colors",
-          active ? accent : "border-muted text-muted-foreground"
-        )}
-      >
-        {icon}
+      <div className="relative flex items-center justify-center">
+        <div
+          className={cn(
+            "flex items-center justify-center rounded-full border-2 bg-card shadow-sm transition-all duration-500",
+            hub
+              ? "h-16 w-16 sm:h-[4.5rem] sm:w-[4.5rem]"
+              : "h-12 w-12 sm:h-14 sm:w-14",
+            active
+              ? accent
+              : "border-muted text-muted-foreground opacity-40 grayscale"
+          )}
+        >
+          {icon}
+        </div>
+        <div
+          className={cn(
+            "absolute flex flex-col items-center gap-0.5 whitespace-nowrap text-center",
+            textPos === "top" ? "bottom-full mb-1.5" : "top-full mt-1.5"
+          )}
+        >
+          <span className="text-[10px] font-medium text-muted-foreground sm:text-xs">
+            {label}
+          </span>
+          {value && (
+            <span className="text-xs font-semibold tabular-nums sm:text-sm">
+              {value}
+            </span>
+          )}
+        </div>
       </div>
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
-      <span className="text-sm font-semibold tabular-nums">{value}</span>
     </div>
   )
 }
@@ -55,24 +89,23 @@ function FlowLine({ from, to, active, color }: FlowLineProps) {
       y1={y1}
       x2={x2}
       y2={y2}
-      strokeWidth={1.4}
+      strokeWidth={1.6}
       strokeLinecap="round"
-      stroke={active ? color : "var(--muted)"}
-      strokeDasharray={active ? "3 4" : undefined}
-      className={active ? "solar-flow-line" : undefined}
-      opacity={active ? 1 : 0.4}
+      stroke={active ? color : "var(--muted-foreground)"}
+      strokeDasharray="3 4"
+      className={active ? "solar-flow-line" : "solar-flow-idle"}
     />
   )
 }
 
 const HUB: [number, number] = [50, 50]
-const PV: [number, number] = [50, 13]
-const GRID: [number, number] = [13, 50]
-const HOME: [number, number] = [87, 50]
-const BATTERY: [number, number] = [50, 87]
+const PV: [number, number] = [50, 16]
+const GRID: [number, number] = [16, 50]
+const HOME: [number, number] = [84, 50]
+const BATTERY: [number, number] = [50, 84]
 
 export function PowerFlowDiagram({ overview }: { overview: SolarOverview }) {
-  const { power, battery } = overview
+  const { power, battery, online } = overview
 
   const solarActive = (power.solarW ?? 0) > 0
   const homeActive = (power.loadW ?? 0) > 0
@@ -83,13 +116,21 @@ export function PowerFlowDiagram({ overview }: { overview: SolarOverview }) {
   const showBattery = battery.present
 
   return (
-    <div className="relative mx-auto aspect-square w-full max-w-md">
+    <div className="relative mx-auto aspect-square w-full max-w-sm sm:max-w-md">
       <style>{`
         .solar-flow-line {
           animation: solar-dash 0.9s linear infinite;
         }
         @keyframes solar-dash {
           to { stroke-dashoffset: -14; }
+        }
+        .solar-flow-idle {
+          opacity: 0.3;
+          animation: solar-idle-pulse 2.4s ease-in-out infinite;
+        }
+        @keyframes solar-idle-pulse {
+          0%, 100% { opacity: 0.18; }
+          50% { opacity: 0.4; }
         }
       `}</style>
 
@@ -98,10 +139,10 @@ export function PowerFlowDiagram({ overview }: { overview: SolarOverview }) {
         className="absolute inset-0 h-full w-full"
         preserveAspectRatio="xMidYMid meet"
       >
-        {/* PV -> hub (production) */}
+        {/* PV -> inverter (production) */}
         <FlowLine from={PV} to={HUB} active={solarActive} color="#f59e0b" />
 
-        {/* Grid <-> hub (import red / export emerald) */}
+        {/* Grid <-> inverter (import red / export emerald) */}
         <FlowLine
           from={importing ? GRID : HUB}
           to={importing ? HUB : GRID}
@@ -109,10 +150,10 @@ export function PowerFlowDiagram({ overview }: { overview: SolarOverview }) {
           color={importing ? "#ef4444" : "#10b981"}
         />
 
-        {/* hub -> Home (consumption) */}
+        {/* inverter -> Home (consumption) */}
         <FlowLine from={HUB} to={HOME} active={homeActive} color="#3b82f6" />
 
-        {/* Battery <-> hub (discharge emerald / charge violet) */}
+        {/* Battery <-> inverter (discharge emerald / charge violet) */}
         {showBattery && (
           <FlowLine
             from={discharging ? BATTERY : HUB}
@@ -121,14 +162,23 @@ export function PowerFlowDiagram({ overview }: { overview: SolarOverview }) {
             color={discharging ? "#10b981" : "#8b5cf6"}
           />
         )}
-
-        {/* central hub dot */}
-        <circle cx={HUB[0]} cy={HUB[1]} r={2.2} fill="var(--primary)" />
       </svg>
+
+      {/* Inverter (center) */}
+      <FlowNode
+        x={HUB[0]}
+        y={HUB[1]}
+        hub
+        icon={<CircuitBoard className="h-7 w-7 sm:h-8 sm:w-8" />}
+        label="Inverter"
+        accent="border-primary text-primary"
+        active={online}
+      />
 
       <FlowNode
         x={PV[0]}
         y={PV[1]}
+        textPos="top"
         icon={<Sun className="h-6 w-6" />}
         label="Solar"
         value={formatPower(power.solarW)}
