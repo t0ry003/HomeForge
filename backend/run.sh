@@ -1,45 +1,65 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 set -eu
-# HomeForge Backend Startup Script
-# This script installs dependencies, applies migrations, and starts the server
 
-echo "🔧 Upgrading PIP ..."
-pip install --upgrade pip
+# HomeForge backend startup script.
+# Uses POSIX shell syntax to run on images where /bin/sh is not bash.
 
-echo "📦 Installing dependencies..."
-pip install -r requirements.txt
+echo "Upgrading pip..."
+python -m pip install --upgrade pip
 
-echo "🔄 Applying database migrations..."
+if [ ! -f "requirements.txt" ]; then
+    echo "ERROR: requirements.txt not found in $(pwd)" >&2
+    exit 1
+fi
+
+echo "Installing dependencies..."
+python -m pip install -r requirements.txt
+
+echo "Applying database migrations..."
 if [ -f "migrate.sh" ]; then
-    bash migrate.sh
+    if command -v bash >/dev/null 2>&1; then
+        bash migrate.sh
+    else
+        echo "Warning: bash not found; running default Django migrate"
+        python manage.py migrate
+    fi
 else
     python manage.py migrate
 fi
 
-# Ensure directories for services
-mkdir -p /run/dbus /var/run/dbus /run/avahi-daemon
+# Ensure runtime/media directories exist.
+mkdir -p /run/dbus /var/run/dbus /run/avahi-daemon /app/media/avatars
 
-# Ensure media directories exist (avatars only - device type images are stored in DB)
-mkdir -p /app/media/avatars
-
-# Remove stale PIDs
+# Remove stale PIDs.
 rm -f /run/dbus/pid /var/run/dbus/pid /run/avahi-daemon/pid /run/mosquitto/mosquitto.pid
 
-echo "🌐 Starting Services (DBus + Avahi + Mosquitto)..."
+echo "Starting optional services (DBus, Avahi, Mosquitto) if available..."
 
-# Start DBus
-dbus-daemon --system --fork
+if command -v dbus-daemon >/dev/null 2>&1; then
+    dbus-daemon --system --fork || echo "Warning: dbus-daemon failed to start"
+else
+    echo "Warning: dbus-daemon not found; skipping"
+fi
 
-# Start Avahi (mDNS)
-avahi-daemon --daemonize --no-drop-root
+if command -v avahi-daemon >/dev/null 2>&1; then
+    avahi-daemon --daemonize --no-drop-root || echo "Warning: avahi-daemon failed to start"
+else
+    echo "Warning: avahi-daemon not found; skipping"
+fi
 
-# Start Mosquitto (MQTT Broker)
-# Note: In development container, we run as root often. With proper permissions set in Dockerfile.
-mosquitto -d -c /etc/mosquitto/mosquitto.conf
+if command -v mosquitto >/dev/null 2>&1; then
+    if [ -f /etc/mosquitto/mosquitto.conf ]; then
+        mosquitto -d -c /etc/mosquitto/mosquitto.conf || echo "Warning: mosquitto failed to start"
+    else
+        mosquitto -d || echo "Warning: mosquitto failed to start"
+    fi
+else
+    echo "Warning: mosquitto not found; skipping"
+fi
 
-echo " Starting Background MQTT Listener..."
+echo "Starting background MQTT listener..."
 python manage.py mqtt_listener &
 
-echo "🚀 Starting development server..."
-python manage.py runserver 0.0.0.0:8000
+echo "Starting development server on 0.0.0.0:8000..."
+exec python manage.py runserver 0.0.0.0:8000
 

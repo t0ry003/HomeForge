@@ -1,0 +1,47 @@
+# Normalize line endings for all text files.
+# Git will auto-detect text files and normalize to LF in the repository.
+* text=auto eol=lf
+
+# Shell scripts MUST always use LF, even when checked out on Windows.
+# CRLF in a shell script breaks execution on Linux/macOS ("bad interpreter").
+*.sh text eol=lf
+*.bash text eol=lf
+run.sh text eol=lf
+
+# Other text formats that should stay LF.
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.html text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.svg text eol=lf
+.gitattributes text eol=lf
+.gitignore text eol=lf
+.env* text eol=lf
+Dockerfile text eol=lf
+
+# Windows-specific scripts keep CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binary files: never modify.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
