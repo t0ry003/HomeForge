@@ -18,6 +18,7 @@ import {
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  useSidebar,
 } from "@/components/ui/sidebar"
 
 export function NavMain({
@@ -37,6 +38,10 @@ export function NavMain({
     }[]
   }[]
 }) {
+  const { isMobile, setOpenMobile } = useSidebar()
+  const handleNavigate = () => {
+    if (isMobile) setOpenMobile(false)
+  }
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Platform</SidebarGroupLabel>
@@ -46,7 +51,7 @@ export function NavMain({
             <Collapsible key={item.title} asChild defaultOpen={item.isActive} className="group/collapsible">
               <SidebarMenuItem>
                 <SidebarMenuButton asChild tooltip={item.title}>
-                  <Link href={item.url} className="relative">
+                  <Link href={item.url} className="relative" onClick={handleNavigate}>
                     <item.icon />
                     <span>{item.title}</span>
                     {item.badge && item.badge > 0 && (
@@ -67,7 +72,7 @@ export function NavMain({
                     {item.items.map((subItem) => (
                       <SidebarMenuSubItem key={subItem.title}>
                         <SidebarMenuSubButton asChild>
-                          <Link href={subItem.url} className="flex items-center gap-2">
+                          <Link href={subItem.url} className="flex items-center gap-2" onClick={handleNavigate}>
                             {subItem.icon && <subItem.icon className="h-4 w-4" />}
                             <span>{subItem.title}</span>
                             {subItem.badge && subItem.badge > 0 && (
@@ -86,7 +91,7 @@ export function NavMain({
           ) : (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild tooltip={item.title}>
-                <Link href={item.url} className="relative">
+                <Link href={item.url} className="relative" onClick={handleNavigate}>
                   <item.icon />
                   <span>{item.title}</span>
                   {item.badge && item.badge > 0 && (
