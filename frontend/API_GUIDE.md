@@ -1,9 +1,9 @@
 # HomeForge API Guide
 
-> **Version:** 1.9.0  
+> **Version:** 1.9.5  
 > **Base URL:** `http://localhost:8000/api/`  
 > **Authentication:** JWT (JSON Web Tokens)  
-> **Last Updated:** June 4, 2026
+> **Last Updated:** June 7, 2026
 
 A comprehensive API reference for the HomeForge smart home management platform. This guide is designed for frontend developers and AI agents to build complete user interfaces.
 
@@ -693,7 +693,7 @@ Any authenticated user can propose a new device type for admin review.
       }
     ]
   },
-  "firmware_code": "#include <WiFi.h>\nconst char* wifi_ssid = \"{{WIFI_SSID}}\";\nconst char* wifi_password = \"{{WIFI_PASSWORD}}\";\nconst char* server_ip = \"{{SERVER_IP}}\";\n...",
+  "firmware_code": "#include <WiFi.h>\nconst char* wifi_ssid = \"{{WIFI_SSID}}\";\nconst char* wifi_password = \"{{WIFI_PASSWORD}}\";\n// server_ip optional: auto-discovered via mDNS\n...",
   "wiring_diagram_text": "## Pin Connections\n| ESP32 Pin | Component |\n|---|---|\n| GPIO4 | DHT22 Data |",
   "documentation": "# Smart Fan\n\n## Parts List\n..."
 }
@@ -703,11 +703,29 @@ Any authenticated user can propose a new device type for admin review.
 - `name` must be unique
 - Every `variable_mapping` in controls must match an `id` in `definition.structure`
 - Always created with `approved: false`
-- If `firmware_code` is provided, it must contain the strings `wifi_ssid`, `wifi_password`, and `server_ip`
+- If `firmware_code` is provided, it must contain the strings `wifi_ssid` and `wifi_password`. `server_ip` is **optional** — firmware may auto-discover the HomeForge MQTT broker via mDNS (`_mqtt._tcp`), so no server address needs to be entered by the user.
 - `firmware_code`: max 100,000 characters
 - `wiring_diagram_text`: max 50,000 characters
 - `documentation`: max 50,000 characters
 - All 3 new text fields are optional (blank is fine)
+
+> **Device → Broker connection order.** Generated firmware reaches the MQTT broker in three
+> tiers, so the frontend can choose how much to pre-fill:
+> 1. **Manual `server_ip` (frontend-substituted).** The firmware exposes a `server_ip`
+>    variable (default `""`). If your app knows the broker's LAN IP, substitute it here when
+>    generating firmware and the device connects directly — no discovery needed.
+> 2. **mDNS auto-discovery.** If `server_ip` is empty, the device queries the LAN for
+>    `_mqtt._tcp` and uses the first broker that answers (cached in NVS).
+> 3. **`/config` web fallback.** If nothing is found, the device serves a page at
+>    `http://<device-ip>/`; POST the broker address to `/config` to set it at runtime.
+>
+> ⚠️ **mDNS auto-discovery requires the HomeForge server to run on a native Linux host on
+> the same physical LAN** as the devices (Docker `network_mode: host`). **On Docker Desktop
+> (macOS/Windows) mDNS will not reach devices** — containers run inside a Linux VM whose
+> `network_mode: host` binds to the VM's internal network (`192.168.65.x` / `172.x.x.x`),
+> not your physical Wi-Fi LAN. In that environment, rely on tier 1 (`server_ip`) or tier 3
+> (`/config`). For zero-config discovery, deploy on a Linux host (e.g. Raspberry Pi) on the
+> same LAN as the devices.
 
 ---
 
@@ -1673,6 +1691,30 @@ Get a visual representation of the smart home network for rendering with graph l
         "borderRadius": "5px",
         "background": "white"
       }
+    },
+    {
+      "id": "solar-3",
+      "type": "solar",
+      "data": {
+        "label": "Rooftop PV",
+        "ip": "http://192.168.1.50",
+        "status": "online",
+        "room": "Solar",
+        "device_type": "Solar System",
+        "provider": "fronius",
+        "icon": "fa-sun",
+        "is_solar": true
+      },
+      "position": { "x": -388.9, "y": 388.9 },
+      "style": {
+        "width": 180,
+        "borderColor": "#10B981",
+        "borderWidth": "2px",
+        "borderStyle": "solid",
+        "padding": "10px",
+        "borderRadius": "5px",
+        "background": "white"
+      }
     }
   ],
   "edges": [
@@ -1695,6 +1737,22 @@ Get a visual representation of the smart home network for rendering with graph l
 |------|-------------|
 | `input` | Central gateway/server node |
 | `device` | IoT device node |
+| `solar` | Registered solar system. Always rendered with a single sun icon (`fa-sun`) and `is_solar: true`. Online/offline reflects the most recent successful overview poll. |
+
+> **Solar nodes:** Each registered solar system (see [Section 10](#10-solar--energy-integration)) appears as one node with id `solar-{id}`. Its `online`/`offline` status is derived from a recent successful `/overview/` poll (cached snapshot or `last_seen` within the last 90 seconds) — the topology endpoint never makes a blocking vendor API call, so it respects provider rate limits. Disabled systems always show as `offline`.
+
+> **⚠️ Icon mapping (frontend):** All topology nodes carry a FontAwesome class in `data.icon` (e.g. devices use `fa-lightbulb`, solar uses **`fa-sun`**). If your renderer uses a different icon set (e.g. Lucide), it must translate this token. A solar node that renders as a generic CPU/box icon means your icon map has no entry for `fa-sun` and fell back to a default. Map it explicitly using **either** signal the backend provides:
+>
+> ```ts
+> // Option A — match the icon token
+> const iconFor = (node) =>
+>   node.data.is_solar ? Sun : ICONS[node.data.icon] ?? Cpu;
+>
+> // Option B — match by FontAwesome class
+> const ICONS = { 'fa-sun': Sun, 'fa-lightbulb': Lightbulb, /* … */ };
+> ```
+>
+> The backend guarantees solar nodes always include `type: "solar"`, `is_solar: true`, and `icon: "fa-sun"`, so any of those three can key the mapping.
 
 **Status Colors:**
 | Status | Color |
@@ -1703,7 +1761,7 @@ Get a visual representation of the smart home network for rendering with graph l
 | `offline` | `#EF4444` (red) |
 | `error` | `#F59E0B` (amber) |
 
-**Layout:** Radial positioning with gateway at center (0, 0) and devices distributed in a circle.
+**Layout:** Radial positioning with gateway at center (0, 0), devices distributed in an inner circle (radius 350), and solar systems on an outer ring (radius 550).
 
 ---
 
@@ -1986,7 +2044,7 @@ Returns a paginated list of registered solar systems.
       "provider": "fronius",
       "enabled": true,
       "api_version": "1",
-      "capabilities": { "history": true, "battery": true, "meter": true },
+      "capabilities": { "battery": true, "meter": true },
       "last_seen": "2026-06-04T12:00:00+00:00",
       "created_at": "2026-06-04T10:00:00+00:00",
       "updated_at": "2026-06-04T12:00:00+00:00"
@@ -2071,7 +2129,7 @@ Returns the live, normalized power-flow snapshot. The backend caches the result 
     "selfConsumptionPct": 46.4,
     "autonomyPct": 100.0
   },
-  "capabilities": { "history": true, "battery": true, "meter": true },
+  "capabilities": { "battery": true, "meter": true },
   "status": { "code": 0, "message": "OK" }
 }
 ```
@@ -2102,7 +2160,7 @@ Any unavailable datapoint is `null`. Drive animated flow arrows from `power.*`: 
   "battery": { "present": false, "socPct": null, "mode": null, "standby": null },
   "energy": { "todayWh": null, "yearWh": null, "totalWh": null },
   "ratios": { "selfConsumptionPct": null, "autonomyPct": null },
-  "capabilities": { "history": true, "battery": true, "meter": true },
+  "capabilities": { "battery": true, "meter": true },
   "status": { "code": null, "message": "System is unreachable." }
 }
 ```
@@ -2325,7 +2383,6 @@ interface SolarSystem {
 }
 
 interface SolarCapabilities {
-  history: boolean;
   battery: boolean;
   meter: boolean;
 }
@@ -2366,7 +2423,7 @@ interface SolarOverview {
 ```typescript
 interface TopologyNode {
   id: string;
-  type: 'input' | 'device';
+  type: 'input' | 'device' | 'solar';
   data: {
     label: string;
     ip: string;
@@ -2375,6 +2432,8 @@ interface TopologyNode {
     device_type?: string;
     icon?: string;
     current_state?: Record<string, any>;
+    provider?: string;       // solar nodes only
+    is_solar?: boolean;      // true for solar system nodes
   };
   position: { x: number; y: number };
   style: Record<string, any>;
@@ -2702,6 +2761,16 @@ function NetworkTopology({ api }) {
 
 6. **Device Type Images:** All images (wiring diagrams, documentation images) are stored as base64 data URIs in the database. No filesystem paths are used. Exports are fully self-contained.
 
+7. **Configuring a Physical Device (firmware connectivity):** When you generate/flash firmware for a user's ESP32, explain how the board reaches the HomeForge MQTT broker. The firmware tries three tiers in order — surface them in the device-setup UI:
+
+   1. **Manual broker IP (`server_ip`) — recommended default for most users.** The firmware exposes a `server_ip` string variable (default `""`). When generating firmware, substitute the HomeForge server's LAN IP here so the device connects directly with no discovery. **In Docker Desktop / WSL / Windows deployments this is the ONLY reliable method** — set it to the host machine's LAN IP (e.g. `192.168.1.50`) and ensure the broker port `1883` is published. Recommend the user give their server a static/reserved DHCP lease so the IP doesn't change.
+   2. **mDNS auto-discovery (`_mqtt._tcp`) — zero-config, Raspberry Pi / native-Linux only.** If `server_ip` is left empty, the board auto-discovers the broker on the LAN. **This only works when HomeForge runs on a native Linux host on the same subnet** (e.g. the Raspberry Pi production deployment). Do **not** promise auto-discovery for Windows/Docker Desktop installs.
+   3. **`/config` web fallback.** If neither works, the board serves a page at `http://<device-ip>/` (the IP it prints to serial). Tell the user they can POST/enter the broker IP there at runtime without reflashing. Useful for recovery if the server IP changes.
+
+   **UX guidance:** In the device-add flow, ask which environment the server runs on. If it's anything other than a Raspberry Pi / Linux host, pre-fill `server_ip` with the detected server LAN IP and tell the user auto-discovery is unavailable. Always show the broker port requirement (`1883`) and a note that the device and server must be on the same Wi-Fi/LAN (watch out for router "client/AP isolation"). After flashing, the device publishes its own IP/MAC to `homeforge/devices/<MAC>/state` — use the MAC shown on the serial console (or the device's `/config` page) to register it.
+
+8. **Solar Node Liveness in Topology:** Solar system online/offline status in `GET /topology/` is kept fresh by a backend background poller (no client polling required). A solar node shows `online` while the server has reached the vendor within the last ~90s, and `offline` when the system is disabled or has been unreachable past that window. You no longer need to keep the Solar tab open for the topology to reflect the correct state.
+
 ---
 
 ## 15. System Status
@@ -2731,7 +2800,7 @@ Returns whether this is a fresh installation (no users have been registered yet)
 
 5. **Notifications:** Use `/notifications/unread-count/` for badge counts. The `by_type` field allows showing different badges for different notification categories.
 
-6. **Icons:** Device icons use FontAwesome class names (e.g., `fa-lightbulb`). Include FontAwesome in your frontend.
+6. **Icons:** All icon fields (rooms, devices, and topology nodes) use FontAwesome class names (e.g., `fa-lightbulb`, `fa-sun`). Either include FontAwesome in your frontend, or — if you use a different icon set such as Lucide — maintain a token→component map. Solar topology nodes always send `icon: "fa-sun"` (plus `type: "solar"` / `is_solar: true`); make sure your map has an entry for it so it renders a sun rather than the generic fallback icon.
 
 7. **Accent Color:** Users can personalize their UI with `accent_color`. Use it for theming.
 

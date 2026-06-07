@@ -1,6 +1,6 @@
 # HomeForge API Guide
 
-> **Version:** 1.9.4  
+> **Version:** 1.9.5  
 > **Base URL:** `http://localhost:8000/api/`  
 > **Authentication:** JWT (JSON Web Tokens)  
 > **Last Updated:** June 7, 2026
@@ -708,6 +708,24 @@ Any authenticated user can propose a new device type for admin review.
 - `wiring_diagram_text`: max 50,000 characters
 - `documentation`: max 50,000 characters
 - All 3 new text fields are optional (blank is fine)
+
+> **Device → Broker connection order.** Generated firmware reaches the MQTT broker in three
+> tiers, so the frontend can choose how much to pre-fill:
+> 1. **Manual `server_ip` (frontend-substituted).** The firmware exposes a `server_ip`
+>    variable (default `""`). If your app knows the broker's LAN IP, substitute it here when
+>    generating firmware and the device connects directly — no discovery needed.
+> 2. **mDNS auto-discovery.** If `server_ip` is empty, the device queries the LAN for
+>    `_mqtt._tcp` and uses the first broker that answers (cached in NVS).
+> 3. **`/config` web fallback.** If nothing is found, the device serves a page at
+>    `http://<device-ip>/`; POST the broker address to `/config` to set it at runtime.
+>
+> ⚠️ **mDNS auto-discovery requires the HomeForge server to run on a native Linux host on
+> the same physical LAN** as the devices (Docker `network_mode: host`). **On Docker Desktop
+> (macOS/Windows) mDNS will not reach devices** — containers run inside a Linux VM whose
+> `network_mode: host` binds to the VM's internal network (`192.168.65.x` / `172.x.x.x`),
+> not your physical Wi-Fi LAN. In that environment, rely on tier 1 (`server_ip`) or tier 3
+> (`/config`). For zero-config discovery, deploy on a Linux host (e.g. Raspberry Pi) on the
+> same LAN as the devices.
 
 ---
 
@@ -2742,6 +2760,16 @@ function NetworkTopology({ api }) {
 5. **Room Icons:** Rooms now include an `icon` field (FontAwesome class). Default: `fa-door-open`. Display this icon in room lists and device assignments.
 
 6. **Device Type Images:** All images (wiring diagrams, documentation images) are stored as base64 data URIs in the database. No filesystem paths are used. Exports are fully self-contained.
+
+7. **Configuring a Physical Device (firmware connectivity):** When you generate/flash firmware for a user's ESP32, explain how the board reaches the HomeForge MQTT broker. The firmware tries three tiers in order — surface them in the device-setup UI:
+
+   1. **Manual broker IP (`server_ip`) — recommended default for most users.** The firmware exposes a `server_ip` string variable (default `""`). When generating firmware, substitute the HomeForge server's LAN IP here so the device connects directly with no discovery. **In Docker Desktop / WSL / Windows deployments this is the ONLY reliable method** — set it to the host machine's LAN IP (e.g. `192.168.1.50`) and ensure the broker port `1883` is published. Recommend the user give their server a static/reserved DHCP lease so the IP doesn't change.
+   2. **mDNS auto-discovery (`_mqtt._tcp`) — zero-config, Raspberry Pi / native-Linux only.** If `server_ip` is left empty, the board auto-discovers the broker on the LAN. **This only works when HomeForge runs on a native Linux host on the same subnet** (e.g. the Raspberry Pi production deployment). Do **not** promise auto-discovery for Windows/Docker Desktop installs.
+   3. **`/config` web fallback.** If neither works, the board serves a page at `http://<device-ip>/` (the IP it prints to serial). Tell the user they can POST/enter the broker IP there at runtime without reflashing. Useful for recovery if the server IP changes.
+
+   **UX guidance:** In the device-add flow, ask which environment the server runs on. If it's anything other than a Raspberry Pi / Linux host, pre-fill `server_ip` with the detected server LAN IP and tell the user auto-discovery is unavailable. Always show the broker port requirement (`1883`) and a note that the device and server must be on the same Wi-Fi/LAN (watch out for router "client/AP isolation"). After flashing, the device publishes its own IP/MAC to `homeforge/devices/<MAC>/state` — use the MAC shown on the serial console (or the device's `/config` page) to register it.
+
+8. **Solar Node Liveness in Topology:** Solar system online/offline status in `GET /topology/` is kept fresh by a backend background poller (no client polling required). A solar node shows `online` while the server has reached the vendor within the last ~90s, and `offline` when the system is disabled or has been unreachable past that window. You no longer need to keep the Solar tab open for the topology to reflect the correct state.
 
 ---
 

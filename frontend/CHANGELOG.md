@@ -1,5 +1,15 @@
 # HomeForge Frontend Changelog
 
+## [2026-06-07] - Solar topology node type & liveness
+
+### Changed
+- **File**: `components/topology/TopologyCanvas.tsx`
+- **Description**: Registered the new `solar` node type (mapped to `TopologyBuilderNode`) so backend-emitted solar nodes (`type: "solar"`) render without a ReactFlow fallback warning.
+- **Impact**: Clean rendering of solar systems now that `/topology/` returns them as first-class `solar` nodes with live online/offline status.
+
+- **File**: `components/topology/nodes/TopologyBuilderNode.tsx`
+- **Description**: Solar detection now prefers the backend's explicit `is_solar: true` / `type: "solar"` signals (per API guide v1.9.5) in addition to the `fa-sun` icon hint, before falling back to the amber `Sun` icon.
+
 ## [2026-06-07] - Solar icon in topology
 
 ### Changed
