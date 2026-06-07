@@ -227,6 +227,11 @@ export default function SmartDeviceCard({ device, deviceType, roomName, roomIcon
 
   // Determine if card should show "tap to toggle" behavior
   const isTappable = singleToggle && isOnline && !readOnly && !isSyncing;
+
+  // Whether the card is conceptually tappable, ignoring the transient syncing
+  // state. Used for layout-affecting hints so the card height stays stable
+  // while a command is in flight (the loading overlay shows progress instead).
+  const canTap = singleToggle && isOnline && !readOnly;
   const isPoweredOn = singleToggle && !!currentState[toggleControls[0]?.variable_mapping];
 
   // Render individual widget based on type
@@ -531,7 +536,7 @@ export default function SmartDeviceCard({ device, deviceType, roomName, roomIcon
             </div>
             
             {/* Tap hint */}
-            {isTappable && (
+            {canTap && (
               <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
                 Tap to {isPoweredOn ? 'turn off' : 'turn on'}
               </span>
