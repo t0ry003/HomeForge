@@ -1,17 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { CheckCircle2, Home, Cpu, ArrowRight, Sparkles } from 'lucide-react';
+import { CheckCircle2, Home, Cpu, ArrowRight, Sparkles, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 
 interface CompleteStepProps {
   roomsCreated: number;
   deviceTypesImported: number;
+  solarConnected?: boolean;
   onFinish: () => void;
 }
 
-export function CompleteStep({ roomsCreated, deviceTypesImported, onFinish }: CompleteStepProps) {
+export function CompleteStep({ roomsCreated, deviceTypesImported, solarConnected, onFinish }: CompleteStepProps) {
   const [showContent, setShowContent] = useState(false);
 
   useEffect(() => {
@@ -59,6 +60,17 @@ export function CompleteStep({ roomsCreated, deviceTypesImported, onFinish }: Co
               </p>
               <p className="text-xs text-muted-foreground">
                 {deviceTypesImported > 0 ? 'Available in Device Collection' : 'Build your own in Device Builder'}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-muted/50 text-left">
+            <Sun className="w-5 h-5 text-primary shrink-0" />
+            <div>
+              <p className="font-medium text-sm">
+                {solarConnected ? 'Solar system connected' : 'No solar system connected'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {solarConnected ? 'Live power flow on the Solar page' : 'Add one any time from the Solar page'}
               </p>
             </div>
           </div>

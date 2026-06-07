@@ -6,14 +6,16 @@ import { WelcomeStep } from './steps/WelcomeStep';
 import { AdminAccountStep } from './steps/AdminAccountStep';
 import { RoomsStep } from './steps/RoomsStep';
 import { DeviceTypesStep } from './steps/DeviceTypesStep';
+import { SolarStep } from './steps/SolarStep';
 import { CompleteStep } from './steps/CompleteStep';
 
-const STEPS = ['welcome', 'account', 'rooms', 'devices', 'complete'] as const;
+const STEPS = ['welcome', 'account', 'rooms', 'devices', 'solar', 'complete'] as const;
 type Step = typeof STEPS[number];
 
 interface SetupState {
   roomsCreated: number;
   deviceTypesImported: number;
+  solarConnected: boolean;
 }
 
 export function SetupWizard() {
@@ -23,6 +25,7 @@ export function SetupWizard() {
   const [setupState, setSetupState] = useState<SetupState>({
     roomsCreated: 0,
     deviceTypesImported: 0,
+    solarConnected: false,
   });
 
   const currentIndex = STEPS.indexOf(currentStep);
@@ -103,10 +106,20 @@ export function SetupWizard() {
               onBack={goBack}
             />
           )}
+          {currentStep === 'solar' && (
+            <SolarStep
+              onNext={(connected) => {
+                setSetupState(s => ({ ...s, solarConnected: connected }));
+                goNext();
+              }}
+              onBack={goBack}
+            />
+          )}
           {currentStep === 'complete' && (
             <CompleteStep
               roomsCreated={setupState.roomsCreated}
               deviceTypesImported={setupState.deviceTypesImported}
+              solarConnected={setupState.solarConnected}
               onFinish={handleComplete}
             />
           )}
