@@ -137,21 +137,6 @@ export default function SolarPage() {
           <Sun className="h-5 w-5 text-primary" />
           <span className="text-lg font-semibold tracking-tight">Solar</span>
         </div>
-        {system && canManage && (
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleEdit}>
-              <Pencil className="mr-2 h-4 w-4" /> Edit
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setConfirmDelete(true)}
-              className="text-destructive hover:text-destructive"
-            >
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
-            </Button>
-          </div>
-        )}
         {!system && canManage && !systemsLoading && (
           <Button size="sm" onClick={handleAdd}>
             <Plus className="mr-2 h-4 w-4" /> Add solar system
@@ -185,6 +170,21 @@ export default function SolarPage() {
               )
             ) : (
               <Badge variant="outline">Connecting…</Badge>
+            )}
+            {canManage && (
+              <div className="ml-auto flex gap-2">
+                <Button variant="outline" size="sm" onClick={handleEdit}>
+                  <Pencil className="mr-2 h-4 w-4" /> Edit
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setConfirmDelete(true)}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete
+                </Button>
+              </div>
             )}
           </div>
 

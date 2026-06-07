@@ -81,17 +81,49 @@ function FlowNode({
 }
 
 interface FlowLineProps {
-  /** source point [x,y] in 0-100 viewBox units */
-  from: [number, number]
-  /** target point [x,y] in 0-100 viewBox units */
-  to: [number, number]
+  /** the outer node endpoint [x,y] in 0-100 viewBox units */
+  node: [number, number]
   active: boolean
   color: string
+  /** when true the flow travels hub -> node, otherwise node -> hub */
+  reverse?: boolean
 }
 
-function FlowLine({ from, to, active, color }: FlowLineProps) {
+const HUB: [number, number] = [50, 50]
+const NODE_R = 8
+const HUB_R = 10
+
+/** Trim a segment so its ends stop at the circle edges instead of overlapping them. */
+function trim(
+  from: [number, number],
+  to: [number, number],
+  rFrom: number,
+  rTo: number
+): { x1: number; y1: number; x2: number; y2: number } {
   const [x1, y1] = from
   const [x2, y2] = to
+  const dx = x2 - x1
+  const dy = y2 - y1
+  const len = Math.hypot(dx, dy) || 1
+  const ux = dx / len
+  const uy = dy / len
+  return {
+    x1: x1 + ux * rFrom,
+    y1: y1 + uy * rFrom,
+    x2: x2 - ux * rTo,
+    y2: y2 - uy * rTo,
+  }
+}
+
+function FlowLine({ node, active, color, reverse = false }: FlowLineProps) {
+  // Direction of travel drives the dash animation; the geometry is always the
+  // node<->hub segment, trimmed to each circle's edge so the dashes never bleed
+  // into the icons.
+  const from = reverse ? HUB : node
+  const to = reverse ? node : HUB
+  const rFrom = reverse ? HUB_R : NODE_R
+  const rTo = reverse ? NODE_R : HUB_R
+  const { x1, y1, x2, y2 } = trim(from, to, rFrom, rTo)
   return (
     <line
       x1={x1}
@@ -101,13 +133,12 @@ function FlowLine({ from, to, active, color }: FlowLineProps) {
       strokeWidth={1.6}
       strokeLinecap="round"
       stroke={active ? color : "var(--muted-foreground)"}
-      strokeDasharray="3 4"
+      strokeDasharray={active ? "3 4" : "0.5 4"}
       className={active ? "solar-flow-line" : "solar-flow-idle"}
     />
   )
 }
 
-const HUB: [number, number] = [50, 50]
 const PV: [number, number] = [50, 16]
 const GRID: [number, number] = [16, 50]
 const HOME: [number, number] = [84, 50]
@@ -135,13 +166,14 @@ export function PowerFlowDiagram({ overview }: { overview: SolarOverview }) {
         @keyframes solar-dash {
           to { stroke-dashoffset: -14; }
         }
+        /* Idle: round dots that gently breathe in place to signal "no flow". */
         .solar-flow-idle {
-          opacity: 0.3;
-          animation: solar-idle-pulse 2.4s ease-in-out infinite;
+          stroke-linecap: round;
+          animation: solar-idle-breathe 2.6s ease-in-out infinite;
         }
-        @keyframes solar-idle-pulse {
-          0%, 100% { opacity: 0.18; }
-          50% { opacity: 0.4; }
+        @keyframes solar-idle-breathe {
+          0%, 100% { opacity: 0.15; }
+          50% { opacity: 0.45; }
         }
       `}</style>
 
@@ -151,26 +183,26 @@ export function PowerFlowDiagram({ overview }: { overview: SolarOverview }) {
         preserveAspectRatio="xMidYMid meet"
       >
         {/* PV -> inverter (production) */}
-        <FlowLine from={PV} to={HUB} active={solarActive} color="#f59e0b" />
+        <FlowLine node={PV} active={solarActive} color="#f59e0b" />
 
         {/* Grid <-> inverter (import red / export emerald) */}
         <FlowLine
-          from={importing ? GRID : HUB}
-          to={importing ? HUB : GRID}
+          node={GRID}
           active={importing || exporting}
           color={importing ? "#ef4444" : "#10b981"}
+          reverse={exporting}
         />
 
         {/* inverter -> Home (consumption) */}
-        <FlowLine from={HUB} to={HOME} active={homeActive} color="#3b82f6" />
+        <FlowLine node={HOME} active={homeActive} color="#3b82f6" reverse />
 
         {/* Battery <-> inverter (discharge emerald / charge violet) */}
         {showBattery && (
           <FlowLine
-            from={discharging ? BATTERY : HUB}
-            to={discharging ? HUB : BATTERY}
+            node={BATTERY}
             active={charging || discharging}
-            color={discharging ? "#10b981" : "#8b5cf6"}
+            color={charging ? "#8b5cf6" : "#10b981"}
+            reverse={charging}
           />
         )}
       </svg>
