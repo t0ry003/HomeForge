@@ -1,15 +1,16 @@
 services:
   backend:
-    # Host networking lets mDNS (UDP 5353 multicast) reach the physical LAN so
-    # ESP32 devices can auto-discover the MQTT broker (_mqtt._tcp). It also
-    # publishes the host's real LAN IP and exposes 1883/8000 directly (the
-    # `ports:` mappings are not needed with host networking).
-    network_mode: host
-    # With host networking the backend leaves the compose bridge network, so the
-    # `db` service hostname is no longer resolvable via Docker DNS. The db service
-    # publishes 5432 on the host, so reach Postgres via localhost instead.
-    environment:
-      - DB_HOST=127.0.0.1
+    # NOTE: We intentionally do NOT use `network_mode: host` here.
+    # On Docker Desktop (macOS/Windows) host mode binds to the internal Linux VM,
+    # not the physical LAN, so it neither exposes ports to your network nor lets
+    # mDNS reach real devices — and it also breaks `db` hostname resolution.
+    # Bridge networking with explicit published ports works everywhere for the
+    # manual `server_ip` / `/config` device-connection fallbacks.
+    # (True mDNS zero-config discovery only works on a native Linux host such as a
+    # Raspberry Pi — see deploy/docker-compose.prod.yml.)
+    ports:
+      - "8000:8000"   # Django API
+      - "1883:1883"   # Mosquitto MQTT broker (REQUIRED for devices to connect)
     command: sleep infinity
   frontend:
     command: sleep infinity

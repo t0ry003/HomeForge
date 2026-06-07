@@ -1,0 +1,45 @@
+# HomeForge production deployment — NATIVE LINUX HOST ONLY (e.g. Raspberry Pi 4).
+#
+# Run this directly on a Linux machine that sits on the same physical LAN as your
+# ESP32 devices. On native Linux, `network_mode: host` places the MQTT broker and
+# the Avahi advertisement directly on the LAN, so:
+#   * mDNS (UDP 5353 multicast) reaches devices -> zero-config _mqtt._tcp discovery
+#   * Avahi advertises the host's REAL LAN IP (e.g. 192.168.1.x)
+#   * Ports 8000 (API) and 1883 (MQTT) are exposed on the host's LAN IP directly
+#
+# This is the deployment where device auto-discovery is intended to work.
+#
+# NOTE: Auto-discovery is NOT supported on Docker Desktop / Windows / WSL — host
+# mode there binds to the internal Docker VM, not the physical LAN. For development
+# on Windows use the bridge-networked dev setup (.devcontainer/docker-compose.dev.yml)
+# with published 8000/1883 ports and the manual `server_ip` / `/config` fallbacks.
+#
+# Usage (from the repo root on the Pi):
+#   docker compose -f docker-compose.yml -f backend/deploy/docker-compose.prod.yml up -d --build
+#
+# (Adjust the path to this file to match where your repo lays it out.)
+
+services:
+  db:
+    # Keep Postgres on its own bridge network; it does not need host networking.
+    # The backend reaches it via the published port on localhost (see DB_HOST below).
+    ports:
+      - "5432:5432"
+
+  backend:
+    # Host networking is the whole point on the Pi: it places mosquitto + Avahi on
+    # the physical LAN so devices can discover and reach the broker with no config.
+    network_mode: host
+    environment:
+      # With host networking the backend leaves the compose bridge network, so the
+      # `db` service hostname no longer resolves. Postgres is published on the host,
+      # so reach it via localhost instead.
+      - DB_HOST=127.0.0.1
+      - DB_NAME=HomeForge
+      - DB_USER=myuser
+      - DB_PASS=mypassword
+      - PYTHONUNBUFFERED=1
+    # `ports:` are not used with host networking — 8000 and 1883 are already on the
+    # host's LAN IP directly.
+    depends_on:
+      - db
