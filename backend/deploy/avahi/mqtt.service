@@ -1,0 +1,14 @@
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<!--
+  Advertises the HomeForge MQTT broker over mDNS as _mqtt._tcp so that
+  ESP32 devices can auto-discover it (MDNS.queryService("mqtt", "tcp"))
+  without the user entering a server IP.
+-->
+<service-group>
+  <name replace-wildcards="yes">HomeForge MQTT on %h</name>
+  <service>
+    <type>_mqtt._tcp</type>
+    <port>1883</port>
+  </service>
+</service-group>

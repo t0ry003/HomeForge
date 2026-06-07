@@ -31,3 +31,7 @@ RUN echo "listener 1883 0.0.0.0\nallow_anonymous true" > /etc/mosquitto/conf.d/e
 
 # Configure Avahi
 RUN sed -i 's/#enable-dbus=yes/enable-dbus=yes/' /etc/avahi/avahi-daemon.conf
+
+# Advertise the MQTT broker over mDNS (_mqtt._tcp) so ESP32 devices
+# can auto-discover the broker without a hardcoded server IP.
+COPY deploy/avahi/mqtt.service /etc/avahi/services/mqtt.service

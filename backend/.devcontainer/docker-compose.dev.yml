@@ -1,8 +1,10 @@
 services:
   backend:
-    ports:
-      - "1883:1883"
-      - "8000:8000"
+    # Host networking lets mDNS (UDP 5353 multicast) reach the physical LAN so
+    # ESP32 devices can auto-discover the MQTT broker (_mqtt._tcp). It also
+    # publishes the host's real LAN IP and exposes 1883/8000 directly (the
+    # `ports:` mappings are not needed with host networking).
+    network_mode: host
     command: sleep infinity
   frontend:
     command: sleep infinity
