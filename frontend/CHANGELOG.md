@@ -1,5 +1,27 @@
 # HomeForge Frontend Changelog
 
+## [2026-06-05] - Solar idle animation, setup step, admin controls
+
+### Changed
+- **File**: `components/solar/PowerFlowDiagram.tsx`
+- **Description**: Refactored `FlowLine` to take a single `node` endpoint plus a `reverse` direction flag, and added a `trim()` helper (with `NODE_R`/`HUB_R` radii) that shortens each segment to stop at the circle edges — so idle/greyed lines no longer overlap into the icon circles. Replaced the idle opacity pulse with a non-directional "breathing dots" animation (`solar-idle-breathe`, round dashes `0.5 4`) that conveys "nothing passing through".
+- **Impact**: Cleaner diagram; idle legs read clearly as inactive without bleeding into the nodes.
+
+- **File**: `app/dashboard/solar/page.tsx`
+- **Description**: Moved the admin-only Edit/Delete buttons out of the top header and into the system details row, right-aligned (`ml-auto`) on the same level as the name, provider, and status badges. They remain gated to admin/owner via `canManage`.
+- **Impact**: Tidier header; admin controls sit alongside the system metadata.
+
+### Added
+- **File**: `components/setup/steps/SolarStep.tsx`
+- **Description**: New skippable setup-wizard step to optionally connect a Fronius solar system (name, API URL, provider) via `createSolarSystem`, with server-side link validation/error handling and a note that support for more solar APIs is coming soon.
+- **Dependencies**: None (reuses existing apiClient + ui primitives).
+
+- **File**: `components/setup/SetupWizard.tsx`, `components/setup/steps/CompleteStep.tsx`
+- **Description**: Inserted the `solar` step into the wizard flow between `devices` and `complete`, added `solarConnected` to setup state, and added a solar summary row to the completion screen.
+
+- **File**: `frontend_readme.md`
+- **Description**: Documented the Solar feature (overview, dependencies, project structure, setup wizard step, Features section, component library, and Solar API client functions).
+
 ## [2026-06-05] - Solar diagram polish, chart scaling, mobile sidebar
 
 ### Changed

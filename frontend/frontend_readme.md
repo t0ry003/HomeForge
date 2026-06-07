@@ -32,6 +32,7 @@
 - � **Device Collection** — Browse, import/export device type definitions
 - 🔧 **Device Builder** — Design custom device configurations via drag-and-drop
 - 🌐 **Topology View** — Visualize your connected device network
+- ☀️ **Solar** — Live Fronius SolarWeb / Tesla-style power-flow view
 - ⚙️ **Settings** — User profiles, themes, and preferences
 - 🛡️ **Admin Panel** — Room management, user roles, and device approvals
 - 🚀 **Setup Wizard** — Guided first-run configuration
@@ -67,6 +68,7 @@
 | elkjs | Graph layout algorithms |
 | @dnd-kit | Drag-and-drop |
 | Prism.js | Code syntax highlighting |
+| Recharts | Solar live power chart |
 
 ### Data & State
 
@@ -142,6 +144,7 @@ Component → React Query → apiClient.js → Backend API (port 8000)
 │       │   └── [id]/           # Dynamic collection detail page
 │       ├── device-types/       # Device type proposals
 │       ├── topology/           # Network visualization
+│       ├── solar/              # Solar power-flow view
 │       ├── settings/           # User preferences
 │       └── admin/              # Admin-only routes
 │           ├── rooms/          # Room management
@@ -158,6 +161,13 @@ Component → React Query → apiClient.js → Backend API (port 8000)
 │   │   ├── FirmwareCodeEditor.tsx
 │   │   └── WiringDiagramEditor.tsx
 │   ├── topology/               # Graph visualization
+│   ├── solar/                  # Solar power-flow view
+│   │   ├── PowerFlowDiagram.tsx
+│   │   ├── SolarStatCards.tsx
+│   │   ├── LivePowerChart.tsx
+│   │   ├── SolarSystemDialog.tsx
+│   │   ├── SolarEmptyState.tsx
+│   │   └── solar-utils.ts
 │   ├── notifications/          # Notification system
 │   │   └── notification-center.tsx
 │   ├── setup/                  # First-run setup wizard
@@ -182,6 +192,7 @@ Component → React Query → apiClient.js → Backend API (port 8000)
 ├── lib/                        # Utilities
 │   ├── apiClient.js            # API communication
 │   ├── dashboard-grid.ts       # Dashboard grid types & helpers
+│   ├── solar-types.ts          # Solar TypeScript interfaces
 │   ├── utils.ts                # Helper functions (cn)
 │   └── icons.ts                # Icon mappings (Lucide)
 │
@@ -269,7 +280,8 @@ When the system is fresh (no users exist), the setup wizard guides first-time co
 2. **Admin Account** — Create the owner account (prevents duplicate creation on back-navigation)
 3. **Rooms** — Select from suggested rooms (with default icons) or add custom rooms with icon picker
 4. **Device Types** — Import default device type definitions
-5. **Complete** — Summary of created resources
+5. **Solar** *(optional, skippable)* — Connect a Fronius solar system by API URL; shows a note that support for more solar APIs is coming soon
+6. **Complete** — Summary of created resources (rooms, device types, solar)
 
 **Suggested Room Icons:**
 
@@ -378,6 +390,22 @@ Network visualization of connected devices:
 - **Radial Layout** — Gateway-centered star topology
 - **Live Data** — Fetched from `/topology/` endpoint
 - **Status Indicators** — Online (green glow) / Offline
+
+### Solar (`/dashboard/solar`)
+
+Live solar energy monitoring with a Tesla / Fronius SolarWeb–style view:
+
+- **Animated Power-Flow Diagram** — Central inverter hub with PV, Grid, Home, and Battery nodes
+  - Flow lines are trimmed to each circle's edge so dashes never overlap the icons
+  - Active legs animate as travelling dashes in the direction of power flow (color-coded: PV amber, grid import red / export emerald, home blue, battery charge violet / discharge emerald)
+  - Idle legs (< 1 W) grey out and gently "breathe" as round dots to signal that nothing is passing through
+  - The battery node only appears when the system reports a battery
+- **Live Power Chart** — Session-only Recharts area chart accumulating polled samples (Solar / Home / Grid) with an always-visible legend
+- **Stat Cards** — Production, Consumption, Grid, Battery, Self-consumption, and Autonomy
+- **Polling** — Overview refetched every 5 seconds while the page is open
+- **Admin Controls** — Edit / Delete actions are admin/owner only and right-aligned on the system details row
+- **States** — Loading skeletons, offline badge, and an empty state with an admin-only "Add solar system" CTA
+- **Provider Support** — Fronius Solar API V1 today; more providers coming soon. HomeForge stores only the API link and reads it server-side.
 
 ### Device Management (`/dashboard/devices`)
 
@@ -537,6 +565,7 @@ Key optimizations:
 | `breadcrumb` | Navigation breadcrumbs |
 | `button` | Action buttons with variants |
 | `card` | Content containers |
+| `chart` | Recharts wrapper (container, tooltip, legend) |
 | `checkbox` | Checkbox inputs |
 | `collapsible` | Expandable sections |
 | `command` | Command palette |
@@ -570,9 +599,14 @@ Key optimizations:
 | `HomeForgeLogo` | Adaptive logo (color in dark, masked BW in light) |
 | `NavUser` | User dropdown menu + notification bell |
 | `NotificationCenter` | Bell icon with popover notification list |
-| `SetupWizard` | First-run setup flow (account, rooms, device types) |
+| `SetupWizard` | First-run setup flow (account, rooms, device types, solar) |
 | `OnboardingChecklist` | Post-setup task checklist with reactive completion |
 | `PageTooltip` | Contextual page-level tooltip hints |
+| `PowerFlowDiagram` | Animated SVG solar power-flow diagram (inverter hub + nodes) |
+| `LivePowerChart` | Session-only Recharts area chart of live solar power |
+| `SolarStatCards` | Live solar production/consumption/grid/battery stat cards |
+| `SolarSystemDialog` | Admin add/edit dialog for a solar system |
+| `SolarEmptyState` | Empty state with admin-only "Add solar system" CTA |
 | `SmartDeviceCard` | Device display card with smart toggle behavior |
 | `DraggableDeviceGrid` | Drag-and-drop dashboard grid with folder support |
 | `DeviceFolder` | iOS-style device folder with 2×2 preview |
@@ -688,6 +722,31 @@ const rooms = await fetchRooms()
 await createRoom({ name: 'Living Room', icon: 'Sofa' })
 await updateRoom(roomId, { name: 'Living Room', icon: 'Armchair' })
 await deleteRoom(roomId)
+```
+
+### Solar API
+
+```javascript
+import {
+  fetchSolarSystems,
+  createSolarSystem,
+  updateSolarSystem,
+  deleteSolarSystem,
+  fetchSolarOverview,
+} from '@/lib/apiClient'
+
+// List configured solar systems
+const systems = await fetchSolarSystems()
+
+// Create a system (link is validated server-side; throws on unreachable URL)
+await createSolarSystem({ name: 'Rooftop PV', base_url: 'http://inverter:80', provider: 'fronius' })
+
+// Update / delete (admin/owner only)
+await updateSolarSystem(systemId, { name: 'Rooftop PV', base_url: 'http://inverter:80', provider: 'fronius' })
+await deleteSolarSystem(systemId)
+
+// Live overview (power, battery, energy, ratios) — polled every 5s on the Solar page
+const overview = await fetchSolarOverview(systemId)
 ```
 
 ### Notification API
