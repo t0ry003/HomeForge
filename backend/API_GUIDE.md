@@ -1,6 +1,6 @@
 # HomeForge API Guide
 
-> **Version:** 1.9.3  
+> **Version:** 1.9.4  
 > **Base URL:** `http://localhost:8000/api/`  
 > **Authentication:** JWT (JSON Web Tokens)  
 > **Last Updated:** June 7, 2026
@@ -693,7 +693,7 @@ Any authenticated user can propose a new device type for admin review.
       }
     ]
   },
-  "firmware_code": "#include <WiFi.h>\nconst char* wifi_ssid = \"{{WIFI_SSID}}\";\nconst char* wifi_password = \"{{WIFI_PASSWORD}}\";\nconst char* server_ip = \"{{SERVER_IP}}\";\n...",
+  "firmware_code": "#include <WiFi.h>\nconst char* wifi_ssid = \"{{WIFI_SSID}}\";\nconst char* wifi_password = \"{{WIFI_PASSWORD}}\";\n// server_ip optional: auto-discovered via mDNS\n...",
   "wiring_diagram_text": "## Pin Connections\n| ESP32 Pin | Component |\n|---|---|\n| GPIO4 | DHT22 Data |",
   "documentation": "# Smart Fan\n\n## Parts List\n..."
 }
@@ -703,7 +703,7 @@ Any authenticated user can propose a new device type for admin review.
 - `name` must be unique
 - Every `variable_mapping` in controls must match an `id` in `definition.structure`
 - Always created with `approved: false`
-- If `firmware_code` is provided, it must contain the strings `wifi_ssid`, `wifi_password`, and `server_ip`
+- If `firmware_code` is provided, it must contain the strings `wifi_ssid` and `wifi_password`. `server_ip` is **optional** — firmware may auto-discover the HomeForge MQTT broker via mDNS (`_mqtt._tcp`), so no server address needs to be entered by the user.
 - `firmware_code`: max 100,000 characters
 - `wiring_diagram_text`: max 50,000 characters
 - `documentation`: max 50,000 characters
