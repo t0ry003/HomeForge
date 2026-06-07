@@ -60,6 +60,9 @@ fi
 echo "Starting background MQTT listener..."
 python manage.py mqtt_listener &
 
+echo "Starting background solar poller..."
+python manage.py poll_solar &
+
 echo "Starting development server on 0.0.0.0:8000..."
 exec python manage.py runserver 0.0.0.0:8000
 
