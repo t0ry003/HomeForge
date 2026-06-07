@@ -1,5 +1,12 @@
 # HomeForge Frontend Changelog
 
+## [2026-06-07] - Stable device card height while syncing
+
+### Fixed
+- **File**: `components/devices/SmartDeviceCard.tsx`
+- **Description**: Single-toggle device cards no longer shrink in height while a command is in flight. The "Tap to turn on/off" hint was gated on `isTappable` (which includes `!isSyncing`), so pressing a relay removed that line from the layout and made the card shorter until the loading state cleared. Added a stable `canTap` condition (ignores the transient syncing state) to drive the hint, so the card keeps its size and the loading overlay shows progress in place.
+- **Impact**: Toggling a device on the dashboard keeps a constant card height instead of jumping smaller during the loading spinner.
+
 ## [2026-06-07] - Solar topology node type & liveness
 
 ### Changed
