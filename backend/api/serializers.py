@@ -72,11 +72,13 @@ class CustomDeviceTypeSerializer(serializers.ModelSerializer):
         if value and len(value) > 100000:
             raise serializers.ValidationError("Firmware code must not exceed 100,000 characters.")
         if value:
-            required_vars = ['wifi_ssid', 'wifi_password', 'server_ip']
+            # WiFi credentials are always required (replaced per-device by the UI).
+            # server_ip is optional: firmware may auto-discover the broker via mDNS.
+            required_vars = ['wifi_ssid', 'wifi_password']
             missing = [v for v in required_vars if v not in value]
             if missing:
                 raise serializers.ValidationError(
-                    "Firmware code must contain the variables: wifi_ssid, wifi_password, server_ip. These are required for device connectivity."
+                    "Firmware code must contain the variables: wifi_ssid, wifi_password. These are required for device connectivity."
                 )
         return value
 
