@@ -10,6 +10,7 @@ const nodeTypes: NodeTypes = {
   input: TopologyBuilderNode,
   mcu: TopologyBuilderNode,
   gateway: TopologyBuilderNode,
+  solar: TopologyBuilderNode,
   // Fallback for any unknown types
   default: TopologyBuilderNode,
 };

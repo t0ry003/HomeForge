@@ -84,10 +84,15 @@ export default memo(({ id, data: _data, selected }: NodeProps<Node>) => {
   const data = _data as any;
   let config = resolveType(data.device_type || data.type, id);
 
-  // Solar fallback: the backend may only hint "solar" through the icon string
-  // (e.g. a FontAwesome class like "fa-solar-panel") rather than device_type.
+  // Solar fallback: the backend marks solar nodes explicitly via `is_solar`
+  // / `type: "solar"`, and may only hint solar through the icon string
+  // (e.g. a FontAwesome class like "fa-sun") rather than device_type.
   const iconHint = `${data.icon ?? ''}`.toLowerCase();
-  if (config === TYPE_CONFIG.default && /solar|photovolta|inverter/.test(iconHint)) {
+  const isSolar =
+    data.is_solar === true ||
+    `${data.type ?? ''}`.toLowerCase() === 'solar' ||
+    /solar|photovolta|inverter/.test(iconHint);
+  if (isSolar) {
     config = TYPE_CONFIG.solar;
   }
 
