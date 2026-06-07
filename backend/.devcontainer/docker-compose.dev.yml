@@ -5,6 +5,11 @@ services:
     # publishes the host's real LAN IP and exposes 1883/8000 directly (the
     # `ports:` mappings are not needed with host networking).
     network_mode: host
+    # With host networking the backend leaves the compose bridge network, so the
+    # `db` service hostname is no longer resolvable via Docker DNS. The db service
+    # publishes 5432 on the host, so reach Postgres via localhost instead.
+    environment:
+      - DB_HOST=127.0.0.1
     command: sleep infinity
   frontend:
     command: sleep infinity
