@@ -1,5 +1,12 @@
 # HomeForge Frontend Changelog
 
+## [2026-06-07] - Solar icon in topology
+
+### Changed
+- **File**: `components/topology/nodes/TopologyBuilderNode.tsx`
+- **Description**: Solar systems no longer fall back to the generic `Cpu` icon in the network topology. Added a `solar` type mapping (amber `Sun` icon) and detection in `resolveType` for `device_type`/`type` values containing `solar`, `inverter`, `photovolta`, `pv`, or `panel`. Also added an icon-string fallback so a solar node tagged only via its FontAwesome icon (e.g. `fa-solar-panel`) still renders the `Sun` icon instead of `Cpu`.
+- **Impact**: Solar/PV nodes in `/dashboard/topology` now show a representative sun icon.
+
 ## [2026-06-05] - Solar idle animation, setup step, admin controls
 
 ### Changed

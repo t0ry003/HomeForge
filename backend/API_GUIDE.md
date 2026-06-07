@@ -1,9 +1,9 @@
 # HomeForge API Guide
 
-> **Version:** 1.9.2  
+> **Version:** 1.9.3  
 > **Base URL:** `http://localhost:8000/api/`  
 > **Authentication:** JWT (JSON Web Tokens)  
-> **Last Updated:** June 5, 2026
+> **Last Updated:** June 7, 2026
 
 A comprehensive API reference for the HomeForge smart home management platform. This guide is designed for frontend developers and AI agents to build complete user interfaces.
 
@@ -1723,6 +1723,19 @@ Get a visual representation of the smart home network for rendering with graph l
 
 > **Solar nodes:** Each registered solar system (see [Section 10](#10-solar--energy-integration)) appears as one node with id `solar-{id}`. Its `online`/`offline` status is derived from a recent successful `/overview/` poll (cached snapshot or `last_seen` within the last 90 seconds) — the topology endpoint never makes a blocking vendor API call, so it respects provider rate limits. Disabled systems always show as `offline`.
 
+> **⚠️ Icon mapping (frontend):** All topology nodes carry a FontAwesome class in `data.icon` (e.g. devices use `fa-lightbulb`, solar uses **`fa-sun`**). If your renderer uses a different icon set (e.g. Lucide), it must translate this token. A solar node that renders as a generic CPU/box icon means your icon map has no entry for `fa-sun` and fell back to a default. Map it explicitly using **either** signal the backend provides:
+>
+> ```ts
+> // Option A — match the icon token
+> const iconFor = (node) =>
+>   node.data.is_solar ? Sun : ICONS[node.data.icon] ?? Cpu;
+>
+> // Option B — match by FontAwesome class
+> const ICONS = { 'fa-sun': Sun, 'fa-lightbulb': Lightbulb, /* … */ };
+> ```
+>
+> The backend guarantees solar nodes always include `type: "solar"`, `is_solar: true`, and `icon: "fa-sun"`, so any of those three can key the mapping.
+
 **Status Colors:**
 | Status | Color |
 |--------|-------|
@@ -2759,7 +2772,7 @@ Returns whether this is a fresh installation (no users have been registered yet)
 
 5. **Notifications:** Use `/notifications/unread-count/` for badge counts. The `by_type` field allows showing different badges for different notification categories.
 
-6. **Icons:** Device icons use FontAwesome class names (e.g., `fa-lightbulb`). Include FontAwesome in your frontend.
+6. **Icons:** All icon fields (rooms, devices, and topology nodes) use FontAwesome class names (e.g., `fa-lightbulb`, `fa-sun`). Either include FontAwesome in your frontend, or — if you use a different icon set such as Lucide — maintain a token→component map. Solar topology nodes always send `icon: "fa-sun"` (plus `type: "solar"` / `is_solar: true`); make sure your map has an entry for it so it renders a sun rather than the generic fallback icon.
 
 7. **Accent Color:** Users can personalize their UI with `accent_color`. Use it for theming.
 
