@@ -35,6 +35,9 @@ const TYPE_CONFIG: Record<string, { icon: any, color: string }> = {
   switch: { icon: ToggleLeft, color: 'text-green-500 border-green-500/50 bg-green-500/10' },
   thermostat: { icon: Thermometer, color: 'text-orange-500 border-orange-500/50 bg-orange-500/10' },
   humidity: { icon: Droplets, color: 'text-cyan-500 border-cyan-500/50 bg-cyan-500/10' },
+
+  // Energy / Solar
+  solar: { icon: Sun, color: 'text-amber-500 border-amber-500/50 bg-amber-500/10' },
   
   // IT Infrastructure
   computer: { icon: Laptop, color: 'text-indigo-500 border-indigo-500/50 bg-indigo-500/10' },
@@ -61,6 +64,7 @@ const resolveType = (type: string = '', id: string = '') => {
   // Only check type and ID for gateway detection (input is a ReactFlow type)
   if (t.includes('gateway') || i.includes('gateway') || t === 'input') return TYPE_CONFIG.gateway;
   if (t.includes('server')) return TYPE_CONFIG.server;
+  if (t.includes('solar') || t.includes('inverter') || t.includes('photovolta') || t.includes('pv') || t.includes('panel')) return TYPE_CONFIG.solar;
   if (t.includes('camera')) return TYPE_CONFIG.camera;
   if (t.includes('light') || t.includes('bulb')) return TYPE_CONFIG.light;
   if (t.includes('sensor') || t.includes('temp') || t.includes('humid')) return TYPE_CONFIG.sensor;
@@ -78,8 +82,15 @@ const resolveType = (type: string = '', id: string = '') => {
 
 export default memo(({ id, data: _data, selected }: NodeProps<Node>) => {
   const data = _data as any;
-  const config = resolveType(data.device_type || data.type, id);
-  
+  let config = resolveType(data.device_type || data.type, id);
+
+  // Solar fallback: the backend may only hint "solar" through the icon string
+  // (e.g. a FontAwesome class like "fa-solar-panel") rather than device_type.
+  const iconHint = `${data.icon ?? ''}`.toLowerCase();
+  if (config === TYPE_CONFIG.default && /solar|photovolta|inverter/.test(iconHint)) {
+    config = TYPE_CONFIG.solar;
+  }
+
   // Use custom icon if provided, else component default
   const CustomIcon = data.icon ? getIconComponent(data.icon) : null;
   const Icon = CustomIcon || config.icon;
