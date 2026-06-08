@@ -403,8 +403,10 @@ function autoGenerateWidgets(nodes: Node[]): Widget[] {
   const mappableNodes = nodes.filter(n => n.data.type !== 'mcu');
   const widgets: Widget[] = [];
   
-  // Separate sensors and controls
-  const sensorTypes = ['temperature', 'humidity', 'motion', 'light', 'co2'];
+  // Separate sensors and controls.
+  // Sensor types are derived from NODE_TO_WIDGET_MAP (minus controls) so any node
+  // type that maps to a widget — e.g. pressure or future sensors — is included.
+  const sensorTypes = Object.keys(NODE_TO_WIDGET_MAP).filter(t => t !== 'switch');
   const sensorNodes = mappableNodes.filter(n => sensorTypes.includes(n.data.type));
   const controlNodes = mappableNodes.filter(n => n.data.type === 'switch');
   

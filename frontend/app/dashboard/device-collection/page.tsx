@@ -27,6 +27,7 @@ import {
   Sun,
   ToggleLeft,
   Wind,
+  Gauge,
   Code2,
   BookOpen,
   Cable,
@@ -47,11 +48,16 @@ const SENSOR_ICONS: Record<string, { icon: React.ElementType; color: string }> =
   mcu: { icon: Cpu, color: 'text-blue-500' },
   temperature: { icon: Thermometer, color: 'text-orange-500' },
   humidity: { icon: Droplets, color: 'text-cyan-500' },
+  pressure: { icon: Gauge, color: 'text-indigo-500' },
+  switch: { icon: ToggleLeft, color: 'text-green-500' },
   motion: { icon: Activity, color: 'text-red-500' },
   light: { icon: Sun, color: 'text-yellow-500' },
-  switch: { icon: ToggleLeft, color: 'text-green-500' },
   co2: { icon: Wind, color: 'text-gray-500' },
 };
+
+// Fallback badge config for any component type not explicitly mapped above,
+// so every node in the topology always gets a visible badge.
+const DEFAULT_SENSOR_ICON = { icon: Gauge, color: 'text-muted-foreground' };
 
 function DeviceTypeCard({ deviceType }: { deviceType: any }) {
   const router = useRouter();
@@ -108,8 +114,7 @@ function DeviceTypeCard({ deviceType }: { deviceType: any }) {
         {sensors.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {sensors.map((sensor: any, i: number) => {
-              const config = SENSOR_ICONS[sensor.type];
-              if (!config) return null;
+              const config = SENSOR_ICONS[sensor.type] || DEFAULT_SENSOR_ICON;
               const Icon = config.icon;
               return (
                 <div
