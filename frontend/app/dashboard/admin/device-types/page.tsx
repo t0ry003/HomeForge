@@ -1082,7 +1082,7 @@ export default function DeviceTypesManagementPage() {
                                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Firmware Code</span>
                                     </div>
                                     {selectedType.firmware_code ? (
-                                        <pre className="flex-1 max-h-[360px] overflow-auto p-4 text-xs font-mono leading-relaxed bg-background whitespace-pre">
+                                        <pre className="h-[420px] overflow-auto p-4 text-xs font-mono leading-relaxed bg-background whitespace-pre">
                                             <code>{selectedType.firmware_code}</code>
                                         </pre>
                                     ) : (
@@ -1097,7 +1097,7 @@ export default function DeviceTypesManagementPage() {
                                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Wiring Diagram</span>
                                     </div>
                                     {(selectedType.wiring_diagram_image || selectedType.wiring_diagram_text) ? (
-                                        <div className="flex-1 p-4 space-y-4 overflow-auto bg-background">
+                                        <div className="h-[420px] p-4 space-y-4 overflow-auto bg-background">
                                             {selectedType.wiring_diagram_image && (
                                                 // eslint-disable-next-line @next/next/no-img-element
                                                 <img
@@ -1122,7 +1122,7 @@ export default function DeviceTypesManagementPage() {
                                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Documentation</span>
                                     </div>
                                     {selectedType.documentation ? (
-                                        <div className="flex-1 p-4 overflow-auto bg-background">
+                                        <div className="h-[420px] p-4 overflow-auto bg-background">
                                             <MarkdownRenderer>{selectedType.documentation}</MarkdownRenderer>
                                         </div>
                                     ) : (
