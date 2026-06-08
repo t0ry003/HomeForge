@@ -20,7 +20,7 @@ import {
     Cpu, Thermometer, Droplets, Activity, Sun, ToggleLeft, Wind, 
     CheckCircle2, XCircle, Inbox, RotateCw, Plus, Edit, Trash2,
     AlertTriangle, CheckSquare, Square, Filter, Download, Upload,
-    FileUp, Package
+    FileUp, Package, Code2, FileText, CircuitBoard
 } from 'lucide-react';
 import { toast } from "sonner";
 import Link from "next/link";
@@ -55,9 +55,11 @@ import {
     importDeviceTypesFromFile,
     exportDeviceTypes,
     exportSingleDeviceType,
+    getMediaUrl,
 } from "@/lib/apiClient";
 import { useUser } from "@/components/user-provider";
 import SmartDeviceCard from "@/components/devices/SmartDeviceCard";
+import { MarkdownRenderer } from "@/components/ui/markdown-editor";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -251,25 +253,41 @@ export default function DeviceTypesManagementPage() {
 
     const isLoading = loadingApproved || loadingPending || loadingDenied;
 
-    // Combine and filter all types
-    const allTypes = useMemo(() => {
-        const combined = [
-            ...approvedTypes.map((dt: any) => ({ ...dt, _status: 'approved' as const })),
-            ...pendingTypes.map((dt: any) => ({ ...dt, _status: 'pending' as const })),
-            ...deniedTypes.map((dt: any) => ({ ...dt, _status: 'denied' as const })),
-        ];
-        
-        if (statusFilter === 'all') return combined;
-        return combined.filter(dt => dt._status === statusFilter);
-    }, [approvedTypes, pendingTypes, deniedTypes, statusFilter]);
+    // Combine and dedupe all types by id.
+    // NOTE: for admins, GET /device-types/ returns ALL types (including pending/denied),
+    // so the same type can appear in `approvedTypes` AND in the pending/denied lists.
+    // We dedupe by id and let the pending/denied lists be authoritative for status,
+    // merging fields so heavy data (firmware/wiring/docs) from the full list is kept.
+    const dedupedTypes = useMemo(() => {
+        const byId = new Map<number, any>();
+        for (const dt of approvedTypes) {
+            const status = dt.approved
+                ? 'approved'
+                : (dt.rejection_reason ? 'denied' : 'pending');
+            byId.set(dt.id, { ...dt, _status: status });
+        }
+        for (const dt of pendingTypes) {
+            byId.set(dt.id, { ...byId.get(dt.id), ...dt, _status: 'pending' as const });
+        }
+        for (const dt of deniedTypes) {
+            byId.set(dt.id, { ...byId.get(dt.id), ...dt, _status: 'denied' as const });
+        }
+        return Array.from(byId.values());
+    }, [approvedTypes, pendingTypes, deniedTypes]);
 
-    // Counts for badges
+    // Filter for the active tab
+    const allTypes = useMemo(() => {
+        if (statusFilter === 'all') return dedupedTypes;
+        return dedupedTypes.filter(dt => dt._status === statusFilter);
+    }, [dedupedTypes, statusFilter]);
+
+    // Counts for badges (derived from deduped list so totals match what is shown)
     const counts = useMemo(() => ({
-        all: approvedTypes.length + pendingTypes.length + deniedTypes.length,
-        approved: approvedTypes.length,
-        pending: pendingTypes.length,
-        denied: deniedTypes.length,
-    }), [approvedTypes, pendingTypes, deniedTypes]);
+        all: dedupedTypes.length,
+        approved: dedupedTypes.filter(d => d._status === 'approved').length,
+        pending: dedupedTypes.filter(d => d._status === 'pending').length,
+        denied: dedupedTypes.filter(d => d._status === 'denied').length,
+    }), [dedupedTypes]);
 
     // Refetch all queries
     const refetchAll = useCallback(() => {
@@ -1011,7 +1029,8 @@ export default function DeviceTypesManagementPage() {
                             </div>
 
                             {/* Preview Panels */}
-                            <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0 overflow-auto">
+                            <div className="flex-1 flex flex-col gap-4 min-h-0 overflow-auto">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                 {/* Panel 1: Hardware Topology */}
                                 <div className="flex flex-col rounded-lg border overflow-hidden min-h-[300px]">
                                     <div className="py-2 px-3 border-b bg-muted/30 shrink-0">
@@ -1052,6 +1071,62 @@ export default function DeviceTypesManagementPage() {
                                             />
                                         </div>
                                     </div>
+                                </div>
+                                </div>
+
+                                {/* Panel 3: Firmware Code */}
+                                <div className="flex flex-col rounded-lg border bg-card overflow-hidden">
+                                    <div className="py-2 px-3 border-b bg-muted/30 shrink-0 flex items-center gap-2">
+                                        <Code2 className="w-3.5 h-3.5 text-muted-foreground" />
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Firmware Code</span>
+                                    </div>
+                                    {selectedType.firmware_code ? (
+                                        <pre className="flex-1 max-h-[360px] overflow-auto p-4 text-xs font-mono leading-relaxed bg-background whitespace-pre">
+                                            <code>{selectedType.firmware_code}</code>
+                                        </pre>
+                                    ) : (
+                                        <div className="p-4 text-xs text-muted-foreground italic">No firmware code provided.</div>
+                                    )}
+                                </div>
+
+                                {/* Panel 4: Wiring Diagram */}
+                                <div className="flex flex-col rounded-lg border bg-card overflow-hidden">
+                                    <div className="py-2 px-3 border-b bg-muted/30 shrink-0 flex items-center gap-2">
+                                        <CircuitBoard className="w-3.5 h-3.5 text-muted-foreground" />
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Wiring Diagram</span>
+                                    </div>
+                                    {(selectedType.wiring_diagram_image || selectedType.wiring_diagram_text) ? (
+                                        <div className="flex-1 p-4 space-y-4 overflow-auto bg-background">
+                                            {selectedType.wiring_diagram_image && (
+                                                // eslint-disable-next-line @next/next/no-img-element
+                                                <img
+                                                    src={getMediaUrl(selectedType.wiring_diagram_image)}
+                                                    alt="Wiring diagram"
+                                                    className="max-w-full rounded-md border"
+                                                />
+                                            )}
+                                            {selectedType.wiring_diagram_text && (
+                                                <MarkdownRenderer>{selectedType.wiring_diagram_text}</MarkdownRenderer>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="p-4 text-xs text-muted-foreground italic">No wiring diagram provided.</div>
+                                    )}
+                                </div>
+
+                                {/* Panel 5: Documentation */}
+                                <div className="flex flex-col rounded-lg border bg-card overflow-hidden">
+                                    <div className="py-2 px-3 border-b bg-muted/30 shrink-0 flex items-center gap-2">
+                                        <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Documentation</span>
+                                    </div>
+                                    {selectedType.documentation ? (
+                                        <div className="flex-1 p-4 overflow-auto bg-background">
+                                            <MarkdownRenderer>{selectedType.documentation}</MarkdownRenderer>
+                                        </div>
+                                    ) : (
+                                        <div className="p-4 text-xs text-muted-foreground italic">No documentation provided.</div>
+                                    )}
                                 </div>
                             </div>
                         </div>

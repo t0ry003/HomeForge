@@ -33,6 +33,7 @@ import {
   Activity,
   Sun,
   Wind,
+  Gauge,
   Wand2,
   LayoutGrid,
   Rows3,
@@ -65,7 +66,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-type WidgetType = 'TOGGLE' | 'SLIDER' | 'TEMPERATURE' | 'HUMIDITY' | 'MOTION' | 'LIGHT' | 'CO2';
+type WidgetType = 'TOGGLE' | 'SLIDER' | 'TEMPERATURE' | 'HUMIDITY' | 'PRESSURE' | 'MOTION' | 'LIGHT' | 'CO2';
 type WidgetVariant = 'row' | 'square';
 type WidgetSize = 'sm' | 'md' | 'lg';
 
@@ -117,25 +118,28 @@ const CONTROL_WIDGET_TYPES = [
   { type: 'SLIDER' as WidgetType, icon: SlidersHorizontal, label: 'Range Slider', defaultLabel: 'Level', category: 'control' },
 ];
 
-// Sensor display widgets (read-only monitoring)
+// Sensor display widgets (read-only monitoring).
+// `comingSoon` widgets are valid choices kept for forward-compat, but firmware
+// support isn't wired up yet, so the builder renders them disabled.
 const SENSOR_WIDGET_TYPES = [
   { type: 'TEMPERATURE' as WidgetType, icon: Thermometer, label: 'Temperature', defaultLabel: 'Temperature', category: 'sensor', unit: '°C' },
   { type: 'HUMIDITY' as WidgetType, icon: Droplets, label: 'Humidity', defaultLabel: 'Humidity', category: 'sensor', unit: '%' },
-  { type: 'MOTION' as WidgetType, icon: Activity, label: 'Motion Sensor', defaultLabel: 'Motion', category: 'sensor' },
-  { type: 'LIGHT' as WidgetType, icon: Sun, label: 'Light Sensor', defaultLabel: 'Light Level', category: 'sensor', unit: 'lux' },
-  { type: 'CO2' as WidgetType, icon: Wind, label: 'Air Quality', defaultLabel: 'CO2', category: 'sensor', unit: 'ppm' },
+  { type: 'PRESSURE' as WidgetType, icon: Gauge, label: 'Pressure', defaultLabel: 'Pressure', category: 'sensor', unit: 'hPa' },
+  { type: 'MOTION' as WidgetType, icon: Activity, label: 'Motion Sensor', defaultLabel: 'Motion', category: 'sensor', comingSoon: true },
+  { type: 'LIGHT' as WidgetType, icon: Sun, label: 'Light Sensor', defaultLabel: 'Light Level', category: 'sensor', unit: 'lux', comingSoon: true },
+  { type: 'CO2' as WidgetType, icon: Wind, label: 'Air Quality', defaultLabel: 'CO2', category: 'sensor', unit: 'ppm', comingSoon: true },
 ];
 
 const ALL_WIDGET_TYPES = [...CONTROL_WIDGET_TYPES, ...SENSOR_WIDGET_TYPES];
 
-// Map node types to widget types for auto-generation
+// Map node types to widget types for auto-generation.
+// Only currently-supported sensors are auto-generated; motion/light/co2 are
+// future implementations and intentionally omitted.
 const NODE_TO_WIDGET_MAP: Record<string, WidgetType> = {
   'switch': 'TOGGLE',
   'temperature': 'TEMPERATURE',
   'humidity': 'HUMIDITY',
-  'motion': 'MOTION',
-  'light': 'LIGHT',
-  'co2': 'CO2',
+  'pressure': 'PRESSURE',
 };
 
 // Get widget-specific colors
@@ -231,6 +235,7 @@ function SortableSquareWidget({ widget, isSelected, onSelect }: SortableSquareWi
       {/* Sensor icons */}
       {widget.type === 'TEMPERATURE' && <Thermometer className={`w-4 h-4 ${colors.text} mb-1`} />}
       {widget.type === 'HUMIDITY' && <Droplets className={`w-4 h-4 ${colors.text} mb-1`} />}
+      {widget.type === 'PRESSURE' && <Gauge className={`w-4 h-4 ${colors.text} mb-1`} />}
       {widget.type === 'MOTION' && <Activity className={`w-6 h-6 ${colors.text}`} />}
       {widget.type === 'LIGHT' && <Sun className={`w-4 h-4 ${colors.text} mb-1`} />}
       {widget.type === 'CO2' && <Wind className={`w-4 h-4 ${colors.text} mb-1`} />}
@@ -328,6 +333,7 @@ function SortableRowWidget({ widget, isSelected, onSelect, mappedLabel }: Sortab
             {widget.type === 'SLIDER' && <SlidersHorizontal className="w-5 h-5" />}
             {widget.type === 'TEMPERATURE' && <Thermometer className="w-5 h-5 text-orange-500" />}
             {widget.type === 'HUMIDITY' && <Droplets className="w-5 h-5 text-cyan-500" />}
+            {widget.type === 'PRESSURE' && <Gauge className="w-5 h-5 text-indigo-500" />}
             {widget.type === 'MOTION' && <Activity className="w-5 h-5 text-red-500" />}
             {widget.type === 'LIGHT' && <Sun className="w-5 h-5 text-yellow-500" />}
             {widget.type === 'CO2' && <Wind className="w-5 h-5 text-gray-500" />}
@@ -714,15 +720,30 @@ export default function DeviceUICreator({ nodes, onBack, onSave, isSubmitting, i
             <h3 className="text-xs font-semibold mb-3 text-muted-foreground uppercase tracking-wider">Sensor Displays</h3>
             <div className="grid grid-cols-2 gap-2 mb-4">
               {SENSOR_WIDGET_TYPES.map(t => (
-                <Button
-                  key={t.type}
-                  variant="outline" 
-                  className="h-auto py-3 px-2 flex-col gap-1 border-dashed border hover:border-primary/50 hover:bg-primary/5 transition-all group"
-                  onClick={() => addWidget(t.type)}
-                >
-                  <t.icon className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
-                  <span className="font-medium text-[10px]">{t.label}</span>
-                </Button>
+                t.comingSoon ? (
+                  <div
+                    key={t.type}
+                    aria-disabled
+                    title="Coming soon"
+                    className="relative h-auto py-3 px-2 flex flex-col items-center justify-center gap-1 border-dashed border rounded-md bg-muted/30 opacity-60 cursor-not-allowed select-none"
+                  >
+                    <span className="absolute top-1 right-1 text-[8px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted px-1 py-0.5 rounded">
+                      Soon
+                    </span>
+                    <t.icon className="w-5 h-5 text-muted-foreground" />
+                    <span className="font-medium text-[10px] text-muted-foreground">{t.label}</span>
+                  </div>
+                ) : (
+                  <Button
+                    key={t.type}
+                    variant="outline"
+                    className="h-auto py-3 px-2 flex-col gap-1 border-dashed border hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                    onClick={() => addWidget(t.type)}
+                  >
+                    <t.icon className="w-5 h-5 text-muted-foreground group-hover:text-primary" />
+                    <span className="font-medium text-[10px]">{t.label}</span>
+                  </Button>
+                )
               ))}
             </div>
 

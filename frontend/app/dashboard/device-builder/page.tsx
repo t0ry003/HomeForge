@@ -30,6 +30,7 @@ import {
   Sun, 
   ToggleLeft, 
   Wind, 
+  Gauge,
   Plus,
   Trash2,
   Menu,
@@ -66,7 +67,7 @@ import DocumentationEditor from '@/components/device-builder/DocumentationEditor
 import { PageTooltip } from '@/components/onboarding/PageTooltip';
 
 // --- Types ---
-type SensorType = 'mcu' | 'temperature' | 'humidity' | 'motion' | 'light' | 'switch' | 'co2';
+type SensorType = 'mcu' | 'temperature' | 'humidity' | 'pressure' | 'motion' | 'light' | 'switch' | 'co2';
 
 interface SensorDefinition {
   type: SensorType;
@@ -74,16 +75,18 @@ interface SensorDefinition {
   icon: React.ElementType;
   color: string;
   description: string;
+  comingSoon?: boolean;
 }
 
 const AVAILABLE_SENSORS: SensorDefinition[] = [
   { type: 'mcu', label: 'MCU', icon: Cpu, color: 'text-blue-500 border-blue-500/50 bg-blue-500/10', description: 'Main Controller Unit' },
   { type: 'temperature', label: 'Temp', icon: Thermometer, color: 'text-orange-500 border-orange-500/50 bg-orange-500/10', description: 'Temperature Sensor' },
   { type: 'humidity', label: 'Humidity', icon: Droplets, color: 'text-cyan-500 border-cyan-500/50 bg-cyan-500/10', description: 'Humidity Sensor' },
-  { type: 'motion', label: 'Motion', icon: Activity, color: 'text-red-500 border-red-500/50 bg-red-500/10', description: 'Motion Detector' },
-  { type: 'light', label: 'Light', icon: Sun, color: 'text-yellow-500 border-yellow-500/50 bg-yellow-500/10', description: 'Light Sensor' },
+  { type: 'pressure', label: 'Pressure', icon: Gauge, color: 'text-indigo-500 border-indigo-500/50 bg-indigo-500/10', description: 'Pressure Sensor' },
   { type: 'switch', label: 'Relay', icon: ToggleLeft, color: 'text-green-500 border-green-500/50 bg-green-500/10', description: 'Switch / Relay' },
-  { type: 'co2', label: 'CO2', icon: Wind, color: 'text-gray-500 border-gray-500/50 bg-gray-500/10', description: 'Air Quality Sensor' },
+  { type: 'motion', label: 'Motion', icon: Activity, color: 'text-red-500 border-red-500/50 bg-red-500/10', description: 'Motion Detector', comingSoon: true },
+  { type: 'light', label: 'Light', icon: Sun, color: 'text-yellow-500 border-yellow-500/50 bg-yellow-500/10', description: 'Light Sensor', comingSoon: true },
+  { type: 'co2', label: 'CO2', icon: Wind, color: 'text-gray-500 border-gray-500/50 bg-gray-500/10', description: 'Air Quality Sensor', comingSoon: true },
 ];
 
 // --- Custom Node Component ---
@@ -492,6 +495,11 @@ const DeviceBuilderContent = () => {
     const sensorDef = AVAILABLE_SENSORS.find(s => s.type === type);
     if (!sensorDef) return;
 
+    if (sensorDef.comingSoon) {
+      toast.info(`${sensorDef.label} is coming soon`, { description: "This component isn't supported yet." });
+      return;
+    }
+
     let position = { x: 0, y: 0 };
     
     if (reactFlowWrapper.current) {
@@ -552,6 +560,11 @@ const DeviceBuilderContent = () => {
 
       const sensorDef = AVAILABLE_SENSORS.find(s => s.type === type);
       if (!sensorDef) return;
+
+      if (sensorDef.comingSoon) {
+        toast.info(`${sensorDef.label} is coming soon`, { description: "This component isn't supported yet." });
+        return;
+      }
 
       if ('changedTouches' in event) {
         clientX = event.changedTouches[0].clientX;
@@ -722,26 +735,39 @@ const DeviceBuilderContent = () => {
                 <div
                   className={`
                     flex flex-col items-center justify-center p-3 rounded-lg border border-border bg-card/30 
-                    cursor-grab active:cursor-grabbing hover:bg-card hover:border-primary/50 transition-all group relative overflow-hidden
+                    transition-all group relative overflow-hidden
+                    ${sensor.comingSoon
+                      ? 'opacity-50 cursor-not-allowed bg-muted/20'
+                      : 'cursor-grab active:cursor-grabbing hover:bg-card hover:border-primary/50'}
                   `}
                   onDragStart={(event) => {
+                    if (sensor.comingSoon) {
+                      event.preventDefault();
+                      return;
+                    }
                     event.dataTransfer.setData('application/reactflow', sensor.type);
                     event.dataTransfer.effectAllowed = 'move';
                     (window as any).__draggedType = sensor.type;
                   }}
                   onTouchStart={() => {
+                     if (sensor.comingSoon) return;
                      (window as any).__draggedType = sensor.type;
                   }}
-                  draggable
+                  draggable={!sensor.comingSoon}
                   onClick={() => handleAddNode(sensor.type)}
                 >
+                  {sensor.comingSoon && (
+                    <span className="absolute top-1 right-1 text-[8px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted px-1 py-0.5 rounded">
+                      Soon
+                    </span>
+                  )}
                   <div className={`absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity ${sensor.color.replace('text-', 'bg-')}`} />
                   <sensor.icon className={`w-6 h-6 mb-2 ${sensor.color.split(' ')[0]} opacity-80 group-hover:opacity-100 transition-all group-hover:scale-110`} />
                   <span className="text-[10px] font-medium text-muted-foreground group-hover:text-foreground text-center">{sensor.label}</span>
                 </div>
               </TooltipTrigger>
               <TooltipContent side="right" className="bg-popover border-border text-popover-foreground">
-                <p className="font-semibold text-xs mb-1">{sensor.label}</p>
+                <p className="font-semibold text-xs mb-1">{sensor.label}{sensor.comingSoon ? ' (Coming Soon)' : ''}</p>
                 <p className="text-[10px] text-muted-foreground">{sensor.description}</p>
               </TooltipContent>
             </Tooltip>
