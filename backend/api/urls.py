@@ -1,6 +1,7 @@
 from django.urls import path
 from .views import (
     SystemStatusView,
+    WidgetTypeListView,
     RegisterView, 
     ProfileView, 
     TopologyView,
@@ -49,6 +50,7 @@ from rest_framework_simplejwt.views import (
 
 urlpatterns = [
     path('system-status/', SystemStatusView.as_view(), name='system-status'),
+    path('widget-types/', WidgetTypeListView.as_view(), name='widget-types'),
     path('register/', RegisterView.as_view(), name='register'),
     path('login/', TokenObtainPairView.as_view(), name='token_obtain_pair'),  # Login
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),

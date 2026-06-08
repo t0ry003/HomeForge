@@ -196,6 +196,29 @@ class SystemStatusView(views.APIView):
         })
 
 
+class WidgetTypeListView(views.APIView):
+    """
+    GET /api/widget-types/
+    Returns the device-builder widget palette, split into widget types that are
+    fully supported today and those planned for future implementation. The
+    frontend builder should render `supported` as usable nodes and present
+    `future` as disabled / "coming soon".
+    """
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request):
+        labels = dict(DeviceControl.WIDGET_CHOICES)
+        supported = [
+            {"value": value, "label": labels[value]}
+            for value in DeviceControl.SUPPORTED_WIDGET_TYPES
+        ]
+        future = [
+            {"value": value, "label": labels[value]}
+            for value in DeviceControl.FUTURE_WIDGET_TYPES
+        ]
+        return Response({"supported": supported, "future": future})
+
+
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (AllowAny,)  # Anyone may register

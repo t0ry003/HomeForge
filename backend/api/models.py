@@ -175,7 +175,31 @@ class DeviceControl(models.Model):
     WIDGET_POWER = 'POWER'
     WIDGET_BATTERY = 'BATTERY'
     WIDGET_STATUS = 'STATUS'
-    
+
+    # Widget types with full backend + firmware + fixture support today.
+    # Keep this in sync with the device builder palette the frontend exposes.
+    SUPPORTED_WIDGET_TYPES = [
+        WIDGET_TOGGLE,        # relay
+        WIDGET_SLIDER,
+        WIDGET_BUTTON,
+        WIDGET_GAUGE,
+        WIDGET_TEMPERATURE,
+        WIDGET_HUMIDITY,
+        WIDGET_PRESSURE,
+        WIDGET_POWER,
+        WIDGET_BATTERY,
+        WIDGET_STATUS,
+    ]
+
+    # Planned for future implementation. These remain valid choices (so existing
+    # data and saved templates never break) but are NOT yet wired to firmware,
+    # so the builder UI should present them as "coming soon" / disabled.
+    FUTURE_WIDGET_TYPES = [
+        WIDGET_MOTION,
+        WIDGET_CO2,
+        WIDGET_LIGHT,
+    ]
+
     WIDGET_CHOICES = [
         # Interactive
         (WIDGET_TOGGLE, 'Toggle Switch'),
@@ -185,13 +209,14 @@ class DeviceControl(models.Model):
         (WIDGET_GAUGE, 'Gauge'),
         (WIDGET_TEMPERATURE, 'Temperature Sensor'),
         (WIDGET_HUMIDITY, 'Humidity Sensor'),
-        (WIDGET_MOTION, 'Motion Sensor'),
-        (WIDGET_LIGHT, 'Light Sensor'),
-        (WIDGET_CO2, 'CO2 Sensor'),
         (WIDGET_PRESSURE, 'Pressure Sensor'),
         (WIDGET_POWER, 'Power Meter'),
         (WIDGET_BATTERY, 'Battery Level'),
         (WIDGET_STATUS, 'Status Indicator'),
+        # Future implementations (kept valid, surfaced as "coming soon" in the UI)
+        (WIDGET_MOTION, 'Motion Sensor (Coming Soon)'),
+        (WIDGET_CO2, 'CO2 Sensor (Coming Soon)'),
+        (WIDGET_LIGHT, 'Light Sensor (Coming Soon)'),
     ]
     
     # Display variant options
