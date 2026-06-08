@@ -1,5 +1,17 @@
 # HomeForge Frontend Changelog
 
+## [2026-06-08] - Reusable sensor rendering: show Pressure & any new sensor/gauge
+
+### Fixed
+- **File**: `components/devices/SmartDeviceCard.tsx`, `components/devices/SensorWidgets.tsx`
+- **Description**: Device cards silently dropped any widget type without an explicit `case` in `renderWidget` (the `default` returned `null`), so PRESSURE — and any future sensor/gauge — never appeared. Added a dedicated `PressureWidget` and a `GenericSensorWidget` fallback in `SensorWidgets.tsx`, registered them in the `SensorWidgets` map, imported them into the card, added a `PRESSURE` case, and changed `GAUGE`/`POWER`/`BATTERY`/`STATUS`/`default` to render the generic widget so every mapped control is always shown.
+- **Impact**: Pressure sensors now render on device cards, and the card is reusable — any new sensor/gauge/relay type is displayed instead of disappearing.
+
+### Fixed
+- **File**: `app/dashboard/admin/device-types/page.tsx`, `app/dashboard/admin/approvals/page.tsx`, `app/dashboard/device-collection/[id]/page.tsx`, `components/topology/nodes/TopologyBuilderNode.tsx`
+- **Description**: Hardware-topology previews showed the CPU fallback icon for pressure nodes because the various `AVAILABLE_SENSORS`/`SENSOR_ICONS` maps (and the topology `TYPE_CONFIG`) had no `pressure` entry. Added a `pressure` entry (`Gauge` icon, indigo accent, "Pressure" label) to every map across the admin device-types review, admin approvals, device-collection detail, and the topology builder node (with `pressure`/`barometer` type detection).
+- **Impact**: Pressure nodes now display the gauge icon consistently in topology reviews, the device collection, and the hardware components list.
+
 ## [2026-06-08] - Admin device types: de-duplicate listings & full review preview
 
 ### Fixed
