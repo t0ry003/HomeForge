@@ -39,6 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 import { 
     fetchDeviceTypes,
@@ -1031,7 +1032,7 @@ export default function DeviceTypesManagementPage() {
 
                             {/* Preview Panels */}
                             <div className="flex-1 flex flex-col gap-4 min-h-0 overflow-auto">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 shrink-0">
                                 {/* Panel 1: Hardware Topology */}
                                 <div className="flex flex-col rounded-lg border overflow-hidden min-h-[300px]">
                                     <div className="py-2 px-3 border-b bg-muted/30 shrink-0">
@@ -1075,60 +1076,63 @@ export default function DeviceTypesManagementPage() {
                                 </div>
                                 </div>
 
-                                {/* Panel 3: Firmware Code */}
-                                <div className="flex flex-col rounded-lg border bg-card overflow-hidden">
-                                    <div className="py-2 px-3 border-b bg-muted/30 shrink-0 flex items-center gap-2">
-                                        <Code2 className="w-3.5 h-3.5 text-muted-foreground" />
-                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Firmware Code</span>
-                                    </div>
-                                    {selectedType.firmware_code ? (
-                                        <pre className="h-[420px] overflow-auto p-4 text-xs font-mono leading-relaxed bg-background whitespace-pre">
-                                            <code>{selectedType.firmware_code}</code>
-                                        </pre>
-                                    ) : (
-                                        <div className="p-4 text-xs text-muted-foreground italic">No firmware code provided.</div>
-                                    )}
-                                </div>
+                                {/* Panel 3: Firmware / Wiring / Documentation (tabbed) */}
+                                <Tabs defaultValue="firmware" className="shrink-0 rounded-lg border bg-card overflow-hidden">
+                                    <TabsList className="w-full justify-start rounded-none border-b bg-muted/30 p-0 h-auto">
+                                        <TabsTrigger value="firmware" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-xs uppercase tracking-wider">
+                                            <Code2 className="w-3.5 h-3.5 mr-1.5" />
+                                            Firmware
+                                        </TabsTrigger>
+                                        <TabsTrigger value="wiring" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-xs uppercase tracking-wider">
+                                            <CircuitBoard className="w-3.5 h-3.5 mr-1.5" />
+                                            Wiring
+                                        </TabsTrigger>
+                                        <TabsTrigger value="docs" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4 py-2.5 text-xs uppercase tracking-wider">
+                                            <FileText className="w-3.5 h-3.5 mr-1.5" />
+                                            Docs
+                                        </TabsTrigger>
+                                    </TabsList>
 
-                                {/* Panel 4: Wiring Diagram */}
-                                <div className="flex flex-col rounded-lg border bg-card overflow-hidden">
-                                    <div className="py-2 px-3 border-b bg-muted/30 shrink-0 flex items-center gap-2">
-                                        <CircuitBoard className="w-3.5 h-3.5 text-muted-foreground" />
-                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Wiring Diagram</span>
-                                    </div>
-                                    {(selectedType.wiring_diagram_image || selectedType.wiring_diagram_text) ? (
-                                        <div className="h-[420px] p-4 space-y-4 overflow-auto bg-background">
-                                            {selectedType.wiring_diagram_image && (
-                                                // eslint-disable-next-line @next/next/no-img-element
-                                                <img
-                                                    src={getMediaUrl(selectedType.wiring_diagram_image)}
-                                                    alt="Wiring diagram"
-                                                    className="max-w-full rounded-md border"
-                                                />
-                                            )}
-                                            {selectedType.wiring_diagram_text && (
-                                                <MarkdownRenderer>{selectedType.wiring_diagram_text}</MarkdownRenderer>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div className="p-4 text-xs text-muted-foreground italic">No wiring diagram provided.</div>
-                                    )}
-                                </div>
+                                    <TabsContent value="firmware" className="mt-0">
+                                        {selectedType.firmware_code ? (
+                                            <pre className="h-[440px] overflow-auto p-4 text-xs font-mono leading-relaxed bg-background whitespace-pre">
+                                                <code>{selectedType.firmware_code}</code>
+                                            </pre>
+                                        ) : (
+                                            <div className="p-4 text-xs text-muted-foreground italic">No firmware code provided.</div>
+                                        )}
+                                    </TabsContent>
 
-                                {/* Panel 5: Documentation */}
-                                <div className="flex flex-col rounded-lg border bg-card overflow-hidden">
-                                    <div className="py-2 px-3 border-b bg-muted/30 shrink-0 flex items-center gap-2">
-                                        <FileText className="w-3.5 h-3.5 text-muted-foreground" />
-                                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Documentation</span>
-                                    </div>
-                                    {selectedType.documentation ? (
-                                        <div className="h-[420px] p-4 overflow-auto bg-background">
-                                            <MarkdownRenderer>{selectedType.documentation}</MarkdownRenderer>
-                                        </div>
-                                    ) : (
-                                        <div className="p-4 text-xs text-muted-foreground italic">No documentation provided.</div>
-                                    )}
-                                </div>
+                                    <TabsContent value="wiring" className="mt-0">
+                                        {(selectedType.wiring_diagram_image || selectedType.wiring_diagram_text) ? (
+                                            <div className="h-[440px] p-4 space-y-4 overflow-auto bg-background">
+                                                {selectedType.wiring_diagram_image && (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img
+                                                        src={getMediaUrl(selectedType.wiring_diagram_image)}
+                                                        alt="Wiring diagram"
+                                                        className="max-w-full rounded-md border"
+                                                    />
+                                                )}
+                                                {selectedType.wiring_diagram_text && (
+                                                    <MarkdownRenderer>{selectedType.wiring_diagram_text}</MarkdownRenderer>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <div className="p-4 text-xs text-muted-foreground italic">No wiring diagram provided.</div>
+                                        )}
+                                    </TabsContent>
+
+                                    <TabsContent value="docs" className="mt-0">
+                                        {selectedType.documentation ? (
+                                            <div className="h-[440px] p-4 overflow-auto bg-background">
+                                                <MarkdownRenderer>{selectedType.documentation}</MarkdownRenderer>
+                                            </div>
+                                        ) : (
+                                            <div className="p-4 text-xs text-muted-foreground italic">No documentation provided.</div>
+                                        )}
+                                    </TabsContent>
+                                </Tabs>
                             </div>
                         </div>
                     ) : (
