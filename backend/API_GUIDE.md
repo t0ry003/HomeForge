@@ -1,9 +1,9 @@
 # HomeForge API Guide
 
-> **Version:** 1.9.5  
+> **Version:** 1.9.6  
 > **Base URL:** `http://localhost:8000/api/`  
 > **Authentication:** JWT (JSON Web Tokens)  
-> **Last Updated:** June 7, 2026
+> **Last Updated:** June 8, 2026
 
 A comprehensive API reference for the HomeForge smart home management platform. This guide is designed for frontend developers and AI agents to build complete user interfaces.
 
@@ -2257,20 +2257,22 @@ interface DeviceControl {
   id: number;
   widget_type: 
     // Interactive Controls
-    | 'TOGGLE'       // Boolean on/off switch
+    | 'TOGGLE'       // Boolean on/off switch (relay)
     | 'SLIDER'       // Numeric range control
     | 'GAUGE'        // Read-only numeric display
     | 'BUTTON'       // Trigger action button
-    // Sensor Displays
+    // Sensor Displays (supported today)
     | 'TEMPERATURE'  // Temperature reading display
     | 'HUMIDITY'     // Humidity reading display
-    | 'MOTION'       // Motion detection indicator
-    | 'LIGHT'        // Light level display
-    | 'CO2'          // CO2 level display
     | 'PRESSURE'     // Pressure reading display
     | 'POWER'        // Power consumption display
     | 'BATTERY'      // Battery level display
-    | 'STATUS';      // Generic status display
+    | 'STATUS'       // Generic status display
+    // Future implementations — valid values, but NOT yet wired to firmware.
+    // The builder should show these as disabled / "coming soon".
+    | 'MOTION'       // Motion detection indicator (future)
+    | 'LIGHT'        // Light level display (future)
+    | 'CO2';         // CO2 level display (future)
   label: string;                          // Display label
   variable_mapping: string;               // Key for current_state
   min_value: number | null;               // For SLIDER/GAUGE
@@ -2797,6 +2799,44 @@ Returns whether this is a fresh installation (no users have been registered yet)
 | `is_fresh` | boolean | `true` if no users exist (first-time setup), `false` otherwise |
 
 > **Frontend Usage:** Call this on app load. If `is_fresh` is `true`, show the setup wizard / first-user registration flow instead of the login page.
+
+### 15.2 Get Widget Palette
+
+| Method | Endpoint | Auth Required |
+|--------|----------|---------------|
+| `GET` | `/widget-types/` | ✅ Yes |
+
+Returns the device-builder widget palette, split into widget types that are fully supported today and those planned for future implementation. Use this to drive the builder palette dynamically instead of hardcoding the list.
+
+**Success Response (200 OK):**
+```json
+{
+  "supported": [
+    { "value": "TOGGLE", "label": "Toggle Switch" },
+    { "value": "SLIDER", "label": "Slider" },
+    { "value": "BUTTON", "label": "Button" },
+    { "value": "GAUGE", "label": "Gauge" },
+    { "value": "TEMPERATURE", "label": "Temperature Sensor" },
+    { "value": "HUMIDITY", "label": "Humidity Sensor" },
+    { "value": "PRESSURE", "label": "Pressure Sensor" },
+    { "value": "POWER", "label": "Power Meter" },
+    { "value": "BATTERY", "label": "Battery Level" },
+    { "value": "STATUS", "label": "Status Indicator" }
+  ],
+  "future": [
+    { "value": "MOTION", "label": "Motion Sensor (Coming Soon)" },
+    { "value": "CO2", "label": "CO2 Sensor (Coming Soon)" },
+    { "value": "LIGHT", "label": "Light Sensor (Coming Soon)" }
+  ]
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `supported` | array | Widget types with full backend + firmware support. Render as usable builder nodes. |
+| `future` | array | Planned widget types. Still valid values (saved templates won't break), but render as disabled / "coming soon". |
+
+> **Frontend Usage:** Active device components today are **temperature, humidity, pressure, and relay (`TOGGLE`)**. **Motion, CO2, and light** are returned under `future` — present them as disabled in the builder until firmware support lands. The values in `future` remain accepted by the API so existing device types that already reference them keep working.
 
 5. **Notifications:** Use `/notifications/unread-count/` for badge counts. The `by_type` field allows showing different badges for different notification categories.
 

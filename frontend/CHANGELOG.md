@@ -1,5 +1,31 @@
 # HomeForge Frontend Changelog
 
+## [2026-06-08] - Admin device types: de-duplicate listings & full review preview
+
+### Fixed
+- **File**: `app/dashboard/admin/device-types/page.tsx`
+- **Description**: A newly submitted device type appeared twice in the admin Device Types panel — once as "Approved" and once as "Pending". For admins, `GET /device-types/` returns *all* types (including pending/denied), so each pending type also showed up in the separate pending list. Replaced the naive concat of the three lists with an id-keyed de-dupe that merges records and lets the pending/denied lists be authoritative for status (merging preserves heavy fields like firmware/wiring/docs from the full list). Status badge counts now derive from the de-duped set so totals match what's shown.
+- **Impact**: Each device type now shows exactly once with the correct status (a freshly submitted type appears only as Pending).
+
+### Added
+- **File**: `app/dashboard/admin/device-types/page.tsx`
+- **Description**: Expanded the review/detail panel so admins can see everything a user uploaded. In addition to the existing Hardware Topology and Card Preview, added read-only panels for **Firmware Code** (monospace, scrollable), **Wiring Diagram** (image via `getMediaUrl` + markdown text), and **Documentation** (rendered markdown). Each panel shows an empty-state message when the field is blank.
+- **Dependencies**: Reuses `MarkdownRenderer` from `components/ui/markdown-editor` and `getMediaUrl` from `lib/apiClient`.
+
+## [2026-06-08] - Device builder components tab: add Pressure, mark future sensors
+
+### Changed
+- **File**: `app/dashboard/device-builder/page.tsx`
+- **Description**: The Components palette (topology builder) was missing Pressure and still allowed Motion/Light/CO2. Added a **Pressure** component (`Gauge` icon, indigo accent) to `SensorType` and `AVAILABLE_SENSORS`, and added a `comingSoon` flag to mark **Motion**, **Light**, and **CO2** as upcoming. Coming-soon components now render dimmed with a "Soon" badge, are non-draggable, and are blocked from being added via click or drop (`handleAddNode` and the drop handler show a "coming soon" toast). Supported components (MCU, Temperature, Humidity, Pressure, Relay) are listed first.
+- **Impact**: The components tab matches the widget palette's supported/future split — only currently-supported components can be placed on the canvas, with Pressure now available and a proper Gauge icon.
+
+## [2026-06-08] - Device builder palette: supported vs. future sensors
+
+### Changed
+- **File**: `app/dashboard/device-builder/DeviceUICreator.tsx`
+- **Description**: Aligned the widget palette with the backend's supported/future split. Added **Pressure** (`Gauge` icon, `hPa`) as a supported sensor display, and marked **Motion**, **Light Sensor**, and **Air Quality (CO2)** as "Soon" — they now render as dimmed, non-clickable palette tiles with a badge instead of addable widgets. Added `PRESSURE` to the `WidgetType` union and to the preview icon switches, and updated `NODE_TO_WIDGET_MAP` so auto-generation only emits the currently-supported sensors (temperature, humidity, pressure) plus relays. The future widget types remain valid in the type union so previously saved templates referencing them continue to render.
+- **Impact**: Builders can only place currently-supported components (temperature, humidity, pressure, relay) while motion/light/co2 are visibly reserved as upcoming features.
+
 ## [2026-06-07] - Stable device card height while syncing
 
 ### Fixed
