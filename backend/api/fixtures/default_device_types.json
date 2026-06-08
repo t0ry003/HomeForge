@@ -38,8 +38,7 @@
       ]
     },
     "firmware_code_file": "firmware/projects/ESP32_RELAY/firmware.ino",
-    "wiring_diagram_text_file": "firmware/projects/ESP32_RELAY/wiring.md",
-    "documentation_file": "firmware/projects/ESP32_RELAY/README.md"
+    "wiring_diagram_text_file": "firmware/projects/ESP32_RELAY/wiring.md"
   },
   {
     "name": "ESP32 Thermostat (DHT11)",
@@ -96,8 +95,7 @@
       ]
     },
     "firmware_code_file": "firmware/projects/ESP32_THERMOSTAT_DHT11/firmware.ino",
-    "wiring_diagram_text_file": "firmware/projects/ESP32_THERMOSTAT_DHT11/wiring.md",
-    "documentation_file": "firmware/projects/ESP32_THERMOSTAT_DHT11/README.md"
+    "wiring_diagram_text_file": "firmware/projects/ESP32_THERMOSTAT_DHT11/wiring.md"
   },
   {
     "name": "ESP32 Thermostat (BMP180)",
@@ -154,8 +152,7 @@
       ]
     },
     "firmware_code_file": "firmware/projects/ESP32_THERMOSTAT_BMP180/firmware.ino",
-    "wiring_diagram_text_file": "firmware/projects/ESP32_THERMOSTAT_BMP180/wiring.md",
-    "documentation_file": "firmware/projects/ESP32_THERMOSTAT_BMP180/README.md"
+    "wiring_diagram_text_file": "firmware/projects/ESP32_THERMOSTAT_BMP180/wiring.md"
   },
   {
     "name": "ESP32 Weather Station (DHT11 + BMP180)",
@@ -227,7 +224,6 @@
       ]
     },
     "firmware_code_file": "firmware/projects/ESP32_THERMOSTAT_DHT11_BMP180/firmware.ino",
-    "wiring_diagram_text_file": "firmware/projects/ESP32_THERMOSTAT_DHT11_BMP180/wiring.md",
-    "documentation_file": "firmware/projects/ESP32_THERMOSTAT_DHT11_BMP180/README.md"
+    "wiring_diagram_text_file": "firmware/projects/ESP32_THERMOSTAT_DHT11_BMP180/wiring.md"
   }
 ]
