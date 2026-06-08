@@ -1,5 +1,26 @@
 # HomeForge Frontend Changelog
 
+## [2026-06-08] - Admin device review: fix collapsed firmware/wiring/docs panels
+
+### Fixed
+- **File**: `app/dashboard/admin/device-types/page.tsx`
+- **Description**: The Firmware Code, Wiring Diagram, and Documentation review panels relied on `flex-1` for their content height, but inside the `overflow-auto` scroll container (which has no fixed height) `flex-1` collapsed to near-zero, making the boxes too short to read or scroll. Replaced the `flex-1`/`max-h` content areas with an explicit `h-[420px] overflow-auto` height on each panel's body.
+- **Impact**: Firmware code, wiring diagram, and documentation now render in readable, scrollable panels in the admin review view.
+
+## [2026-06-08] - Device collection cards: show Pressure & any component badge
+
+### Fixed
+- **File**: `app/dashboard/device-collection/page.tsx`
+- **Description**: Sensor badges on the device collection cards used `SENSOR_ICONS[sensor.type]` and `return null` when a type wasn't mapped, so pressure (and any unmapped component) showed no badge. Added a `pressure` entry (`Gauge` icon, indigo) and a `DEFAULT_SENSOR_ICON` fallback so any component type without an explicit mapping still renders a badge (gauge icon) with its label.
+- **Impact**: Pressure now appears as a badge on device collection cards, and every node in the topology is guaranteed a visible component badge.
+
+## [2026-06-08] - Auto-generate device card includes Pressure & all mapped sensors
+
+### Fixed
+- **File**: `app/dashboard/device-builder/DeviceUICreator.tsx`
+- **Description**: "Auto-Generate from Topology" only created widgets for temperature and humidity — pressure (and any other sensor) was skipped because `autoGenerateWidgets` filtered sensor nodes against a hardcoded `['temperature','humidity','motion','light','co2']` list that omitted `pressure`. Replaced that hardcoded list by deriving sensor types from `NODE_TO_WIDGET_MAP` (excluding the `switch` control), so every node type that maps to a widget — including pressure and future sensors — is picked up and gets a card widget.
+- **Impact**: Auto-generating a card now produces a widget for each sensor node present in the topology (temperature, humidity, pressure, …), not just temp/humidity.
+
 ## [2026-06-08] - Reusable sensor rendering: show Pressure & any new sensor/gauge
 
 ### Fixed
