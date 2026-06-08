@@ -318,7 +318,9 @@ Interactive canvas for designing device configurations:
   - Motion sensors stay medium (binary state)
   - Temp/Humidity pairs get matching sizes
   - Control count determines switch sizing
-- **Sensor Widgets** — Temperature, Humidity, Motion, Light, CO2 displays
+  - Derives widgets from every mapped sensor node (incl. Pressure), not a hardcoded list
+- **Supported Sensor Widgets** — Temperature, Humidity, Pressure displays (relays via Toggle/Slider)
+- **Future Sensors** — Motion, Light, and CO2 are shown as "Soon" (dimmed, non-draggable) until supported
 - **Flexible Layouts** — Row or Square widget styles with configurable sizes (Small/Medium/Large)
 - **Size Options** — Small, Medium, Large affect widget dimensions:
   - Square: Large spans 2x2 grid cells
@@ -336,9 +338,11 @@ Device cards support intelligent behavior:
   - `SLIDER` — Range control (brightness, speed, etc.)
   - `TEMPERATURE` — Color-coded temperature display
   - `HUMIDITY` — Humidity with progress bar
+  - `PRESSURE` — Barometric pressure display (hPa)
   - `MOTION` — Motion detection status with alerts
   - `LIGHT` — Light level (lux) or bright/dark indicator
   - `CO2` — Air quality with quality badges
+  - Any unmapped sensor/gauge falls back to a generic read-only widget (never dropped)
 
 ### Dashboard Grid & Layout (`/dashboard`)
 
@@ -448,11 +452,11 @@ Admin-only features for system management:
 - Manage user roles (owner, admin, user)
 
 #### Device Types (`/dashboard/admin/device-types`)
-- View all device type definitions
+- View all device type definitions (de-duplicated — each type appears once with its correct status)
 - Filter by status: All, Approved, Pending, Denied
 - Deep linking support: `?filter=pending` auto-selects filter
 - Approve or deny pending device type submissions
-- Review hardware topology before approval
+- Full review preview: Hardware Topology + Card Preview, plus a tabbed **Firmware / Wiring / Docs** panel showing everything the submitter uploaded
 
 #### Approvals (`/dashboard/admin/approvals`)
 - Quick access to pending device types requiring review
@@ -611,7 +615,7 @@ Key optimizations:
 | `DraggableDeviceGrid` | Drag-and-drop dashboard grid with folder support |
 | `DeviceFolder` | iOS-style device folder with 2×2 preview |
 | `AddDeviceDialog` | Multi-step device registration dialog |
-| `SensorWidgets` | Temperature, Humidity, Motion, Light, CO2 displays |
+| `SensorWidgets` | Temperature, Humidity, Pressure displays + generic sensor fallback |
 | `IconPicker` | Icon selection UI (used for devices and rooms) |
 | `TopologyCanvas` | React Flow wrapper |
 | `TopologyBuilderNode` | Network device node (type-based coloring) |

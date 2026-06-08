@@ -1,6 +1,6 @@
 # HomeForge API Guide
 
-> **Version:** 1.9.6  
+> **Version:** 1.9.7  
 > **Base URL:** `http://localhost:8000/api/`  
 > **Authentication:** JWT (JSON Web Tokens)  
 > **Last Updated:** June 8, 2026
@@ -816,7 +816,7 @@ Get full device type details including both `definition` (node topology) and `ca
 }
 ```
 
-> **Frontend Note:** This endpoint returns the complete device type with both the **node topology** (`definition.structure`) for the Node Builder editor AND the **UI controls** (`card_template.controls`) for the Control Editor. Display both in your admin edit interface.
+Returns full device type details including both the **node topology** (`definition.structure`) and the **UI controls** (`card_template.controls`), along with all other fields (firmware_code, wiring_diagram_image, wiring_diagram_text, documentation).
 
 ---
 
@@ -1740,19 +1740,6 @@ Get a visual representation of the smart home network for rendering with graph l
 | `solar` | Registered solar system. Always rendered with a single sun icon (`fa-sun`) and `is_solar: true`. Online/offline reflects the most recent successful overview poll. |
 
 > **Solar nodes:** Each registered solar system (see [Section 10](#10-solar--energy-integration)) appears as one node with id `solar-{id}`. Its `online`/`offline` status is derived from a recent successful `/overview/` poll (cached snapshot or `last_seen` within the last 90 seconds) — the topology endpoint never makes a blocking vendor API call, so it respects provider rate limits. Disabled systems always show as `offline`.
-
-> **⚠️ Icon mapping (frontend):** All topology nodes carry a FontAwesome class in `data.icon` (e.g. devices use `fa-lightbulb`, solar uses **`fa-sun`**). If your renderer uses a different icon set (e.g. Lucide), it must translate this token. A solar node that renders as a generic CPU/box icon means your icon map has no entry for `fa-sun` and fell back to a default. Map it explicitly using **either** signal the backend provides:
->
-> ```ts
-> // Option A — match the icon token
-> const iconFor = (node) =>
->   node.data.is_solar ? Sun : ICONS[node.data.icon] ?? Cpu;
->
-> // Option B — match by FontAwesome class
-> const ICONS = { 'fa-sun': Sun, 'fa-lightbulb': Lightbulb, /* … */ };
-> ```
->
-> The backend guarantees solar nodes always include `type: "solar"`, `is_solar: true`, and `icon: "fa-sun"`, so any of those three can key the mapping.
 
 **Status Colors:**
 | Status | Color |
@@ -2749,32 +2736,6 @@ function NetworkTopology({ api }) {
 
 ---
 
-## Notes for Frontend Developers
-
-1. **First User Setup:** The first registered user becomes the `owner` with full privileges. Use `GET /api/system-status/` to detect fresh installs and show the setup wizard.
-
-2. **Token Management:** Access tokens expire quickly. Implement automatic refresh using the refresh token.
-
-3. **Device Controls:** Use `card_template.controls` to dynamically render UI widgets. The `variable_mapping` corresponds to keys in `current_state`.
-
-4. **Real-time Updates:** Currently HTTP-based. For real-time, poll `/notifications/unread-count/` every 30 seconds for notification badges, or await future WebSocket implementation.
-
-5. **Room Icons:** Rooms now include an `icon` field (FontAwesome class). Default: `fa-door-open`. Display this icon in room lists and device assignments.
-
-6. **Device Type Images:** All images (wiring diagrams, documentation images) are stored as base64 data URIs in the database. No filesystem paths are used. Exports are fully self-contained.
-
-7. **Configuring a Physical Device (firmware connectivity):** When you generate/flash firmware for a user's ESP32, explain how the board reaches the HomeForge MQTT broker. The firmware tries three tiers in order — surface them in the device-setup UI:
-
-   1. **Manual broker IP (`server_ip`) — recommended default for most users.** The firmware exposes a `server_ip` string variable (default `""`). When generating firmware, substitute the HomeForge server's LAN IP here so the device connects directly with no discovery. **In Docker Desktop / WSL / Windows deployments this is the ONLY reliable method** — set it to the host machine's LAN IP (e.g. `192.168.1.50`) and ensure the broker port `1883` is published. Recommend the user give their server a static/reserved DHCP lease so the IP doesn't change.
-   2. **mDNS auto-discovery (`_mqtt._tcp`) — zero-config, Raspberry Pi / native-Linux only.** If `server_ip` is left empty, the board auto-discovers the broker on the LAN. **This only works when HomeForge runs on a native Linux host on the same subnet** (e.g. the Raspberry Pi production deployment). Do **not** promise auto-discovery for Windows/Docker Desktop installs.
-   3. **`/config` web fallback.** If neither works, the board serves a page at `http://<device-ip>/` (the IP it prints to serial). Tell the user they can POST/enter the broker IP there at runtime without reflashing. Useful for recovery if the server IP changes.
-
-   **UX guidance:** In the device-add flow, ask which environment the server runs on. If it's anything other than a Raspberry Pi / Linux host, pre-fill `server_ip` with the detected server LAN IP and tell the user auto-discovery is unavailable. Always show the broker port requirement (`1883`) and a note that the device and server must be on the same Wi-Fi/LAN (watch out for router "client/AP isolation"). After flashing, the device publishes its own IP/MAC to `homeforge/devices/<MAC>/state` — use the MAC shown on the serial console (or the device's `/config` page) to register it.
-
-8. **Solar Node Liveness in Topology:** Solar system online/offline status in `GET /topology/` is kept fresh by a backend background poller (no client polling required). A solar node shows `online` while the server has reached the vendor within the last ~90s, and `offline` when the system is disabled or has been unreachable past that window. You no longer need to keep the Solar tab open for the topology to reflect the correct state.
-
----
-
 ## 15. System Status
 
 Public endpoint for frontend setup wizard detection.
@@ -2797,8 +2758,6 @@ Returns whether this is a fresh installation (no users have been registered yet)
 | Field | Type | Description |
 |-------|------|-------------|
 | `is_fresh` | boolean | `true` if no users exist (first-time setup), `false` otherwise |
-
-> **Frontend Usage:** Call this on app load. If `is_fresh` is `true`, show the setup wizard / first-user registration flow instead of the login page.
 
 ### 15.2 Get Widget Palette
 
@@ -2835,15 +2794,3 @@ Returns the device-builder widget palette, split into widget types that are full
 |-------|------|-------------|
 | `supported` | array | Widget types with full backend + firmware support. Render as usable builder nodes. |
 | `future` | array | Planned widget types. Still valid values (saved templates won't break), but render as disabled / "coming soon". |
-
-> **Frontend Usage:** Active device components today are **temperature, humidity, pressure, and relay (`TOGGLE`)**. **Motion, CO2, and light** are returned under `future` — present them as disabled in the builder until firmware support lands. The values in `future` remain accepted by the API so existing device types that already reference them keep working.
-
-5. **Notifications:** Use `/notifications/unread-count/` for badge counts. The `by_type` field allows showing different badges for different notification categories.
-
-6. **Icons:** All icon fields (rooms, devices, and topology nodes) use FontAwesome class names (e.g., `fa-lightbulb`, `fa-sun`). Either include FontAwesome in your frontend, or — if you use a different icon set such as Lucide — maintain a token→component map. Solar topology nodes always send `icon: "fa-sun"` (plus `type: "solar"` / `is_solar: true`); make sure your map has an entry for it so it renders a sun rather than the generic fallback icon.
-
-7. **Accent Color:** Users can personalize their UI with `accent_color`. Use it for theming.
-
-8. **Device States:** When updating state via `PATCH /devices/{id}/state/`, only send changed keys. They merge with existing state.
-
-9. **Dashboard Layout:** The frontend currently uses `localStorage` (`homeforge_dashboard_layout` key). Once the API is live, read/write via `/dashboard-layout/` instead. The frontend performs client-side reconciliation for added/removed devices — the backend only validates on save. Folder IDs are opaque client-generated strings; the backend stores them as-is. Use `device_order` to persist the user's preferred device grouping (`room`, `type`, `status`, `name`, `custom`). To update only the sort preference without re-saving the layout, use `PATCH /device-order/`.

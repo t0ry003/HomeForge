@@ -193,6 +193,7 @@ HomeForge is an open-source smart home management system designed for DIY IoT en
 - **Control Mappings**: Link UI widgets to device state keys
 - **DB-stored Images**: Wiring diagrams and documentation images stored as base64 in the database (no filesystem)
 - **Export/Import**: Self-contained JSON export with all images embedded
+- **Bundled Defaults**: Platform-default device types ship inline (firmware code, wiring text, and images embedded in `api/fixtures/default_device_types.json`) and load via the `load_default_types` command or `POST /device-types/import-defaults/` — no firmware files on disk
 
 ### 6. Setup Wizard Support
 
@@ -247,6 +248,7 @@ HomeForge is an open-source smart home management system designed for DIY IoT en
 - **Reusable provider adapters**: `api/solar/` uses an adapter/registry pattern (`FroniusProvider` first) so new vendors require only a new adapter — the API contract and UI stay unchanged.
 - **Normalized power flow**: `/solar/systems/{id}/overview/` returns solar/grid/load/battery power (W), SOC, energy counters (Wh), and self-consumption/autonomy ratios with consistent sign conventions for a reusable Tesla-style flow UI.
 - **Rate-limit aware**: Realtime overview responses are cached (~8s) to respect vendor throttling; clients poll every 5–10s.
+- **Background liveness poller**: A `poll_solar` management command refreshes each system's `last_seen` in the background, so topology online/offline status stays accurate without any client polling the Solar tab.
 - **Graceful offline state**: Unreachable/disabled systems return `online: false` with a status message instead of a hard error.
 
 ---
@@ -400,6 +402,8 @@ Individual UI widget definition.
 | | `POWER` | Power consumption display |
 | | `BATTERY` | Battery level display |
 | | `STATUS` | Generic status display |
+
+> **Supported vs. future widgets:** `TOGGLE`, `SLIDER`, `BUTTON`, `GAUGE`, `TEMPERATURE`, `HUMIDITY`, `PRESSURE`, `POWER`, `BATTERY`, and `STATUS` are fully supported today. `MOTION`, `CO2`, and `LIGHT` are valid values reserved for future firmware support (saved templates keep working). The split is exposed via `GET /widget-types/` (`supported` vs `future`).
 
 #### Notification
 User notification for alerts and system messages.
@@ -680,6 +684,8 @@ For complete API documentation including all endpoints, request/response schemas
 | **System** | `GET /system-status/` |
 | **Device Type Images** | `POST /device-types/{id}/wiring-image/`, `POST /device-types/doc-images/`, `GET /device-types/{id}/doc-image/{filename}` |
 | **Export/Import** | `GET /device-types/export/`, `POST /device-types/import/`, `GET/POST /device-types/import-defaults/` |
+| **Widget Palette** | `GET /widget-types/` |
+| **Solar** | `GET/POST /solar/systems/`, `GET/PUT/DELETE /solar/systems/{id}/`, `GET /solar/systems/{id}/overview/` |
 | **Dashboard** | `GET/PUT/DELETE /dashboard-layout/`, `GET/PUT /admin/dashboard-layout/`, `GET/PATCH /device-order/` |
 | **Topology** | `GET /topology/` |
 
@@ -716,6 +722,15 @@ docker exec -it homeforge-web bash migrate.sh
 ```bash
 # Check device connectivity (updates status based on ping)
 docker exec -it homeforge-web python manage.py monitor_devices
+
+# Listen for device MQTT state/discovery messages
+docker exec -it homeforge-web python manage.py mqtt_listener
+
+# Background-poll registered solar systems (keeps topology liveness fresh)
+docker exec -it homeforge-web python manage.py poll_solar --interval 30
+
+# Load/refresh the bundled default device types (use --force to overwrite)
+docker exec -it homeforge-web python manage.py load_default_types
 
 # Create superuser manually
 docker exec -it homeforge-web python manage.py createsuperuser
@@ -841,6 +856,25 @@ This project is open source. See LICENSE file for details.
 ---
 
 ## Changelog
+
+### v1.6.0 (June 8, 2026)
+
+#### New Features
+- **Solar / Energy Integration** - Link-only `SolarSystem` registration with a backend proxy that fetches vendor raw JSON server-side and returns a provider-agnostic, normalized power-flow schema
+  - Adapter/registry pattern under `api/solar/` (`FroniusProvider` first); new vendors need only a new adapter
+  - `GET /solar/systems/{id}/overview/` normalized power flow (solar/grid/load/battery W, SOC, energy Wh, ratios) cached ~8s
+  - `poll_solar` background management command keeps each system's `last_seen` fresh so topology liveness is accurate without client polling
+  - Solar nodes appear in `GET /topology/` as a single `fa-sun` node (`type: "solar"`, `is_solar: true`)
+- **Widget Palette Endpoint** - `GET /widget-types/` returns the device-builder palette split into `supported` (fully wired) and `future` (`MOTION`, `CO2`, `LIGHT` reserved for future firmware) widget types
+- **MQTT Auto-Discovery Firmware** - Bundled ESP32 firmware connects to the broker via three tiers: manual `server_ip` override → mDNS (`_mqtt._tcp`) auto-discovery (cached in NVS) → `/config` web fallback. `server_ip` is optional; the device publishes its own IP/MAC on `homeforge/devices/<MAC>/state`
+- **Inline Bundled Defaults** - Default device types now ship fully inline in `api/fixtures/default_device_types.json` (firmware code, wiring text, and base64 images embedded). The `load_default_types` command and `POST /device-types/import-defaults/` consume the same self-contained format as `/device-types/import/` — the on-disk `firmware/` project folder has been removed
+
+#### Database Migrations
+- `0033_solarsystem` - Solar system model
+- `0034_alter_solarsystem_capabilities` - Capabilities field adjustment
+- `0035_alter_devicecontrol_widget_type` - Widget type choice label updates (supported vs future)
+
+---
 
 ### v1.5.0 (May 17, 2026)
 

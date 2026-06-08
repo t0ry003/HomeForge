@@ -47,13 +47,28 @@ Unlike commercial solutions, HomeForge gives you complete control over your devi
 - **Firmware/Wiring/Docs** — Store firmware, wiring diagrams, and documentation per device type
 - **Real-time Control** — Toggle switches, sliders, and gauges with instant "Smart Sync" feedback
 - **Custom Device Types** — Propose and approve new device categories
+- **Sensor Widgets** — Temperature, Humidity, and Pressure displays, with a generic fallback so no mapped control is ever dropped (Motion/Light/CO2 reserved as "coming soon")
+- **Supported vs. Future Widgets** — `GET /widget-types/` splits the builder palette into currently-supported and reserved widget types
 - **Enhanced Device Cards** — Visual status indicators with offline overlay and disabled controls
 - **Advanced Drag & Drop** — iOS-style organization with 3-zone drop targets (insert/merge)
+
+### 📡 Zero-Config Device Onboarding
+- **mDNS Auto-Discovery** — ESP32 firmware finds the HomeForge MQTT broker via `_mqtt._tcp` (Avahi/Bonjour) — no server IP to type in
+- **Layered Connection Fallbacks** — Optional compile-time `server_ip`, then mDNS, then a `/config` web fallback
+- **NVS Caching** — Devices cache the resolved broker for fast reboots and self-report their IP/MAC over MQTT
+- **Native-Linux Deployment** — Host-networked production compose (`backend/deploy/docker-compose.prod.yml`) for real LAN discovery on a Raspberry Pi
+
+### ☀️ Solar & Energy Monitoring
+- **Live Power-Flow View** — Tesla / Fronius SolarWeb–style animated diagram (PV, Grid, Home, Battery)
+- **Provider Adapters** — Link-only storage with a backend proxy/normalizer; Fronius Solar API V1 first, more to come
+- **Live Power Chart** — Session-only Recharts chart of Solar/Home/Grid samples
+- **Topology Integration** — Solar systems appear as first-class `solar` nodes with background liveness polling
 
 ### 🗺️ Network Topology
 - **Interactive Visualization** — React Flow-powered network graph
 - **Radial Layout** — Gateway-centered star topology view
 - **Live Status** — Color-coded connections (online/offline/error)
+- **Solar Nodes** — Registered solar systems render with a sun icon and live online/offline state
 
 ### 👥 Multi-User System
 - **Role-Based Access** — Owner, Admin, User, and Viewer roles
@@ -80,7 +95,7 @@ Unlike commercial solutions, HomeForge gives you complete control over your devi
 - **shadcn/ui Components** — Accessible, customizable components
 
 ### 🔧 Developer Friendly
-- **RESTful API** — Complete API v1.8.0 with comprehensive documentation
+- **RESTful API** — Complete API v1.9.7 with comprehensive documentation
 - **React Query Caching** — Optimized data fetching with 30s stale time
 - **Docker Ready** — One-command deployment with Docker Compose
 - **Dev Containers** — VS Code development containers included
@@ -229,6 +244,7 @@ HomeForge/
 | Tailwind CSS | 4 | Utility-first styling |
 | shadcn/ui | Latest | Component library |
 | React Flow | Latest | Graph visualization |
+| Recharts | Latest | Solar live power charts |
 | TanStack Query | Latest | Server state management |
 
 ### Infrastructure
@@ -321,15 +337,18 @@ npm run test
 
 ## 🗺️ Roadmap
 
+### Completed
+- [x] MQTT device integration with mDNS auto-discovery
+- [x] Energy monitoring (Solar power-flow view & provider adapters)
+
 ### In Progress
 - [ ] Real-time updates via WebSockets
-- [ ] MQTT device integration
 - [ ] ESPHome native support
+- [ ] Additional solar providers beyond Fronius
 
 ### Planned
 - [ ] Automation engine (rules & triggers)
 - [ ] Scene management (presets)
-- [ ] Energy monitoring
 - [ ] Mobile app (React Native)
 - [ ] Voice assistant integration
 - [ ] Backup & restore
@@ -393,6 +412,15 @@ This project is open source and available under the [MIT License](LICENSE).
 ---
 
 ## 📋 Changelog
+
+### [2026-06-08] - v1.9.0
+- **Added**: Solar & energy monitoring — link-only `SolarSystem`, backend proxy/normalizer with Fronius adapter, and a Tesla-style live power-flow dashboard with session power chart
+- **Added**: Solar systems as first-class `solar` topology nodes with a background `poll_solar` liveness poller and sun-icon rendering
+- **Added**: mDNS (`_mqtt._tcp`) auto-discovery for ESP32 firmware (relay + thermostats) with `server_ip`/`/config` fallbacks and NVS caching; Avahi broker advertisement and native-Linux production compose
+- **Added**: `GET /widget-types/` endpoint splitting supported vs. future widgets; Pressure sensor widget plus a generic fallback widget so no mapped control is dropped
+- **Added**: Solar setup-wizard step and admin device review tabbed Firmware / Wiring / Docs panel
+- **Changed**: `server_ip` is now optional in firmware validation (only `wifi_ssid`/`wifi_password` required); default device types bundle firmware/wiring inline and drop redundant README docs
+- **Fixed**: Stable device-card height while a toggle command syncs; mobile sidebar auto-closes on navigation; de-duplicated admin device-type listings
 
 ### [2026-05-17] - v1.8.0
 - **Added**: Device Collection browse/detail pages with import/export tools

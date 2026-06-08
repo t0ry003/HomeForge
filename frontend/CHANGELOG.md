@@ -1,11 +1,11 @@
 # HomeForge Frontend Changelog
 
-## [2026-06-08] - Admin device review: fix collapsed firmware/wiring/docs panels
+## [2026-06-08] - Admin device review: tabbed Firmware / Wiring / Docs panel
 
-### Fixed
+### Changed
 - **File**: `app/dashboard/admin/device-types/page.tsx`
-- **Description**: The Firmware Code, Wiring Diagram, and Documentation review panels relied on `flex-1` for their content height, but inside the `overflow-auto` scroll container (which has no fixed height) `flex-1` collapsed to near-zero, making the boxes too short to read or scroll. Replaced the `flex-1`/`max-h` content areas with an explicit `h-[420px] overflow-auto` height on each panel's body.
-- **Impact**: Firmware code, wiring diagram, and documentation now render in readable, scrollable panels in the admin review view.
+- **Description**: The admin review detail panel stacked Firmware Code, Wiring Diagram, and Documentation as three tall vertical panels, forcing excessive scrolling (and they kept collapsing when laid out as flex children). Combined them into a single tabbed container (shadcn `Tabs` with Firmware/Wiring/Docs triggers) that sits below the Hardware Topology + Card Preview grid. Only one section shows at a time in a fixed-height (`h-[440px]`) scrollable body, with an empty-state message per tab.
+- **Impact**: Admins see all uploaded artifacts (topology, card preview, firmware, wiring, docs) without long scrolling — the firmware/wiring/docs content is always visible and readable behind tabs.
 
 ## [2026-06-08] - Device collection cards: show Pressure & any component badge
 
