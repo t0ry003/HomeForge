@@ -796,24 +796,21 @@ class DeviceTypeImportDefaultsView(views.APIView):
 
         created = []
         skipped = []
-
         for dt_data in device_types:
             name = dt_data['name']
             if CustomDeviceType.objects.filter(name=name).exists():
                 skipped.append(name)
                 continue
 
-            firmware_code = self._read_file(base_dir, dt_data.get('firmware_code_file', ''))
-            wiring_text = self._read_file(base_dir, dt_data.get('wiring_diagram_text_file', ''))
-            documentation = self._read_file(base_dir, dt_data.get('documentation_file', ''))
-
             device_type = CustomDeviceType.objects.create(
                 name=name,
                 definition=dt_data['definition'],
                 approved=True,
-                firmware_code=firmware_code,
-                wiring_diagram_text=wiring_text,
-                documentation=documentation,
+                firmware_code=dt_data.get('firmware_code', ''),
+                wiring_diagram_text=dt_data.get('wiring_diagram_text', ''),
+                documentation=dt_data.get('documentation', ''),
+                wiring_diagram_base64=dt_data.get('wiring_diagram_base64', ''),
+                documentation_images_base64=dt_data.get('documentation_images_base64', []) or [],
             )
 
             card_data = dt_data.get('card_template')
@@ -848,15 +845,6 @@ class DeviceTypeImportDefaultsView(views.APIView):
             "created_count": len(created),
             "skipped_count": len(skipped),
         })
-
-    def _read_file(self, base_dir, relative_path):
-        if not relative_path:
-            return ''
-        full_path = os.path.join(base_dir, relative_path)
-        if os.path.exists(full_path):
-            with open(full_path, 'r') as f:
-                return f.read()
-        return ''
 
 
 class DeviceTypeExportView(views.APIView):

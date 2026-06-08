@@ -42,18 +42,15 @@ class Command(BaseCommand):
             if exists and options['force']:
                 CustomDeviceType.objects.filter(name=name).delete()
 
-            # Read file contents
-            firmware_code = self._read_file(dt_data.get('firmware_code_file', ''))
-            wiring_text = self._read_file(dt_data.get('wiring_diagram_text_file', ''))
-            documentation = self._read_file(dt_data.get('documentation_file', ''))
-
             device_type = CustomDeviceType.objects.create(
                 name=name,
                 definition=dt_data['definition'],
                 approved=True,
-                firmware_code=firmware_code,
-                wiring_diagram_text=wiring_text,
-                documentation=documentation,
+                firmware_code=dt_data.get('firmware_code', ''),
+                wiring_diagram_text=dt_data.get('wiring_diagram_text', ''),
+                documentation=dt_data.get('documentation', ''),
+                wiring_diagram_base64=dt_data.get('wiring_diagram_base64', ''),
+                documentation_images_base64=dt_data.get('documentation_images_base64', []) or [],
             )
 
             card_data = dt_data.get('card_template')
@@ -82,13 +79,3 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f'\nDone. Created: {created}, Skipped: {skipped}'
         ))
-
-    def _read_file(self, relative_path):
-        """Read a file relative to BASE_DIR, return empty string if missing."""
-        if not relative_path:
-            return ''
-        full_path = os.path.join(settings.BASE_DIR, relative_path)
-        if os.path.exists(full_path):
-            with open(full_path, 'r') as f:
-                return f.read()
-        return ''
