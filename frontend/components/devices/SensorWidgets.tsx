@@ -6,7 +6,8 @@ import {
   Droplets, 
   Activity, 
   Sun, 
-  Wind
+  Wind,
+  Gauge
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
@@ -280,10 +281,114 @@ export function CO2Widget({
   );
 }
 
+// Pressure Sensor Display
+export function PressureWidget({
+  value,
+  label,
+  unit = 'hPa',
+  isDisabled,
+  variant = 'row'
+}: SensorWidgetProps) {
+  const pressure = typeof value === 'number' ? value : 0;
+  const color = 'text-indigo-500';
+  const bg = 'bg-indigo-500/10';
+  const border = 'border-indigo-500/30';
+
+  if (variant === 'square') {
+    return (
+      <div className={cn(SQUARE_BASE, bg, isDisabled ? 'opacity-50 border-border/50' : border, !isDisabled && 'hover:shadow-lg')}>
+        <Gauge className={cn(ICON_SIZE, "mb-1", color)} />
+        <div className="flex items-baseline">
+          <span className={cn(VALUE_TEXT, color)}>{pressure.toFixed(0)}</span>
+          <span className={UNIT_TEXT}>{unit}</span>
+        </div>
+        <span className={cn(LABEL_TEXT, "mt-1 text-center truncate w-full px-1")}>{label}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn(ROW_BASE, bg, isDisabled ? 'opacity-50 border-border/50' : border, !isDisabled && 'hover:shadow-md')}>
+      <div className="flex items-center gap-3 min-w-0">
+        <div className={cn(ICON_WRAPPER, bg)}>
+          <Gauge className={cn(ICON_SIZE, color)} />
+        </div>
+        <div className="flex flex-col min-w-0">
+          <span className="text-sm font-medium truncate">{label}</span>
+          <span className={LABEL_TEXT}>Pressure</span>
+        </div>
+      </div>
+      <div className="flex items-baseline shrink-0">
+        <span className={cn(VALUE_TEXT, color)}>{pressure.toFixed(0)}</span>
+        <span className={UNIT_TEXT}>{unit}</span>
+      </div>
+    </div>
+  );
+}
+
+// Generic Sensor / Gauge Display
+// Fallback for any sensor/gauge widget type that doesn't have a dedicated
+// component (POWER, BATTERY, STATUS, GAUGE, or future sensors). This keeps the
+// card reusable: any mapped value is always shown instead of silently dropped.
+export function GenericSensorWidget({
+  value,
+  label,
+  unit = '',
+  isDisabled,
+  variant = 'row'
+}: SensorWidgetProps) {
+  let display: string;
+  if (typeof value === 'number') {
+    display = Number.isInteger(value) ? String(value) : value.toFixed(1);
+  } else if (typeof value === 'boolean') {
+    display = value ? 'On' : 'Off';
+  } else if (value === null || value === undefined) {
+    display = '--';
+  } else {
+    display = String(value);
+  }
+
+  const color = 'text-primary';
+  const bg = 'bg-primary/10';
+  const border = 'border-primary/30';
+
+  if (variant === 'square') {
+    return (
+      <div className={cn(SQUARE_BASE, bg, isDisabled ? 'opacity-50 border-border/50' : border, !isDisabled && 'hover:shadow-lg')}>
+        <Gauge className={cn(ICON_SIZE, "mb-1", color)} />
+        <div className="flex items-baseline">
+          <span className={cn(VALUE_TEXT, color)}>{display}</span>
+          {unit && <span className={UNIT_TEXT}>{unit}</span>}
+        </div>
+        <span className={cn(LABEL_TEXT, "mt-1 text-center truncate w-full px-1")}>{label}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn(ROW_BASE, bg, isDisabled ? 'opacity-50 border-border/50' : border, !isDisabled && 'hover:shadow-md')}>
+      <div className="flex items-center gap-3 min-w-0">
+        <div className={cn(ICON_WRAPPER, bg)}>
+          <Gauge className={cn(ICON_SIZE, color)} />
+        </div>
+        <div className="flex flex-col min-w-0">
+          <span className="text-sm font-medium truncate">{label}</span>
+          <span className={LABEL_TEXT}>Sensor</span>
+        </div>
+      </div>
+      <div className="flex items-baseline shrink-0">
+        <span className={cn(VALUE_TEXT, color)}>{display}</span>
+        {unit && <span className={UNIT_TEXT}>{unit}</span>}
+      </div>
+    </div>
+  );
+}
+
 // Export all widgets
 export const SensorWidgets = {
   TEMPERATURE: TemperatureWidget,
   HUMIDITY: HumidityWidget,
+  PRESSURE: PressureWidget,
   MOTION: MotionWidget,
   LIGHT: LightWidget,
   CO2: CO2Widget,

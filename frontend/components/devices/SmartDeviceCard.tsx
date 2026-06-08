@@ -19,9 +19,11 @@ import { cn } from "@/lib/utils";
 import { 
   TemperatureWidget, 
   HumidityWidget, 
+  PressureWidget,
   MotionWidget, 
   LightWidget, 
-  CO2Widget 
+  CO2Widget,
+  GenericSensorWidget
 } from "./SensorWidgets";
 
 interface Control {
@@ -398,25 +400,36 @@ export default function SmartDeviceCard({ device, deviceType, roomName, roomIcon
           />
         );
 
-      case 'GAUGE':
-        // Generic gauge display for unknown sensor types
+      case 'PRESSURE':
         return (
-          <div 
+          <PressureWidget
             key={control.variable_mapping}
-            className={cn(
-              "flex items-center justify-between p-3 rounded-xl bg-card/50 border border-border/50",
-              isDisabled && 'opacity-50'
-            )}
-          >
-            <span className="text-sm font-medium">{control.label}</span>
-            <span className="text-lg font-mono font-semibold">
-              {value ?? '--'}{control.unit || ''}
-            </span>
-          </div>
+            value={value}
+            label={control.label}
+            unit={control.unit}
+            isDisabled={isDisabled}
+            variant={widgetVariant}
+          />
         );
 
+      case 'GAUGE':
+      case 'POWER':
+      case 'BATTERY':
+      case 'STATUS':
       default:
-        return null;
+        // Generic display for any sensor/gauge type without a dedicated widget.
+        // Ensures every mapped control is shown instead of being silently dropped,
+        // keeping the card reusable for new sensors/gauges added in the future.
+        return (
+          <GenericSensorWidget
+            key={control.variable_mapping}
+            value={value}
+            label={control.label}
+            unit={control.unit}
+            isDisabled={isDisabled}
+            variant={widgetVariant}
+          />
+        );
     }
   };
 

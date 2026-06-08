@@ -52,6 +52,7 @@ import {
   Sun,
   ToggleLeft,
   Wind,
+  Gauge,
   User,
   Calendar,
   CheckCircle2,
@@ -64,9 +65,10 @@ const SENSOR_ICONS: Record<string, { icon: React.ElementType; color: string; lab
   mcu: { icon: Cpu, color: 'text-blue-500', label: 'MCU' },
   temperature: { icon: Thermometer, color: 'text-orange-500', label: 'Temperature' },
   humidity: { icon: Droplets, color: 'text-cyan-500', label: 'Humidity' },
+  pressure: { icon: Gauge, color: 'text-indigo-500', label: 'Pressure' },
+  switch: { icon: ToggleLeft, color: 'text-green-500', label: 'Relay' },
   motion: { icon: Activity, color: 'text-red-500', label: 'Motion' },
   light: { icon: Sun, color: 'text-yellow-500', label: 'Light' },
-  switch: { icon: ToggleLeft, color: 'text-green-500', label: 'Relay' },
   co2: { icon: Wind, color: 'text-gray-500', label: 'CO2' },
 };
 
@@ -75,9 +77,10 @@ const AVAILABLE_SENSORS = [
   { type: 'mcu', icon: Cpu, color: 'text-blue-500 border-blue-500/50 bg-blue-500/10' },
   { type: 'temperature', icon: Thermometer, color: 'text-orange-500 border-orange-500/50 bg-orange-500/10' },
   { type: 'humidity', icon: Droplets, color: 'text-cyan-500 border-cyan-500/50 bg-cyan-500/10' },
+  { type: 'pressure', icon: Gauge, color: 'text-indigo-500 border-indigo-500/50 bg-indigo-500/10' },
+  { type: 'switch', icon: ToggleLeft, color: 'text-green-500 border-green-500/50 bg-green-500/10' },
   { type: 'motion', icon: Activity, color: 'text-red-500 border-red-500/50 bg-red-500/10' },
   { type: 'light', icon: Sun, color: 'text-yellow-500 border-yellow-500/50 bg-yellow-500/10' },
-  { type: 'switch', icon: ToggleLeft, color: 'text-green-500 border-green-500/50 bg-green-500/10' },
   { type: 'co2', icon: Wind, color: 'text-gray-500 border-gray-500/50 bg-gray-500/10' },
 ];
 

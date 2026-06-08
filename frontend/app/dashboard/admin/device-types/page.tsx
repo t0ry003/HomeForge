@@ -17,7 +17,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 
 import { 
-    Cpu, Thermometer, Droplets, Activity, Sun, ToggleLeft, Wind, 
+    Cpu, Thermometer, Droplets, Activity, Sun, ToggleLeft, Wind, Gauge,
     CheckCircle2, XCircle, Inbox, RotateCw, Plus, Edit, Trash2,
     AlertTriangle, CheckSquare, Square, Filter, Download, Upload,
     FileUp, Package, Code2, FileText, CircuitBoard
@@ -71,9 +71,10 @@ const AVAILABLE_SENSORS: any[] = [
   { type: 'mcu', label: 'MCU', icon: Cpu, color: 'text-blue-500 border-blue-500/50 bg-blue-500/10' },
   { type: 'temperature', label: 'Temp', icon: Thermometer, color: 'text-orange-500 border-orange-500/50 bg-orange-500/10' },
   { type: 'humidity', label: 'Humidity', icon: Droplets, color: 'text-cyan-500 border-cyan-500/50 bg-cyan-500/10' },
+  { type: 'pressure', label: 'Pressure', icon: Gauge, color: 'text-indigo-500 border-indigo-500/50 bg-indigo-500/10' },
+  { type: 'switch', label: 'Relay', icon: ToggleLeft, color: 'text-green-500 border-green-500/50 bg-green-500/10' },
   { type: 'motion', label: 'Motion', icon: Activity, color: 'text-red-500 border-red-500/50 bg-red-500/10' },
   { type: 'light', label: 'Light', icon: Sun, color: 'text-yellow-500 border-yellow-500/50 bg-yellow-500/10' },
-  { type: 'switch', label: 'Relay', icon: ToggleLeft, color: 'text-green-500 border-green-500/50 bg-green-500/10' },
   { type: 'co2', label: 'CO2', icon: Wind, color: 'text-gray-500 border-gray-500/50 bg-gray-500/10' },
 ];
 

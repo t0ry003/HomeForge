@@ -7,6 +7,7 @@ import {
   Activity, 
   Sun, 
   ToggleLeft, 
+  Gauge,
   Server, 
   Wifi, 
   Video, 
@@ -35,6 +36,7 @@ const TYPE_CONFIG: Record<string, { icon: any, color: string }> = {
   switch: { icon: ToggleLeft, color: 'text-green-500 border-green-500/50 bg-green-500/10' },
   thermostat: { icon: Thermometer, color: 'text-orange-500 border-orange-500/50 bg-orange-500/10' },
   humidity: { icon: Droplets, color: 'text-cyan-500 border-cyan-500/50 bg-cyan-500/10' },
+  pressure: { icon: Gauge, color: 'text-indigo-500 border-indigo-500/50 bg-indigo-500/10' },
 
   // Energy / Solar
   solar: { icon: Sun, color: 'text-amber-500 border-amber-500/50 bg-amber-500/10' },
@@ -67,6 +69,7 @@ const resolveType = (type: string = '', id: string = '') => {
   if (t.includes('solar') || t.includes('inverter') || t.includes('photovolta') || t.includes('pv') || t.includes('panel')) return TYPE_CONFIG.solar;
   if (t.includes('camera')) return TYPE_CONFIG.camera;
   if (t.includes('light') || t.includes('bulb')) return TYPE_CONFIG.light;
+  if (t.includes('pressure') || t.includes('barometer')) return TYPE_CONFIG.pressure;
   if (t.includes('sensor') || t.includes('temp') || t.includes('humid')) return TYPE_CONFIG.sensor;
   if (t.includes('switch') || t.includes('plug') || t.includes('relay')) return TYPE_CONFIG.switch;
   if (t.includes('wifi') || t.includes('ap') || t.includes('access point')) return TYPE_CONFIG.ap;
