@@ -1,0 +1,672 @@
+// apiClient.js - small helper for auth + profile usage
+
+export function getBackendUrl() {
+  if (typeof window !== 'undefined') {
+    return `${window.location.protocol}//${window.location.hostname}:8000`;
+  }
+  return 'http://localhost:8000';
+}
+
+function getApiBase() {
+  return `${getBackendUrl()}/api`;
+}
+
+// Helper to handle API errors globally matching backend format
+async function handleApiError(res, defaultMsg) {
+  let errorData;
+  try {
+    errorData = await res.json();
+  } catch (e) {
+    throw new Error(defaultMsg || `Request failed with status ${res.status}`);
+  }
+
+  if (errorData) {
+    // 1. Check for specific "detail" (Permission errors, etc.)
+    if (typeof errorData.detail === 'string') {
+      throw new Error(errorData.detail);
+    }
+    
+    // 2. Check for "non_field_errors"
+    if (Array.isArray(errorData.non_field_errors)) {
+       throw new Error(errorData.non_field_errors.join(' '));
+    }
+
+    // 3. Field errors
+    const parts = [];
+    for (const [key, value] of Object.entries(errorData)) {
+      // Just extract the messages, ignore the field names for a cleaner look
+      const messages = Array.isArray(value) ? value : [value];
+      parts.push(...messages);
+    }
+    
+    if (parts.length > 0) {
+      // Join with newline
+      throw new Error(parts.join('\n'));
+    }
+  }
+  
+  throw new Error(defaultMsg || `Request failed with status ${res.status}`);
+}
+
+export function getAvatarUrl(path) {
+  if (!path) return undefined;
+  const backendUrl = getBackendUrl();
+  const url = path.startsWith('http') ? path : `${backendUrl}${path}`;
+  return `${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`;
+}
+
+export function getMediaUrl(path) {
+  if (!path) return undefined;
+  if (path.startsWith('http') || path.startsWith('data:') || path.startsWith('blob:')) return path;
+  // Detect raw base64 strings (not a URL path - typically very long, no slashes at start)
+  if (!path.startsWith('/') && path.length > 200) {
+    return `data:image/png;base64,${path}`;
+  }
+  return `${getBackendUrl()}${path}`;
+}
+
+export async function registerUser({ username, email, password, first_name, last_name, role }) {
+  const res = await fetch(`${getApiBase()}/register/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, email, password, first_name, last_name, role }),
+  });
+  if (!res.ok) await handleApiError(res, 'Registration failed');
+  return res.json();
+}
+
+export async function login({ username, password }) {
+  console.log('Login attempt:', { username, password });
+  const res = await fetch(`${getApiBase()}/login/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: username.trim(), password }),
+  });
+  if (!res.ok) await handleApiError(res, 'Login failed');
+  
+  const data = await res.json(); 
+  localStorage.setItem('access', data.access);
+  localStorage.setItem('refresh', data.refresh);
+  return data;
+}
+
+export function logout() {
+  localStorage.removeItem('access');
+  localStorage.removeItem('refresh');
+  if (typeof window !== 'undefined') {
+    window.location.href = '/login';
+  }
+}
+
+export function getAuthHeaders() {
+  const token = localStorage.getItem('access');
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function fetchWithAuth(url, options = {}) {
+  const headers = { ...options.headers, ...getAuthHeaders() };
+  
+  let res = await fetch(url, { ...options, headers });
+
+  if (res.status === 401) {
+    try {
+      const newToken = await refreshAccessToken();
+      const newHeaders = { ...options.headers, Authorization: `Bearer ${newToken}` };
+      res = await fetch(url, { ...options, headers: newHeaders });
+    } catch (error) {
+      throw error;
+    }
+  }
+  return res;
+}
+
+export async function fetchProfile() {
+  const res = await fetchWithAuth(`${getApiBase()}/me/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch profile');
+  return res.json();
+}
+
+export async function updateProfile({ first_name, last_name, username, email, password, role, accent_color, avatarFile }) {
+  const form = new FormData();
+  if (first_name !== undefined) form.append('first_name', first_name);
+  if (last_name !== undefined) form.append('last_name', last_name);
+  if (username !== undefined) form.append('username', username);
+  if (email !== undefined) form.append('email', email);
+  if (password !== undefined && password.trim() !== '') form.append('password', password);
+  if (role !== undefined) form.append('role', role);
+  if (accent_color !== undefined) form.append('accent_color', accent_color);
+  if (avatarFile) {
+    form.append('avatar', avatarFile);
+  }
+
+  const res = await fetchWithAuth(`${getApiBase()}/me/`, {
+    method: 'PUT',
+    body: form,
+  });
+  if (!res.ok) await handleApiError(res, 'Update failed');
+  return res.json();
+}
+
+export async function refreshAccessToken() {
+  const refresh = localStorage.getItem('refresh');
+  if (!refresh) {
+    const e = new Error('No refresh token available');
+    e.status = 401;
+    throw e;
+  }
+  
+  const res = await fetch(`${getApiBase()}/token/refresh/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh }),
+  });
+  
+  if (!res.ok) {
+    localStorage.removeItem('access');
+    localStorage.removeItem('refresh');
+    const e = new Error('Refresh failed');
+    e.status = 401;
+    throw e;
+  }
+  
+  const data = await res.json();
+  localStorage.setItem('access', data.access);
+  return data.access;
+}
+
+// Rooms
+
+export async function fetchRooms() {
+  const res = await fetchWithAuth(`${getApiBase()}/rooms/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch rooms');
+  return res.json();
+}
+
+export async function createRoom(data) {
+  const res = await fetchWithAuth(`${getApiBase()}/rooms/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to create room');
+  return res.json();
+}
+
+export async function updateRoom(id, data) {
+  const res = await fetchWithAuth(`${getApiBase()}/rooms/${id}/`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to update room');
+  return res.json();
+}
+
+export async function deleteRoom(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/rooms/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to delete room');
+  return true;
+}
+
+// Solar
+
+export async function fetchSolarSystems() {
+  const res = await fetchWithAuth(`${getApiBase()}/solar/systems/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch solar systems');
+  return res.json();
+}
+
+export async function createSolarSystem(data) {
+  const res = await fetchWithAuth(`${getApiBase()}/solar/systems/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to create solar system');
+  return res.json();
+}
+
+export async function updateSolarSystem(id, data) {
+  const res = await fetchWithAuth(`${getApiBase()}/solar/systems/${id}/`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to update solar system');
+  return res.json();
+}
+
+export async function deleteSolarSystem(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/solar/systems/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to delete solar system');
+  return true;
+}
+
+export async function fetchSolarOverview(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/solar/systems/${id}/overview/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch solar overview');
+  return res.json();
+}
+
+// Users (Admin)
+
+export async function fetchUsers() {
+  const res = await fetchWithAuth(`${getApiBase()}/users/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch users');
+  return res.json();
+}
+
+export async function updateUserAdmin(id, data) {
+  const res = await fetchWithAuth(`${getApiBase()}/users/${id}/`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to update user');
+  return res.json();
+}
+
+export async function deleteUser(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/users/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to delete user');
+  return true;
+}
+
+// Device Types
+
+export async function fetchDeviceTypes() {
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch device types');
+  return res.json();
+}
+
+export async function createDeviceType(data) {
+    const res = await fetchWithAuth(`${getApiBase()}/device-types/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await handleApiError(res, 'Failed to create device type');
+    return res.json();
+  }
+
+export async function fetchPendingDeviceTypes() {
+  const res = await fetchWithAuth(`${getApiBase()}/admin/device-types/pending/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch pending device types');
+  return res.json();
+}
+
+export async function approveDeviceType(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/admin/device-types/${id}/approve/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+    });
+  if (!res.ok) await handleApiError(res, 'Failed to approve device type');
+  return res.json();
+}
+
+export async function denyDeviceType(id, reason) {
+  const res = await fetchWithAuth(`${getApiBase()}/admin/device-types/${id}/deny/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+    });
+  if (!res.ok) await handleApiError(res, 'Failed to deny device type');
+  return res.json();
+}
+
+export async function deleteDeviceType(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to delete device type');
+  return true;
+}
+
+// Denied Device Types (Admin)
+
+export async function fetchDeniedDeviceTypes() {
+  const res = await fetchWithAuth(`${getApiBase()}/admin/device-types/denied/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch denied device types');
+  return res.json();
+}
+
+export async function deleteDeniedDeviceType(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/admin/device-types/denied/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to delete denied device type');
+  return res.json();
+}
+
+export async function bulkDeleteDeniedDeviceTypes(ids = null) {
+  const options = {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  };
+  
+  // If ids provided, send them in body; otherwise delete all
+  if (ids && ids.length > 0) {
+    options.body = JSON.stringify({ ids });
+  }
+  
+  const res = await fetchWithAuth(`${getApiBase()}/admin/device-types/denied/delete/`, options);
+  if (!res.ok) await handleApiError(res, 'Failed to delete denied device types');
+  return res.json();
+}
+
+// Admin Device Type Editing
+
+export async function fetchAdminDeviceType(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/admin/device-types/${id}/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch device type');
+  return res.json();
+}
+
+export async function updateAdminDeviceType(id, data, partial = false) {
+  const res = await fetchWithAuth(`${getApiBase()}/admin/device-types/${id}/`, {
+    method: partial ? 'PATCH' : 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to update device type');
+  return res.json();
+}
+
+// User Device Type Proposal
+
+export async function proposeDeviceType(data) {
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/propose/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to propose device type');
+  return res.json();
+}
+
+// Devices
+
+export async function fetchDevices() {
+  const res = await fetchWithAuth(`${getApiBase()}/devices/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch devices');
+  return res.json();
+}
+
+export async function registerDevice(data) {
+  const res = await fetchWithAuth(`${getApiBase()}/devices/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to register device');
+  return res.json();
+}
+
+export async function updateDeviceState(id, data) {
+  const res = await fetchWithAuth(`${getApiBase()}/devices/${id}/state/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to update device state');
+  return res.json();
+}
+
+export async function updateDevice(id, data) {
+  const res = await fetchWithAuth(`${getApiBase()}/devices/${id}/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to update device');
+  return res.json();
+}
+
+export async function deleteDevice(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/devices/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to delete device');
+  return true;
+}
+
+export async function fetchTopology() {
+  const res = await fetchWithAuth(`${getApiBase()}/topology/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch topology');
+  return res.json();
+}
+
+// Notifications API
+
+export async function fetchNotifications(params = {}) {
+  const queryParams = new URLSearchParams();
+  if (params.is_read !== undefined) queryParams.append('is_read', params.is_read);
+  if (params.type) queryParams.append('type', params.type);
+  if (params.priority) queryParams.append('priority', params.priority);
+  
+  const queryString = queryParams.toString();
+  const url = `${getApiBase()}/notifications/${queryString ? `?${queryString}` : ''}`;
+  
+  const res = await fetchWithAuth(url);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch notifications');
+  return res.json();
+}
+
+export async function fetchUnreadNotificationCount() {
+  const res = await fetchWithAuth(`${getApiBase()}/notifications/unread-count/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch unread count');
+  return res.json();
+}
+
+export async function fetchNotification(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/notifications/${id}/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch notification');
+  return res.json();
+}
+
+export async function markNotificationAsRead(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/notifications/${id}/read/`, {
+    method: 'POST',
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to mark notification as read');
+  return res.json();
+}
+
+export async function markAllNotificationsAsRead(params = {}) {
+  const queryParams = new URLSearchParams();
+  if (params.type) queryParams.append('type', params.type);
+  
+  const queryString = queryParams.toString();
+  const url = `${getApiBase()}/notifications/read-all/${queryString ? `?${queryString}` : ''}`;
+  
+  const res = await fetchWithAuth(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: params.ids ? JSON.stringify({ ids: params.ids }) : undefined,
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to mark all as read');
+  return res.json();
+}
+
+export async function deleteNotification(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/notifications/${id}/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to delete notification');
+  return true;
+}
+
+export async function bulkDeleteNotifications(params = {}) {
+  const res = await fetchWithAuth(`${getApiBase()}/notifications/bulk-delete/`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to delete notifications');
+  return res.json();
+}
+
+// Dashboard Layout
+
+export async function fetchDashboardLayout() {
+  const res = await fetchWithAuth(`${getApiBase()}/dashboard-layout/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch dashboard layout');
+  return res.json();
+}
+
+export async function saveDashboardLayout(layout, deviceOrder) {
+  const body = { layout };
+  if (deviceOrder) body.device_order = deviceOrder;
+  const res = await fetchWithAuth(`${getApiBase()}/dashboard-layout/`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to save dashboard layout');
+  return res.json();
+}
+
+export async function deleteDashboardLayout() {
+  const res = await fetchWithAuth(`${getApiBase()}/dashboard-layout/`, {
+    method: 'DELETE',
+  });
+  if (!res.ok && res.status !== 204) await handleApiError(res, 'Failed to delete dashboard layout');
+  return true;
+}
+
+export async function fetchSharedDashboardLayout() {
+  const res = await fetchWithAuth(`${getApiBase()}/admin/dashboard-layout/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch shared dashboard layout');
+  return res.json();
+}
+
+export async function saveSharedDashboardLayout(layout) {
+  const res = await fetchWithAuth(`${getApiBase()}/admin/dashboard-layout/`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ layout }),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to save shared dashboard layout');
+  return res.json();
+}
+
+// Device Order
+
+export async function fetchDeviceOrder() {
+  const res = await fetchWithAuth(`${getApiBase()}/device-order/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch device order');
+  return res.json();
+}
+
+export async function updateDeviceOrder(deviceOrder) {
+  const res = await fetchWithAuth(`${getApiBase()}/device-order/`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ device_order: deviceOrder }),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to update device order');
+  return res.json();
+}
+
+// Device Collection
+
+export async function fetchDeviceType(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/${id}/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch device type');
+  return res.json();
+}
+
+export async function uploadWiringDiagramImage(deviceTypeId, imageFile) {
+  const form = new FormData();
+  form.append('image', imageFile);
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/${deviceTypeId}/wiring-image/`, {
+    method: 'POST',
+    body: form,
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to upload wiring diagram image');
+  return res.json();
+}
+
+// Device Type Import/Export
+
+export async function getImportDefaults() {
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/import-defaults/`);
+  if (!res.ok) await handleApiError(res, 'Failed to fetch default device types');
+  return res.json();
+}
+
+export async function importDefaults() {
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/import-defaults/`, {
+    method: 'POST',
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to import default device types');
+  return res.json();
+}
+
+export async function importDeviceTypesFromFile(file) {
+  const form = new FormData();
+  form.append('file', file);
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/import/`, {
+    method: 'POST',
+    body: form,
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to import device types');
+  return res.json();
+}
+
+export async function exportDeviceTypes(ids = null) {
+  const params = ids && ids.length > 0 ? `?ids=${ids.join(',')}` : '';
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/export/${params}`);
+  if (!res.ok) await handleApiError(res, 'Failed to export device types');
+  return res;
+}
+
+export async function exportSingleDeviceType(id) {
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/${id}/export/`);
+  if (!res.ok) await handleApiError(res, 'Failed to export device type');
+  return res;
+}
+
+// Documentation Image Upload
+
+export async function uploadDocumentationImage(imageFile, deviceTypeId = null) {
+  const form = new FormData();
+  form.append('image', imageFile);
+  if (deviceTypeId) {
+    form.append('device_type_id', deviceTypeId);
+  }
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/doc-images/`, {
+    method: 'POST',
+    body: form,
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to upload image');
+  return res.json();
+}
+
+// System Setup
+
+export async function getSystemStatus() {
+  const res = await fetch(`${getApiBase()}/system-status/`);
+  if (!res.ok) {
+    // Fallback: if endpoint doesn't exist, assume system is configured
+    return { is_fresh: false };
+  }
+  return res.json();
+}
+
+export async function importSelectedDefaults(ids) {
+  const res = await fetchWithAuth(`${getApiBase()}/device-types/import-defaults/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+  if (!res.ok) await handleApiError(res, 'Failed to import device types');
+  return res.json();
+}

@@ -192,8 +192,9 @@
 
 
 % Add period after section numbers in table of contents.
-% Keep this hyperref-safe to avoid bookmark PDF string warnings.
-\def\numberline#1{#1.\space}
+% Varianta din template (aliniere corecta a numerelor in Cuprins).
+% Siguranta pentru bookmark-uri PDF este asigurata de \pdfstringdefDisableCommands in teza.tex.
+\def\numberline#1{\advance\hangindent\@tempdima \hbox to\@tempdima{#1.\hfil}}
 
 \newcommand{\l@unnumberedsection}[2]{\pagebreak[3]% \vskip 1em plus 1bp
 \parindent \z@ \rightskip \@pnumwidth 
@@ -397,21 +398,16 @@
 \newcommand\titlep{\vbox to \textheight{%
     \vskip 12mm
                 \noindent
-                \begin{minipage}[c]{0.49\textwidth}
-                        \raggedright
-                        \ifx\@logostanga\@empty\else
-                                \includegraphics[height=18mm]{\@logostanga}
-                        \fi
-                \end{minipage}
-                \begin{minipage}[c]{0.49\textwidth}
-                        \raggedleft
-                        \ifx\@logodreapta\@empty\else
-                                \includegraphics[height=18mm]{\@logodreapta}
-                        \fi
-                \end{minipage}
+                \ifx\@logostanga\@empty\else
+                        \includegraphics[height=16mm,keepaspectratio]{\@logostanga}%
+                \fi
+                \hfill
+                \ifx\@logodreapta\@empty\else
+                        \raisebox{0pt}{\includegraphics[height=16mm,keepaspectratio]{\@logodreapta}}%
+                \fi
                 \par
                 \vskip 8mm
-    \centering\large{Universitatea POLITEHNICA din București\\
+    \centering\large{Universitatea Națională de Știință și Tehnologie\\ POLITEHNICA București\\
 \@facultatea} \par\nobreak % DN
     \vskip 40mm
         \parskip0pt 
@@ -424,22 +420,20 @@
          }
 
         \vskip 20mm
-        {\centering\bfseries{\Huge Lucrare de {\@tiplucrare}}
+        {\centering\bfseries{\Huge Proiect de diplomă}
           \nobreak
-          \vskip 4ex plus 2ex minus 2ex 
+          \vskip 4ex plus 2ex minus 2ex
           \ifdraft%
             {VERSIUNEA DRAFT CREATĂ LA \uppercase\expandafter{\today}\\}
           \else %
-            Prezentată ca cerință parțială pentru obținerea\\ 
-            titlului de {\it {\@titlulobtinut}}\\ 
-            în domeniul {\it\@domeniu}\\
-            programul de studii {\it\@program}
+            prezentat ca cerință parțială pentru obținerea titlului de\\
+            {\it {\@titlulobtinut}} în domeniul {\it\@domeniu}\\
+            programul de studii de licență {\it\@program}
 
         \vfil
 
-             \begin{tabular}
-               {>{\raggedright}p{0.7\textwidth}r}
-               \Large{Conducător științific} & \Large{Absolvent}\\
+             \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.5\textwidth}@{}>{\raggedleft\arraybackslash}p{0.5\textwidth}@{}}
+               {\Large Conducător științific} & {\Large Absolvent}\\
                {\@director} & {\@author}\\
              \end{tabular}
  \vfil
@@ -466,22 +460,20 @@ Catedra \@catedra} \par\nobreak % DN
          }
 
         \vskip 20mm
-        {\centering\bfseries{\Huge Lucrare de {\@tiplucrare}}
+        {\centering\bfseries{\Huge Proiect de diplomă}
           \nobreak
-          \vskip 4ex plus 2ex minus 2ex 
+          \vskip 4ex plus 2ex minus 2ex
           \ifdraft%
             {VERSIUNEA DRAFT CREATĂ LA \uppercase\expandafter{\today}\\}
           \else %
-            Prezentată ca cerință parțială pentru obținerea\\ 
-            titlului de {\it {\@titlulobtinut}}\\ 
-            în domeniul {\it\@domeniu}\\
-            programul de studii {\it\@program}
+            prezentat ca cerință parțială pentru obținerea titlului de\\
+            {\it {\@titlulobtinut}} în domeniul {\it\@domeniu}\\
+            programul de studii de licență {\it\@program}
 
         \vfil
 
-             \begin{tabular}
-               {>{\raggedright}p{0.7\textwidth}r}
-               \Large{Conducător științific} & \Large{Absolvent}\\
+             \begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.5\textwidth}@{}>{\raggedleft\arraybackslash}p{0.5\textwidth}@{}}
+               {\Large Conducător științific} & {\Large Absolvent}\\
                {\@director} & {\@author}\\
              \end{tabular}
  \vfil
@@ -550,10 +542,17 @@ Absolvent: {\@author}
          \let\makelabel\desclabel}}
 \let\enddescriptionlist=\endlist
 
+% Formular de inscriere a temei (Anexa 1/2) - PDF scanat inserat dupa pagina de titlu.
+\newcommand{\anexainscriere}[1]{\gdef\@anexainscriere{#1}}
+\newcommand\@anexainscriere{}
+
 \newcommand\beforepreface{%
         \pagenumbering{roman}
         \pagestyle{empty}
         \titlep
+        \ifx\@anexainscriere\@empty\else
+            \includepdf[pages=-,pagecommand={\thispagestyle{empty}}]{\@anexainscriere}
+        \fi
         % \inscrierep
         \declaratiep
         \tableofcontents
