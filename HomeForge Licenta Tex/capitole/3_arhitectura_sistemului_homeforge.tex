@@ -1,9 +1,9 @@
 \chapter{Arhitectura backend-ului HomeForge}
 
 \section{Vedere de ansamblu}
-Backend-ul HomeForge este un serviciu Django care îndeplinește două roluri simultane: expune un API REST — în accepțiunea originală a lui Fielding, ca stil arhitectural orientat pe resurse, reprezentări și mesaje auto-descriptive \cite{fielding_rest_dissertation} — consumat de aplicația web Next.js și rulează în paralel un proces dedicat care ascultă mesajele MQTT publicate de microcontrolere. Cele două canale de comunicație sunt complet decuplate: dispozitivele fizice nu comunică direct cu frontend-ul, iar frontend-ul nu deschide o conexiune MQTT proprie.
+Backend-ul HomeForge este un serviciu Django cu două roluri simultane. Expune un API REST (în accepțiunea originală a lui Roy Fielding, cel care a introdus stilul REST în teza sa de doctorat, ca stil arhitectural orientat pe resurse, reprezentări și mesaje auto-descriptive \cite{fielding_rest_dissertation}), consumat de aplicația web Next.js. În paralel, rulează un proces dedicat care ascultă mesajele MQTT publicate de microcontrolere. Cele două canale de comunicație sunt complet decuplate: dispozitivele fizice nu comunică direct cu frontend-ul, iar frontend-ul nu deschide o conexiune MQTT proprie.
 
-Alegerea REST pentru stratul browser--backend și a MQTT pentru stratul backend--hardware este justificată de profilul fiecărui canal de comunicație. Pautasso et al., comparând REST cu stilurile de tip \emph{big web services} (SOAP, WS-*), au arătat că REST este indicat pentru scenarii în care clienții au nevoie de un model simplu, stateless și ușor de cache-uit, în timp ce SOAP și WS-* devin relevante doar atunci când sunt necesare mecanisme avansate de transport, precum tranzacțiile distribuite sau mesageria cu garanții formale de livrare \cite{pautasso_rest_vs_ws}. Pentru un dashboard care interoghează lista de dispozitive și transmite comenzi punctuale, REST oferă un model potrivit. Pentru telemetria continuă provenită de la senzori, REST devine însă inadecvat, întrucât nu suportă nativ push-ul de la server către client și nici conexiuni persistente — aceste cerințe sunt acoperite de MQTT.
+Alegerea REST pentru comunicația dintre browser și backend, respectiv a MQTT pentru cea dintre backend și hardware, este justificată de profilul fiecărui canal de comunicație. O analiză comparativă între REST și stilurile de tip \emph{big web services} (SOAP, WS-*) arată o delimitare clară. REST este indicat când clienții au nevoie de un model simplu, \textit{stateless} și ușor de cache-uit. SOAP și WS-* devin relevante doar când sunt necesare mecanisme avansate de transport, precum tranzacțiile distribuite sau mesageria cu garanții formale de livrare \cite{pautasso_rest_vs_ws}. Pentru un dashboard care interoghează lista de dispozitive și transmite comenzi punctuale, REST oferă un model potrivit. Pentru telemetria continuă provenită de la senzori, REST devine însă inadecvat, întrucât nu suportă nativ \textit{push}-ul de la server către client și nici conexiuni persistente, iar aceste cerințe sunt acoperite de MQTT.
 
 În practică, separarea responsabilităților se vede în structura proiectului:
 \begin{itemize}
@@ -15,13 +15,10 @@ Alegerea REST pentru stratul browser--backend și a MQTT pentru stratul backend-
 
 Atunci când brokerul, baza de date și serverul rulează în Docker, brokerul este pornit în același container cu Django, de către scriptul \texttt{run.sh}. Acesta pornește în ordine: \texttt{dbus-daemon}, \texttt{avahi-daemon}, \texttt{mosquitto}, apoi lansează \texttt{mqtt\_listener} în background și termină cu serverul de dezvoltare Django. Pentru un mediu local fără Docker, se folosește scriptul \texttt{dev.sh}, care pornește doar Django (presupunând că Mosquitto este deja instalat ca serviciu local).
 
-% FIGURĂ DE ADĂUGAT: diagrama arhitecturală generală — frontend ←HTTP→
-% Django REST API, Django ←MQTT→ Mosquitto ←MQTT→ ESP32-uri, Django ←ORM→ PostgreSQL.
-% Se poate desena în draw.io sau în Inkscape.
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
-    % \includegraphics[width=0.95\textwidth]{figuri/arhitectura_generala.pdf}
-    \caption{Diagrama de arhitectură a backend-ului HomeForge (figură de adăugat)}
+    \includegraphics[width=1\textwidth]{figuri/arhitectura_generala.pdf}
+    \caption{Diagrama de arhitectură a backend-ului HomeForge}
     \label{fig:arhitectura_generala}
 \end{figure}
 
@@ -45,9 +42,9 @@ class Profile(models.Model):
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_USER)
     accent_color = models.CharField(max_length=7, default='#3B82F6', blank=True)
 \end{minted}
-Două semnale \texttt{post\_save} se ocupă de crearea automată a profilului la înregistrarea unui utilizator nou, iar un semnal \texttt{pre\_save} șterge fizic avatarul vechi atunci când se încarcă unul nou — un detaliu mic, dar important pentru a evita acumularea de fișiere orfane.
+Două semnale \texttt{post\_save} se ocupă de crearea automată a profilului la înregistrarea unui utilizator nou, iar un semnal \texttt{pre\_save} șterge fizic avatarul vechi atunci când se încarcă unul nou. Este un detaliu minor, dar util pentru a evita acumularea de fișiere orfane.
 
-Mecanismul de tip \textit{first-user-becomes-owner} este implementat în \texttt{serializers.py}: la primul \texttt{POST /register/}, dacă nu există niciun utilizator în baza de date, contul nou primește rolul \texttt{owner}, \texttt{is\_staff} și \texttt{is\_superuser}. Toți utilizatorii ulteriori sunt creați cu rolul \texttt{user} și pot fi promovați doar manual de un administrator. Detaliul este expus public prin endpoint-ul \texttt{GET /api/system-status/}, care returnează \texttt{\{"is\_fresh": true\}} atunci când baza de date nu conține niciun utilizator — frontend-ul îl folosește pentru a redirecționa primul vizitator către un \textit{setup wizard} (vezi Capitolul 4).
+Mecanismul de tip \textit{first-user-becomes-owner} este implementat în \texttt{serializers.py}: la primul \texttt{POST /register/}, dacă nu există niciun utilizator în baza de date, contul nou primește rolul \texttt{owner}, \texttt{is\_staff} și \texttt{is\_superuser}. Toți utilizatorii ulteriori sunt creați cu rolul \texttt{user} și pot fi promovați doar manual de un administrator. Detaliul este expus public prin endpoint-ul \texttt{GET /api/system-status/}, care returnează \texttt{\{"is\_fresh": true\}} atunci când baza de date nu conține niciun utilizator. Frontend-ul îl folosește pentru a redirecționa primul vizitator către un \textit{setup wizard}.
 
 \subsection{Cameră și dispozitiv}
 Modelele \texttt{Room} și \texttt{Device} sunt minimaliste. O cameră are un nume, o iconiță (clasa unui icon FontAwesome) și un utilizator-proprietar; numele este unic la nivel de utilizator. Modelul \texttt{Device} este însă piesa centrală a sistemului:
@@ -80,7 +77,7 @@ Trei observații merită subliniate:
     \item Câmpul \texttt{updated\_at} folosește \texttt{auto\_now=True} și este actualizat de fiecare dată când dispozitivul publică un mesaj. \texttt{mqtt\_listener} se bazează pe el pentru a detecta dispozitivele care nu au mai dat semne de viață.
 \end{enumerate}
 
-Pentru a evita problema clasică \textit{N+1} pe interogările cu mai multe relații, toate \texttt{get\_queryset()}-urile importante folosesc \texttt{select\_related} și \texttt{prefetch\_related} (vezi \texttt{views.py:383-389}):
+Pentru a evita problema clasică \textit{N+1} pe interogările cu mai multe relații, toate \texttt{get\_queryset()}-urile importante folosesc \texttt{select\_related} și \texttt{prefetch\_related}:
 \begin{minted}{python}
 Device.objects.select_related(
     'room', 'user', 'device_type', 'device_type__card_template'
@@ -100,7 +97,7 @@ Aceste două descrieri sunt persistate prin trei modele înlănțuite:
     \item \texttt{DeviceControl}: legat \texttt{ManyToOne} de \texttt{DeviceCardTemplate}, descrie fiecare widget vizual (toggle, slider, sensor) împreună cu maparea către o variabilă din starea dispozitivului.
 \end{itemize}
 
-Tipurile de widget-uri suportate sunt enumerate explicit în \texttt{models.py:163-195} — pe lângă cele interactive (\texttt{TOGGLE}, \texttt{SLIDER}, \texttt{BUTTON}), există widget-uri specializate pentru sensori uzuali (\texttt{TEMPERATURE}, \texttt{HUMIDITY}, \texttt{MOTION}, \texttt{LIGHT}, \texttt{CO2}, \texttt{PRESSURE}, \texttt{POWER}, \texttt{BATTERY}, \texttt{STATUS}, \texttt{GAUGE}). Fiecare control are un câmp \texttt{variable\_mapping} care leagă widget-ul de o cheie din \texttt{current\_state} (de exemplu \texttt{relay\_1} sau \texttt{temperature}).
+Tipurile de widget-uri suportate sunt enumerate explicit în \texttt{models.py:163-195}: pe lângă cele interactive (\texttt{TOGGLE}, \texttt{SLIDER}, \texttt{BUTTON}), există widget-uri specializate pentru sensori uzuali (\texttt{TEMPERATURE}, \texttt{HUMIDITY}, \texttt{MOTION}, \texttt{LIGHT}, \texttt{CO2}, \texttt{PRESSURE}, \texttt{POWER}, \texttt{BATTERY}, \texttt{STATUS}, \texttt{GAUGE}). Fiecare control are un câmp \texttt{variable\_mapping} care leagă widget-ul de o cheie din \texttt{current\_state} (de exemplu \texttt{relay\_1} sau \texttt{temperature}).
 
 Procesul de adăugare a unui tip de dispozitiv este descris ca o operațiune cu mai mulți pași în secțiunea dedicată \textit{crowdsourcing}-ului, mai jos în acest capitol.
 
@@ -133,7 +130,7 @@ class Meta:
         ),
     ]
 \end{minted}
-Logica de fallback (personal → partajat → null) trăiește în \texttt{DashboardLayoutView.get()} (vezi \texttt{views.py:1567-1587}).
+Logica de fallback (personal → partajat → null) trăiește în \texttt{DashboardLayoutView.get()}.
 
 \section{API-ul REST}
 Lista completă a endpoint-urilor este expusă în \texttt{urls.py}. Sunt aproximativ 30 de rute, grupate logic în șase familii. În continuare descriu mecanismele importante; pentru contractul exact al fiecărui endpoint trimit la fișierul de cod și la \texttt{API\_GUIDE.md} din rădăcina backend-ului.
@@ -144,7 +141,7 @@ Autentificarea folosește \texttt{djangorestframework-simplejwt}. La login (\tex
     \item \texttt{access}, valabil 5 minute, folosit la fiecare cerere prin antetul \texttt{Authorization: Bearer <token>};
     \item \texttt{refresh}, cu durată mai lungă (1 zi), folosit doar pentru a reînnoi token-ul de acces prin \texttt{POST /api/token/refresh/}.
 \end{itemize}
-Specificația oficială a formatului — RFC 7519, publicată de IETF în 2015 — definește un JWT ca o secvență compactă, URL-safe, de părți \texttt{base64url} separate prin punct; în varianta semnată (JWS), folosită și de noi, structura este \emph{header.payload.signature}, iar în varianta cifrată (JWE) sunt cinci asemenea părți \cite{rfc_jwt}. RFC 7519 definește și un set de claim-uri standard, printre care \texttt{exp} (expiration), \texttt{iat} (issued at) și \texttt{nbf} (not before), pe care validatorul backend-ului trebuie să le verifice împreună cu semnătura. Avantajul direct pentru un API decuplat este că serverul nu mai trebuie să țină o tabelă de sesiuni. Pe frontend, \texttt{apiClient.js} interceptează automat răspunsurile 401 și apelează \texttt{refreshAccessToken()} înainte de a reîncerca cererea originală — în cea mai mare parte a timpului, utilizatorul nu observă că token-ul a expirat.
+Specificația oficială a formatului (RFC 7519, publicată de IETF în 2015) definește un JWT ca o secvență compactă, URL-safe, de părți \texttt{base64url} separate prin punct; în varianta semnată (JWS), folosită și de noi, structura este \emph{header.payload.signature}, iar în varianta cifrată (JWE) sunt cinci asemenea părți \cite{rfc_jwt}. RFC 7519 definește și un set de claim-uri standard, printre care \texttt{exp} (expiration), \texttt{iat} (issued at) și \texttt{nbf} (not before), pe care validatorul backend-ului trebuie să le verifice împreună cu semnătura. Avantajul direct pentru un API decuplat este că serverul nu mai trebuie să țină o tabelă de sesiuni. Pe frontend, \texttt{apiClient.js} interceptează automat răspunsurile 401 și apelează \texttt{refreshAccessToken()} înainte de a reîncerca cererea originală. În cea mai mare parte a timpului, utilizatorul nu observă că token-ul a expirat.
 
 Pe lângă politica implicită Django (\texttt{MinimumLength}\-\texttt{Validator} cu 4 caractere, \texttt{CommonPassword}\-\texttt{Validator}, \texttt{NumericPassword}\-\texttt{Validator}), am adăugat un validator propriu care impune cel puțin o literă majusculă:
 \begin{minted}{python}
@@ -187,11 +184,11 @@ Mai jos sintetizez câteva dintre rutele cele mai relevante. Listă completă: \
     \item[\textbf{POST} \texttt{/api/register/}] \hfill \\
     Public. Creează un cont nou. Dacă este primul utilizator, devine \texttt{owner}.
     \item[\textbf{POST} \texttt{/api/login/}, \textbf{POST} \texttt{/api/token/refresh/}] \hfill \\
-    Public. Emit token-urile JWT.
+    Public. Emite token-urile JWT.
     \item[\textbf{GET / PUT} \texttt{/api/me/}] \hfill \\
     Autentificat. Citește și actualizează profilul. Acceptă \texttt{multipart/form-data} pentru upload de avatar.
     \item[\textbf{GET / POST} \texttt{/api/devices/}, \textbf{GET / PATCH / DELETE} \texttt{/api/devices/<id>/}] \hfill \\
-    Autentificat. CRUD pentru dispozitive. La crearea unui dispozitiv, backend-ul încearcă auto-configurarea (vezi mai jos).
+    Autentificat. CRUD pentru dispozitive. La crearea unui dispozitiv, backend-ul încearcă auto-configurarea.
     \item[\textbf{PATCH} \texttt{/api/devices/<id>/state/}] \hfill \\
     Autentificat. Trimite o comandă către dispozitiv. Răspunde \texttt{202 Accepted} înainte ca dispozitivul să confirme.
     \item[\textbf{GET / POST / PUT / DELETE} \texttt{/api/rooms/}] \hfill \\
@@ -290,7 +287,7 @@ class MQTTClient:
         payload = json.dumps(command_data)
         self.client.publish(topic, payload)
 \end{minted}
-Aici, parametrul \texttt{device\_id} primit de către \texttt{publish} este, de fapt, adresa MAC a dispozitivului — am păstrat numele \texttt{device\_id} din motive istorice, dar identificatorul real în MQTT este MAC-ul. În \texttt{DeviceStateUpdateView.sync\_with\_hardware} (\texttt{views.py:518-559}), payload-ul este pre-procesat: dacă utilizatorul a trimis o valoare booleană fără cheie \texttt{relay\_1}, backend-ul o injectează automat, astfel încât firmware-ul de tip releu să primească un mesaj pe care îl recunoaște.
+Aici, parametrul \texttt{device\_id} primit de către \texttt{publish} este, de fapt, adresa MAC a dispozitivului. Am păstrat numele \texttt{device\_id} pentru compatibilitate cu restul codului, însă identificatorul real în MQTT este adresa MAC. În \texttt{DeviceStateUpdateView.sync\_with\_hardware} (\texttt{views.py:518-559}), payload-ul este pre-procesat: dacă utilizatorul a trimis o valoare booleană fără cheie \texttt{relay\_1}, backend-ul o injectează automat, astfel încât firmware-ul de tip releu să primească un mesaj pe care îl recunoaște.
 
 \section{Mecanismul de propunere a tipurilor de dispozitive}
 Una dintre ideile centrale ale platformei este să permită utilizatorilor să adauge tipuri proprii de dispozitive, fără să modifice codul backend-ului. Întregul flux trece prin patru stări și este orchestrat de \texttt{views.py} împreună cu modelul \texttt{CustomDeviceType}.
@@ -298,7 +295,7 @@ Una dintre ideile centrale ale platformei este să permită utilizatorilor să a
 \begin{enumerate}
     \item \textbf{Propunere.} Un utilizator obișnuit apelează \texttt{POST /api/device-types/propose/} cu o structură JSON care descrie atât topologia (microcontroler, senzori, pini) cât și \texttt{card\_template} (widget-urile vizuale). \texttt{DeviceTypeProposeView} salvează tipul cu \texttt{approved=False} și apelează \texttt{Notification.notify\_admins}.
     \item \textbf{Revizuire.} Adminii văd propunerile prin \texttt{GET /api/admin/device-types/pending/}. Pentru o vizualizare separată a celor respinse, există \texttt{/admin/device-types/denied/}.
-    \item \textbf{Aprobare sau respingere.} \texttt{POST /api/admin/device-types/<id>/approve/} setează \texttt{approved=True} și invalidează cache-ul de tipuri aprobate. \texttt{POST /api/admin/device-types/<id>/deny/} cere obligatoriu un câmp \texttt{reason} (vezi \texttt{views.py:1292-1314}) și stochează motivul în \texttt{rejection\_reason}, astfel încât utilizatorul să poată corecta propunerea.
+    \item \textbf{Aprobare sau respingere.} \texttt{POST /api/admin/device-types/<id>/approve/} setează \texttt{approved=True} și invalidează cache-ul de tipuri aprobate. \texttt{POST /api/admin/device-types/<id>/deny/} cere obligatoriu un câmp \texttt{reason} și stochează motivul în \texttt{rejection\_reason}, astfel încât utilizatorul să poată corecta propunerea.
     \item \textbf{Curățare.} Tipurile respinse pot fi șterse individual sau în bloc prin \texttt{DELETE /api/admin/device-types/denied/} (cu sau fără listă de id-uri în body).
 \end{enumerate}
 
@@ -308,7 +305,7 @@ La nivelul stratului de acces, listarea tipurilor aprobate pentru utilizatorii f
 Pentru a nu obliga adminii să introducă manual fiecare tip de dispozitiv, există trei rute auxiliare:
 \begin{description}
     \item[\textbf{GET / POST} \texttt{/api/device-types/import-defaults/}] \hfill \\
-    Încarcă tipurile predefinite din \texttt{default\_device\_types.json}, care la rândul lor referențiază fișiere firmware și documentație din \texttt{backend/firmware/projects/}.
+    Încarcă tipurile predefinite din fișierul \texttt{api/fixtures/default\_device\_types.json}. Începând cu versiunea actuală a platformei, fișierul conține toate artefactele asociate fiecărui tip direct în interior: cod firmware, text al schemei electrice, documentație Markdown și imagini codificate \texttt{base64}, fără referințe la fișiere externe. Această decizie elimină dependența de structura unui director de proiect și simplifică distribuția: o singură resursă JSON, lipsită de fișiere însoțitoare, conține tot ce trebuie pentru a aproviziona o instanță proaspătă.
     \item[\textbf{GET} \texttt{/api/device-types/export/}] \hfill \\
     Exportă tipurile aprobate (sau o listă explicită prin parametrul \texttt{ids}) într-un fișier JSON. Toate imaginile sunt incluse \texttt{base64}-encodate, astfel încât exportul este self-contained.
     \item[\textbf{POST} \texttt{/api/device-types/import/}] \hfill \\
@@ -316,7 +313,7 @@ Pentru a nu obliga adminii să introducă manual fiecare tip de dispozitiv, exis
 \end{description}
 
 \subsection{Stocarea imaginilor direct în baza de date}
-O decizie deliberată pe care am luat-o este să stochez schemele electrice și imaginile din documentație ca \texttt{base64} în PostgreSQL, prin câmpurile \texttt{wiring\_diagram\_base64} și \texttt{documentation\_images\_base64} ale modelului \texttt{CustomDeviceType}. Avantajul principal este simplitatea operațională: backup-ul bazei de date conține tot ce trebuie, iar exportul/importul tipurilor de dispozitive nu depinde de existența unui director media partajat. Dezavantajul este creșterea bazei de date pentru imagini mari; din acest motiv, există o limită aplicată în view (\texttt{MAX\_SIZE = 5 * 1024 * 1024} bytes — 5 MB) și o listă de tipuri MIME acceptate (\texttt{PNG}, \texttt{JPEG}, \texttt{WEBP}, eventual \texttt{GIF} pentru documentație).
+O decizie deliberată pe care am luat-o este să stochez schemele electrice și imaginile din documentație ca \texttt{base64} în PostgreSQL, prin câmpurile \texttt{wiring\_diagram\_base64} și \texttt{documentation\_images\_base64} ale modelului \texttt{CustomDeviceType}. Avantajul principal este simplitatea operațională: backup-ul bazei de date conține tot ce trebuie, iar exportul/importul tipurilor de dispozitive nu depinde de existența unui director media partajat. Dezavantajul este creșterea bazei de date pentru imagini mari; din acest motiv, există o limită aplicată în view (\texttt{MAX\_SIZE = 5 * 1024 * 1024} bytes, adică 5 MB) și o listă de tipuri MIME acceptate (\texttt{PNG}, \texttt{JPEG}, \texttt{WEBP}, eventual \texttt{GIF} pentru documentație).
 
 Imaginile sunt servite înapoi prin endpoint-uri dedicate care decodează \texttt{base64} și răspund cu \texttt{HttpResponse} având \texttt{content\_type} potrivit (\texttt{views.py:933-951}).
 
@@ -329,32 +326,104 @@ Pe lângă \texttt{mqtt\_listener}, repository-ul mai include două comenzi Djan
 
 \paragraph{Configurația-cheie din \texttt{settings.py}.} Tot pentru completitudine, câteva detalii ale configurației Django pe care le-am atins doar în treacăt anterior:
 \begin{itemize}
-    \item \texttt{REST\_FRAMEWORK['PAGE\_SIZE'] = 50} — paginare implicită pentru toate \texttt{ListAPIView}-urile (folosind \texttt{PageNumberPagination}), ceea ce previne răspunsuri mari când există multe dispozitive sau notificări;
-    \item \texttt{CACHES} folosește \texttt{django.core.cache.backends.locmem.LocMemCache} cu \texttt{TIMEOUT=300} și \texttt{MAX\_ENTRIES=1000} — suficient pentru o instanță locală, ușor de înlocuit cu Redis pentru producție;
+    \item \texttt{REST\_FRAMEWORK['PAGE\_SIZE'] = 50}: paginare implicită pentru toate \texttt{ListAPIView}-urile (folosind \texttt{PageNumberPagination}), ceea ce previne răspunsuri mari când există multe dispozitive sau notificări;
+    \item \texttt{CACHES} folosește \texttt{django.core.cache.backends.locmem.LocMemCache} cu \texttt{TIMEOUT=300} și \texttt{MAX\_ENTRIES=1000}: suficient pentru o instanță locală, ușor de înlocuit cu Redis pentru producție;
     \item \texttt{AUTH\_PASSWORD\_VALIDATORS} include \texttt{api.validators.UppercaseValidator} alături de validatorii standard Django;
-    \item \texttt{CORS\_ALLOW\_ALL\_ORIGINS = True} și \texttt{CORS\_ALLOW\_CREDENTIALS = True} (prin \texttt{django-cors-headers}) — permisiv pentru un demo, dar comentat pentru a fi restrâns la \texttt{http://localhost:3000} în producție;
-    \item \texttt{INSTALLED\_APPS} include \texttt{channels} (Django Channels) — păstrat ca dependență pentru o viitoare implementare cu WebSocket-uri, dar momentan neutilizat;
+    \item \texttt{CORS\_ALLOW\_ALL\_ORIGINS = True} și \texttt{CORS\_ALLOW\_CREDENTIALS = True} (prin \texttt{django-cors-headers}): permisiv pentru un demo, dar comentat pentru a fi restrâns la \texttt{http://localhost:3000} în producție;
+    \item \texttt{INSTALLED\_APPS} include \texttt{channels} (Django Channels): păstrat ca dependență pentru o viitoare implementare cu WebSocket-uri, dar momentan neutilizat;
     \item variabila de mediu \texttt{MQTT\_BROKER\_HOST} controlează IP-ul anunțat dispozitivelor în pasul de auto-configurare (vezi mai sus); când nu e setată, backend-ul îl deduce.
 \end{itemize}
+
+\section{Integrarea sistemelor de panouri solare}
+Pe lângă dispozitivele ESP32 conectate prin MQTT, platforma include un modul dedicat pentru consumul de date de la sisteme externe de monitorizare fotovoltaică. Spre deosebire de dispozitivele DIY, sistemele solare comerciale (precum invertoarele Fronius, SolarEdge sau Huawei) expun deja propriile API-uri HTTP locale; HomeForge le tratează drept surse de telemetrie externă, fără a încerca să le înlocuiască firmware-ul. Codul aferent este izolat în pachetul \texttt{api/solar/}, cu modelul \texttt{SolarSystem} adăugat în \texttt{api/models.py} și vederile dedicate în \texttt{api/views\_solar.py}.
+
+\subsection{Modelul \texttt{SolarSystem}}
+Modelul stochează minimul necesar pentru a putea reinteroga sistemul: numele afișat, URL-ul de bază al API-ului vendor (fără credențiale), un discriminator \texttt{provider} care selectează adaptorul la momentul interogării, un flag \texttt{enabled} și câmpuri auxiliare populate la momentul descoperirii (\texttt{api\_version}, \texttt{capabilities}, \texttt{last\_seen}).
+
+\begin{minted}{python}
+class SolarSystem(models.Model):
+    PROVIDER_FRONIUS = 'fronius'
+    PROVIDER_CHOICES = [(PROVIDER_FRONIUS, 'Fronius Solar API V1')]
+
+    name = models.CharField(max_length=100)
+    base_url = models.URLField(max_length=500)
+    provider = models.CharField(max_length=30, choices=PROVIDER_CHOICES,
+                                default=PROVIDER_FRONIUS)
+    enabled = models.BooleanField(default=True, db_index=True)
+    api_version = models.CharField(max_length=20, blank=True, default='')
+    capabilities = models.JSONField(default=dict, blank=True)
+    last_seen = models.DateTimeField(null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ['base_url', 'user']
+\end{minted}
+
+Trei observații merită semnalate. Prima: nu se persistă nicio măsurătoare (\texttt{P\_PV}, energie totală, stare de încărcare a bateriei) în baza de date; informația este obținută la fiecare cerere de la sursa originală, ceea ce evită replicarea unei serii de timp deja întreținute de invertor. A doua: constrângerea \texttt{unique\_together = ['base\_url', 'user']} împiedică același utilizator să înregistreze aceeași instalație de două ori. A treia: câmpul \texttt{capabilities} reține semnale obținute la descoperire (ex. \texttt{\{"battery": true, "meter": true\}}), folosite ulterior de UI pentru a decide dacă să afișeze cardul de baterie sau nodul de rețea.
+
+\subsection{Pattern-ul adapter / registry}
+Pentru a putea adăuga ulterior alte API-uri (Tesla, SolarEdge, Huawei, Enphase) fără a modifica restul backend-ului sau frontend-ului, modulul \texttt{api/solar/} folosește un pattern adapter / registry. Clasa abstractă \texttt{BaseSolarProvider} expune trei metode: \texttt{discover()} (validare conectivitate și extragere metadata), \texttt{get\_overview()} (citirea snapshot-ului instantaneu) și \texttt{get\_inverters()} (rezervată pentru o fază viitoare).
+
+\begin{minted}{python}
+class BaseSolarProvider:
+    key: str = ''
+
+    def __init__(self, base_url: str):
+        self.base_url = base_url
+
+    def discover(self) -> dict: raise NotImplementedError
+    def get_overview(self) -> dict: raise NotImplementedError
+    def get_inverters(self) -> list[dict]: raise NotImplementedError
+\end{minted}
+
+Prima implementare concretă, \texttt{FroniusProvider}, mapează răspunsurile API-ului oficial Fronius Solar V1 \cite{fronius_solar_api} (în special endpoint-ul \texttt{GetPowerFlowRealtimeData.fcgi}) pe schema normalizată. Pachetul Fronius are o anvelopă \texttt{Head}/\texttt{Body} standardizată, cu \texttt{Status.Code = 0} drept semnal de succes; câmpurile numerice sunt convertite atent prin \texttt{\_to\_float()}, pentru a păstra distincția între zero și valoare lipsă (\texttt{null}).
+
+Registry-ul (\texttt{api/solar/registry.py}) este o tabelă simplă \texttt{provider\_key} $\to$ clasă adaptor; adăugarea unui furnizor nou se reduce la implementarea unei subclase \texttt{BaseSolarProvider} și înregistrarea ei în \texttt{\_PROVIDERS}.
+
+\subsection{Schema normalizată \emph{overview}}
+Vederea \texttt{SolarOverviewView} (\texttt{GET /api/solar/systems/<id>/overview/}) este contractul stabil dintre backend și UI, independent de furnizor. Răspunsul include patru blocuri:
+\begin{itemize}
+    \item \texttt{power} cu \texttt{solarW}, \texttt{gridW}, \texttt{loadW}, \texttt{batteryW}: valori instantanee în Watt, cu convenții de semn definite explicit (rețea pozitivă = import, baterie pozitivă = încărcare);
+    \item \texttt{battery} cu \texttt{present}, \texttt{socPct}, \texttt{mode};
+    \item \texttt{energy} cu \texttt{todayWh}, \texttt{yearWh}, \texttt{totalWh} (toate cu \texttt{null} acolo unde furnizorul nu le expune; la modelele Fronius GEN24, de exemplu, contoarele cumulative nu sunt accesibile prin acest endpoint);
+    \item \texttt{ratios} cu \texttt{selfConsumptionPct} și \texttt{autonomyPct}.
+\end{itemize}
+Pe lângă acestea, mai sunt câmpuri \texttt{provider}, \texttt{online}, \texttt{mode}, \texttt{timestamp} și \texttt{status} cu un mesaj uman-lizibil. Erorile previzibile (sistem dezactivat, API inaccesibil, sistem oprit) sunt convertite în răspunsuri \texttt{200 OK} cu \texttt{online: false} și un mesaj corespunzător, astfel încât interfața să poată afișa o stare \emph{offline} grafică fără a trebui să distingă codurile de eroare HTTP.
+
+Cererile către vendor-ul real sunt protejate de o memorie cache aplicativă cu durată de viață scurtă (\texttt{OVERVIEW\_CACHE\_TTL = 8} secunde), necesară pentru a respecta rate-limit-ul Fronius și a deduplica cererile simultane de la mai mulți clienți care urmăresc același sistem. Frontend-ul efectuează \textit{polling} la 5--10 secunde, iar cache-ul absoarbe interogările intermediare.
+
+\subsection{Poller-ul de fundal pentru \emph{liveness}}
+Topologia globală (descrisă în secțiunea următoare) include nodurile solar ca prim-rang, iar statusul lor \emph{online}/\emph{offline} derivă dintr-un câmp \texttt{last\_seen} actualizat la fiecare interogare reușită. Dacă utilizatorul nu vizitează pagina \emph{Solar}, nicio cerere nu mai ajunge la vendor și \texttt{last\_seen} devine învechit. Pentru a evita acest comportament, există o comandă Django dedicată, \texttt{python manage.py poll\_solar --interval 30}, care iterează periodic prin sistemele activate, apelează \texttt{discover()} și stampilează \texttt{last\_seen}. Intervalul implicit (30 s) este sub fereastra de liveness folosită de topologie (90 s), garantând că reprezentarea grafică reflectă starea reală indiferent de pagina vizualizată.
+
+\subsection{Endpoint-urile expuse}
+Modulul completează API-ul existent cu următoarele rute:
+\begin{description}
+    \item[\textbf{GET / POST} \texttt{/api/solar/systems/}] \hfill \\
+    Lista sistemelor înregistrate (orice utilizator autentificat) și înregistrarea unuia nou (\texttt{admin} sau \texttt{owner}). La creare, backend-ul efectuează un \texttt{discover()} sincron; un sistem inaccesibil este respins cu \texttt{400 Bad Request} și un mesaj explicit, evitând persistența unor înregistrări inutilizabile.
+    \item[\textbf{GET / PUT / DELETE} \texttt{/api/solar/systems/<id>/}] \hfill \\
+    Operațiuni pe o resursă individuală. Câmpurile \texttt{api\_version}, \texttt{capabilities} și \texttt{last\_seen} sunt \emph{read-only}, fiind gestionate intern.
+    \item[\textbf{GET} \texttt{/api/solar/systems/<id>/overview/}] \hfill \\
+    Snapshot-ul normalizat descris mai sus, cu cache de 8 secunde.
+\end{description}
+
+\subsection{Endpoint-ul \texttt{/widget-types/}}
+Pentru a sincroniza paleta de widget-uri din device builder cu setul real recunoscut de backend, a fost introdus un endpoint auxiliar \texttt{GET /api/widget-types/}. Acesta returnează două liste: tipurile \emph{supported} (efectiv procesate end-to-end: \texttt{TOGGLE}, \texttt{SLIDER}, \texttt{TEMPERATURE}, \texttt{HUMIDITY}, \texttt{PRESSURE}) și tipurile \emph{future}, marcate vizual ca rezervate (\texttt{MOTION}, \texttt{LIGHT}, \texttt{CO2}). Această separare a apărut din observația că widget-urile pentru mișcare, lumină ambientală și CO\textsubscript{2} fuseseră introduse în model înainte de a exista un firmware care să publice valorile corespunzătoare; păstrarea lor în model permite migrarea fluentă către o implementare ulterioară, fără a sparge tipurile de dispozitive deja propuse.
 
 \section{Vizualizarea topologiei}
 Endpoint-ul \texttt{GET /api/topology/} (\texttt{views.py:264-373}) returnează direct formatul cerut de biblioteca React Flow, evitând orice procesare suplimentară pe frontend. Backend-ul:
 \begin{enumerate}
     \item creează nodul central \texttt{homeforge-gateway} (brokerul MQTT);
-    \item adaugă fiecare dispozitiv ca nod periferic, plasat radial folosind formule trigonometrice simple;
-    \item generează muchii între gateway și fiecare dispozitiv;
-    \item alege culorile direct după statusul dispozitivului: verde (\texttt{\#10B981}) pentru online, roșu (\texttt{\#EF4444}) pentru offline, galben (\texttt{\#F59E0B}) pentru eroare;
-    \item marchează muchiile către dispozitivele online cu \texttt{animated=True}, ceea ce face ca React Flow să le deseneze cu o linie animată.
+    \item adaugă fiecare dispozitiv ESP32 ca nod periferic;
+    \item adaugă sistemele solare înregistrate ca noduri distincte de tip \texttt{solar}, marcate cu flag-ul \texttt{is\_solar: true} și cu o iconiță \texttt{fa-sun}; statusul lor online derivă din \texttt{last\_seen} întreținut de poller-ul descris mai sus;
+    \item generează muchii între gateway și fiecare nod periferic, indiferent de tip;
+    \item alege culorile direct după statusul nodului: verde (\texttt{\#10B981}) pentru online, roșu (\texttt{\#EF4444}) pentru offline, galben (\texttt{\#F59E0B}) pentru eroare;
+    \item marchează muchiile către nodurile online cu \texttt{animated=True}, ceea ce face ca React Flow să le deseneze cu o linie animată.
 \end{enumerate}
 
-% FIGURĂ DE ADĂUGAT: screenshot real cu vizualizarea de topologie din UI (cu
-% gateway central și 3-4 dispozitive în jur, unele online unele offline).
-% Sugestie: pornește backend-ul cu fixtures, deschide /dashboard/topology și
-% face un screenshot la 1920x1080.
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
-    % \includegraphics[width=0.85\textwidth]{figuri/topology_screenshot.png}
-    \caption{Vizualizarea radială a topologiei rețelei locale (screenshot din interfața HomeForge, de adăugat)}
+    \includegraphics[width=0.85\textwidth]{figuri/topology_screenshot.png}
+    \caption{Vizualizarea radială a topologiei rețelei locale)}
     \label{fig:topology}
 \end{figure}
 
@@ -389,7 +458,7 @@ Pragurile clasice formulate de Nielsen în lucrarea sa despre \textit{usability 
 Layout-ul dashboard-ului este salvat pe server pentru a fi coerent între dispozitivele utilizatorului (telefon, laptop). Două endpoint-uri lucrează împreună:
 \begin{description}
     \item[\textbf{PUT} \texttt{/api/dashboard-layout/}] \hfill \\
-    Cu semantică \texttt{upsert}, înlocuiește layout-ul personal al utilizatorului curent. Serializer-ul (\texttt{serializers.py:387-519}) face o validare amănunțită: verifică versiunea (trebuie să fie \texttt{1}), forma fiecărui item, dimensiunea folderelor (între 2 și 4 dispozitive), unicitatea \texttt{deviceId}-urilor și — opțional, dacă contextul conține \texttt{user} — existența efectivă a dispozitivelor referite.
+    Cu semantică \texttt{upsert}, înlocuiește layout-ul personal al utilizatorului curent. Serializer-ul (\texttt{serializers.py:387-519}) face o validare amănunțită: verifică versiunea (trebuie să fie \texttt{1}), forma fiecărui item, dimensiunea folderelor (între 2 și 4 dispozitive), unicitatea \texttt{deviceId}-urilor și, opțional (dacă contextul conține \texttt{user}), existența efectivă a dispozitivelor referite.
     \item[\textbf{PATCH} \texttt{/api/device-order/}] \hfill \\
     Actualizează doar preferința de grupare (\texttt{room}, \texttt{type}, \texttt{status}, \texttt{name}, \texttt{custom}). Dacă utilizatorul nu are încă un layout personal, view-ul îl creează pornind de la cel partajat (sau de la unul gol). Astfel, schimbarea grupării nu obligă utilizatorul să re-construiască întreg layout-ul.
 \end{description}
@@ -416,5 +485,5 @@ La nivel de backend, HomeForge este o aplicație Django destul de obișnuită, d
     \item rolurile ierarhice \texttt{owner / admin / user} și verificările centralizate în \texttt{permissions.py};
     \item daemonul MQTT care merge în paralel cu serverul Django, completează automat MAC-urile lipsă și marchează dispozitivele offline;
     \item fluxul de propunere/aprobare/respingere pentru tipuri de dispozitive DIY;
-    \item răspunsul \texttt{HTTP 202 Accepted} pentru actualizările de stare, care permite \textit{optimistic UI}-ul tratat în Capitolul 4.
+    \item răspunsul \texttt{HTTP 202 Accepted} pentru actualizările de stare, care permite \textit{optimistic UI}-ul tratat în Capitolul 3.
 \end{itemize}

@@ -1,49 +1,76 @@
 \chapter{Aplicația web Next.js}
 
 \section{Structura proiectului}
-Aplicația de frontend este construită cu Next.js 16 și React 19 (vezi \texttt{package.json}). Folosește \textit{App Router}-ul Next.js, ceea ce înseamnă că rutele sunt definite implicit prin structura folderelor din directorul \texttt{app/}. Două rute sunt publice și separate de zona autentificată:
+Aplicația de frontend este construită cu Next.js 16 și React 19. Folosește \textit{App Router}-ul Next.js, ceea ce înseamnă că rutele sunt definite implicit prin structura folderelor din directorul \texttt{app/}. Două rute sunt publice și separate de zona autentificată:
 \begin{itemize}
-    \item \texttt{app/login/} — formular de autentificare;
-    \item \texttt{app/register/} — formular de înregistrare;
-    \item \texttt{app/setup/} — \textit{setup wizard}-ul afișat când backend-ul răspunde cu \texttt{is\_fresh: true}.
+    \item \texttt{app/login/}: formular de autentificare;
+    \item \texttt{app/register/}: formular de înregistrare;
+    \item \texttt{app/setup/}: \textit{setup wizard}-ul afișat când backend-ul răspunde cu \texttt{is\_fresh: true}.
 \end{itemize}
 
 Restul aplicației trăiește sub \texttt{/dashboard/...} și folosește un layout comun definit în \texttt{layout.tsx}. Acesta verifică, la fiecare reîncărcare, profilul curent prin \texttt{fetchProfile()} și redirecționează către \texttt{/login} dacă răspunsul este \texttt{401}. Tot el inserează \texttt{SidebarProvider}-ul, breadcrumb-urile dinamice și butonul de schimbare a temei (light/dark).
 
 Sub \texttt{/dashboard} găsim:
 \begin{itemize}
-    \item \texttt{page.tsx} — dashboard-ul principal cu cardurile dispozitivelor;
-    \item \texttt{devices/} — lista detaliată a dispozitivelor;
-    \item \texttt{device-builder/} — editorul vizual pentru tipuri de dispozitive (\textit{device builder});
-    \item \texttt{device-collection/} — vitrina de tipuri propuse de comunitate;
-    \item \texttt{device-types/} — pagina cu tipurile de dispozitive disponibile;
-    \item \texttt{topology/} — vizualizarea de topologie cu React Flow;
-    \item \texttt{settings/} — pagina de setări utilizator;
-    \item \texttt{admin/} — secțiune restricționată cu sub-paginile \texttt{approvals/}, \texttt{users/}, \texttt{rooms/}, \texttt{device-types/}, \texttt{debug/}.
+    \item \texttt{page.tsx}: dashboard-ul principal cu cardurile dispozitivelor;
+    \item \texttt{devices/}: lista detaliată a dispozitivelor;
+    \item \texttt{device-builder/}: editorul vizual pentru tipuri de dispozitive (\textit{device builder});
+    \item \texttt{device-collection/}: colecția de dispozitive, cu tipurile propuse de comunitate;
+    \item \texttt{device-types/}: pagina cu tipurile de dispozitive disponibile;
+    \item \texttt{topology/}: vizualizarea de topologie cu React Flow;
+    \item \texttt{settings/}: pagina de setări utilizator;
+    \item \texttt{admin/}: secțiune restricționată cu sub-paginile \texttt{approvals/}, \texttt{users/}, \texttt{rooms/}, \texttt{device-types/}, \texttt{debug/}.
 \end{itemize}
 
 Componentele reutilizabile sunt în \texttt{components/}, grupate pe domenii: \texttt{devices/} pentru cardurile de dispozitive, \texttt{device-builder/} pentru editorul vizual, \texttt{notifications/} pentru centrul de notificări, \texttt{setup/} pentru wizardul inițial, \texttt{topology/} pentru nodurile React Flow și \texttt{ui/} pentru primitive (Button, Card, Slider, etc.) generate prin \texttt{shadcn/ui}.
 
-% FIGURĂ DE ADĂUGAT: arborele de directoare al folderului frontend/app
-% și frontend/components — poate fi un text formatat sau un export
-% din IDE/Treerunner.
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
-    % \includegraphics[width=0.7\textwidth]{figuri/frontend_tree.pdf}
-    \caption{Structura directoarelor aplicației Next.js (figură de adăugat)}
+    \begin{minipage}{0.92\textwidth}
+    \footnotesize
+    \dirtree{%
+.1 frontend/.
+.2 app/\DTcomment{rute Next.js (App Router)}.
+.3 dashboard/\DTcomment{zona autentificată}.
+.4 page.tsx\DTcomment{dashboard principal}.
+.4 layout.tsx\DTcomment{sidebar + verificare auth}.
+.4 solar/\DTcomment{monitorizare fotovoltaică}.
+.4 topology/\DTcomment{vizualizare React Flow}.
+.4 device-builder/\DTcomment{editor vizual de tipuri}.
+.4 device-collection/\DTcomment{dispozitivele comunității}.
+.4 devices/.
+.4 settings/.
+.4 admin/\DTcomment{rooms, users, device-types, debug}.
+.3 login/.
+.3 register/.
+.3 setup/\DTcomment{setup wizard inițial}.
+.2 components/.
+.3 devices/\DTcomment{SmartDeviceCard, grid, foldere}.
+.3 solar/\DTcomment{diagramă flux de putere, grafice}.
+.3 device-builder/\DTcomment{editoare firmware/wiring/docs}.
+.3 topology/\DTcomment{noduri React Flow}.
+.3 setup/\DTcomment{pașii wizardului}.
+.3 notifications/.
+.3 onboarding/.
+.3 ui/\DTcomment{28 primitive shadcn/ui}.
+.2 hooks/\DTcomment{useDashboardLayout, useTopologyLayout}.
+.2 lib/\DTcomment{apiClient.js, dashboard-grid.ts, utils.ts}.
+}
+    \end{minipage}
+    \caption{Structura directoarelor aplicației Next.js (selecție a celor mai relevante rute și componente)}
     \label{fig:frontend_tree}
 \end{figure}
 
 \section{Stack-ul de interfață: shadcn/ui, Radix și Tailwind}
 Înainte de a intra în paginile concrete, este utilă o privire asupra straturilor de UI care le compun. HomeForge nu folosește o singură bibliotecă de componente „închisă" (în stilul Material UI sau Ant Design), ci o stivă compusă din trei nivele, fiecare cu un rol bine definit.
 
-\paragraph{Tailwind CSS 4 — sistemul de stiluri.} Tailwind este folosit drept singura unealtă de stilizare; nu există fișiere CSS scrise de mână (cu excepția lui \texttt{globals.css}, care declară doar variabilele de temă și câteva animații \texttt{@keyframes}). Tot ce înseamnă spațiere, tipografie, culori, breakpoints este exprimat prin clase utilitare direct în JSX. Decizia, pe lângă viteza de iterare, are un avantaj practic: un component poate fi mutat sau copiat fără să trebuiască să sincronizez și un fișier CSS separat.
+\paragraph{Tailwind CSS 4: sistemul de stiluri.} Tailwind este folosit drept singura unealtă de stilizare; nu există fișiere CSS scrise de mână (cu excepția lui \texttt{globals.css}, care declară doar variabilele de temă și câteva animații \texttt{@keyframes}). Tot ce înseamnă spațiere, tipografie, culori, breakpoints este exprimat prin clase utilitare direct în JSX. Decizia, pe lângă viteza de iterare, are un avantaj practic: un component poate fi mutat sau copiat fără să trebuiască să sincronizez și un fișier CSS separat.
 
-\paragraph{Radix UI — primitivele de comportament.} Pentru toate elementele care au logică interactivă complexă (Dropdown, Dialog, Popover, Slider, Switch, Select, Tooltip, Tabs, Collapsible, Avatar, Scroll Area), HomeForge folosește primitivele \texttt{@radix-ui/react-*}. Acestea oferă comportamentul corect din punct de vedere accesibilitate (focus trap, navigare cu tastatura, atribute \texttt{aria-*}, gestiunea \texttt{Escape}), dar fără niciun stil impus — partea vizuală o pune Tailwind.
+\paragraph{Radix UI: primitivele de comportament.} Pentru toate elementele care au logică interactivă complexă (Dropdown, Dialog, Popover, Slider, Switch, Select, Tooltip, Tabs, Collapsible, Avatar, Scroll Area), HomeForge folosește primitivele \texttt{@radix-ui/react-*}. Acestea oferă comportamentul corect din punct de vedere accesibilitate (focus trap, navigare cu tastatura, atribute \texttt{aria-*}, gestiunea \texttt{Escape}), dar fără niciun stil impus, iar partea vizuală o pune Tailwind.
 
-\paragraph{shadcn/ui — stratul de „componente proprii".} Deasupra Radix-ului trăiește un al treilea nivel pe care îl materializează \texttt{shadcn/ui}. Acesta nu este o bibliotecă instalată ca dependință \texttt{npm}, ci un CLI care \emph{copiază} cod TypeScript direct în repository-ul meu, în \texttt{components/ui/}. Configurația proiectului (\texttt{components.json}) declară stilul „new-york", \texttt{rsc=true}, \texttt{tsx=true}, \texttt{baseColor=neutral}, \texttt{iconLibrary=lucide} și aliasurile de import \texttt{@/components}, \texttt{@/lib/utils}, \texttt{@/components/ui}, \texttt{@/hooks}.
+\paragraph{shadcn/ui: stratul de „componente proprii".} Deasupra Radix-ului trăiește un al treilea nivel pe care îl materializează \texttt{shadcn/ui}. Acesta nu este o bibliotecă instalată ca dependință \texttt{npm}, ci un CLI care \emph{copiază} cod TypeScript direct în repository-ul meu, în \texttt{components/ui/}. Configurația proiectului (\texttt{components.json}) declară stilul „new-york", \texttt{rsc=true}, \texttt{tsx=true}, \texttt{baseColor=neutral}, \texttt{iconLibrary=lucide} și aliasurile de import \texttt{@/components}, \texttt{@/lib/utils}, \texttt{@/components/ui}, \texttt{@/hooks}.
 
-Diferența față de o bibliotecă tradițională este filozofică, dar contează: codul fiecărui Button, Card, Dialog \emph{îmi aparține} și pot să-l modific fără să mă confrunt cu API-ul cuiva. Folderul \texttt{components/ui/} conține 28 de astfel de componente — printre ele \texttt{button.tsx}, \texttt{card.tsx}, \texttt{dialog.tsx}, \texttt{dropdown-menu.tsx}, \texttt{slider.tsx}, \texttt{sidebar.tsx}, \texttt{tabs.tsx}, \texttt{tooltip.tsx}, \texttt{command.tsx}, \texttt{markdown-editor.tsx} — toate generate inițial cu shadcn/ui, apoi adaptate la nevoile mele.
+Diferența față de o bibliotecă tradițională este filozofică, dar contează: codul fiecărui Button, Card, Dialog \emph{îmi aparține} și pot să-l modific fără să mă confrunt cu API-ul cuiva. Folderul \texttt{components/ui/} conține 28 de astfel de componente (printre ele \texttt{button.tsx}, \texttt{card.tsx}, \texttt{dialog.tsx}, \texttt{dropdown-menu.tsx}, \texttt{slider.tsx}, \texttt{sidebar.tsx}, \texttt{tabs.tsx}, \texttt{tooltip.tsx}, \texttt{command.tsx}, \texttt{markdown-editor.tsx}), toate generate inițial cu shadcn/ui, apoi adaptate la nevoile mele.
 
 Pentru a vedea pe ce se sprijină acest model, exemplific cu \texttt{Button}, unde apar și \texttt{class-variance-authority} (cva) și utility-ul \texttt{cn} compus din \texttt{clsx} + \texttt{tailwind-merge}:
 
@@ -68,7 +95,7 @@ export function cn(...inputs: ClassValue[]) {
 \end{minted}
 Combinația elimină categoria de bug-uri în care două clase Tailwind conflictuale (\texttt{p-2} și \texttt{p-4}, de exemplu) ar fi aplicate amândouă într-o ordine nedeterministă.
 
-\paragraph{Lucide React — iconițe.} Toate iconițele din aplicație vin din pachetul \texttt{lucide-react}, ales prin \texttt{components.json} (\texttt{"iconLibrary": "lucide"}). În \texttt{lib/icons.ts}, expun tot setul ca un map, ceea ce permite construirea componentei \texttt{IconPicker} (vezi \texttt{components/devices/IconPicker.tsx}) — un \texttt{Popover} cu căutare în interiorul căruia utilizatorul poate alege orice icon Lucide pentru o cameră sau un dispozitiv:
+\paragraph{Lucide React: iconițe.} Toate iconițele din aplicație vin din pachetul \texttt{lucide-react}, ales prin \texttt{components.json} (\texttt{"iconLibrary": "lucide"}). În \texttt{lib/icons.ts}, expun tot setul ca un map, ceea ce permite construirea componentei \texttt{IconPicker}, un \texttt{Popover} cu căutare în interiorul căruia utilizatorul poate alege orice icon Lucide pentru o cameră sau un dispozitiv:
 \begin{minted}{typescript}
 import * as LucideIcons from 'lucide-react';
 export const ICON_MAP = LucideIcons as unknown as Record<string, any>;
@@ -77,23 +104,37 @@ export const ICON_OPTIONS = Object.keys(ICON_MAP).filter(key => {
 });
 \end{minted}
 
-\paragraph{Sonner — sistemul de toast.} Pentru notificările inline (succes, eroare, info), folosesc biblioteca \texttt{sonner}, accesată prin singleton-ul \texttt{toast} din \texttt{components/ui/sonner.tsx}. Apelurile sunt scurte și consistente:
+\paragraph{Sonner: sistemul de toast.} Pentru notificările inline (succes, eroare, info), folosesc biblioteca \texttt{sonner}, accesată prin singleton-ul \texttt{toast} din \texttt{components/ui/sonner.tsx}. Apelurile sunt scurte și consistente:
 \begin{minted}{typescript}
 toast.success("Layout set as default for all users");
 toast.error("Failed to sync device state", { description: err.message });
 \end{minted}
 
-\paragraph{Framer Motion — animații.} Animațiile (carduri care intră cu fade-in, folderul care se deschide cu \texttt{AnimatePresence}, etc.) sunt gestionate de \texttt{framer-motion}. În cardurile cu drag-and-drop folosesc \texttt{@dnd-kit/core}, \texttt{@dnd-kit/sortable} și \texttt{@dnd-kit/utilities} — toate trei făcând parte din aceeași familie de pachete.
+\paragraph{Framer Motion: animații.} Animațiile (carduri care intră cu fade-in, folderul care se deschide cu \texttt{AnimatePresence}, etc.) sunt gestionate de \texttt{framer-motion}. În cardurile cu drag-and-drop folosesc \texttt{@dnd-kit/core}, \texttt{@dnd-kit/sortable} și \texttt{@dnd-kit/utilities}, toate trei făcând parte din aceeași familie de pachete.
 
 \paragraph{Restul pieselor.} Pe lângă cele de mai sus, mai există câteva dependențe utilitare pe care le menționez în trecere: \texttt{date-fns} pentru manipulare de date și ore, \texttt{cmdk} pentru paleta de comandă, \texttt{prismjs} cu \texttt{react-simple-code-editor} pentru editor-ul de cod din device builder, \texttt{react-markdown} împreună cu \texttt{remark-gfm} și \texttt{rehype-highlight} pentru randarea documentației Markdown, iar \texttt{elkjs} este disponibilă pentru viitoarele layout-uri automate ale grafurilor (este în \texttt{dependencies}, dar nu o folosesc activ încă).
 
-% FIGURĂ DE ADĂUGAT: screenshot al unei pagini din UI cu accent vizual pe
-% câteva primitive de la shadcn/ui — un Dialog deschis, un Dropdown, un
-% Toast Sonner activ în colț. Util pentru a arăta consistența vizuală.
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
-    % \includegraphics[width=0.95\textwidth]{figuri/ui_components_overview.png}
-    \caption{Captură de ecran: primitive shadcn/ui în acțiune (Dialog, Dropdown, Toast) — screenshot de adăugat}
+    \begin{subfigure}[t]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figuri/ui_dialog.png}
+        \caption{Dialog de descărcare a firmware-ului}
+        \label{fig:ui_dialog}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figuri/ui_dropdown.png}
+        \caption{Dropdown de schimbare a rolului}
+        \label{fig:ui_dropdown}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figuri/ui_toast.png}
+        \caption{Notificare \textit{toast}}
+        \label{fig:ui_toast}
+    \end{subfigure}
+    \caption{Primitive shadcn/ui în interfața HomeForge: (a) dialogul prin care, din colecția de dispozitive (\emph{Device Collection}), utilizatorul introduce credențialele Wi-Fi și adresa IP a serverului pentru a descărca sketch-ul de firmware personalizat; (b) meniul \textit{dropdown} cu submeniu pentru schimbarea rolului unui utilizator, din pagina de administrare; (c) notificarea \textit{toast} oferită de biblioteca Sonner, afișată la finalizarea unei acțiuni.}
     \label{fig:ui_primitives}
 \end{figure}
 
@@ -101,7 +142,7 @@ toast.error("Failed to sync device state", { description: err.message });
 Întreaga zonă autentificată folosește un layout comun \texttt{app/dashboard/layout.tsx}, care montează patru piese fixe: \texttt{AppSidebar}, butonul de \texttt{SidebarTrigger}, breadcrumb-urile dinamice și \texttt{ModeToggle}-ul pentru tema light/dark.
 
 \subsection{Sidebar-ul adaptiv}
-\texttt{components/app-sidebar.tsx} construiește meniul lateral pornind de la rolul utilizatorului curent. Lista de bază este aceeași pentru toți (Dashboard, Device Builder, Device Collection, Topology, Settings), iar dacă rolul este \texttt{admin} sau \texttt{owner}, se adaugă un submeniu „Admin Panel" cu link-uri către \emph{Rooms}, \emph{Users}, \emph{Device Types} și \emph{Debug}:
+\texttt{components/app-sidebar.tsx} construiește meniul lateral pornind de la rolul utilizatorului curent. Lista de bază (vizibilă pentru toate rolurile) include intrările \emph{Dashboard}, \emph{Device Builder}, \emph{Device Collection}, \emph{Topology}, \emph{Solar} și \emph{Settings}. Pentru rolurile \texttt{admin} și \texttt{owner} se adaugă un submeniu „Admin Panel" cu link-uri către \emph{Rooms}, \emph{Users}, \emph{Device Types} și \emph{Debug}:
 \begin{minted}{typescript}
 const navMain = React.useMemo(() => {
   const items = [
@@ -109,6 +150,7 @@ const navMain = React.useMemo(() => {
     { title: "Device Builder", url: "/dashboard/device-builder", icon: Cpu },
     { title: "Device Collection", url: "/dashboard/device-collection", icon: Package },
     { title: "Topology", url: "/dashboard/topology", icon: Network },
+    { title: "Solar", url: "/dashboard/solar", icon: Sun },
     { title: "Settings", url: "/dashboard/settings", icon: Settings },
   ];
   if (isAdmin) {
@@ -126,16 +168,12 @@ const navMain = React.useMemo(() => {
 }, [isAdmin]);
 \end{minted}
 
-Componenta de bază (\texttt{Sidebar}, \texttt{SidebarHeader}, \texttt{SidebarFooter}, \texttt{SidebarContent}) vine din shadcn/ui și expune un \texttt{SidebarProvider} care gestionează starea „colapsat / expandat" — fiind responsivă, pe mobil se transformă într-un \texttt{Sheet} care alunecă din lateral, iar pe desktop poate fi colapsată la doar iconițe. Header-ul conține logo-ul HomeForge (componenta \texttt{HomeForgeLogo}, un SVG inline), iar footer-ul găzduiește un \texttt{NavUser} cu avatarul utilizatorului, numele și un dropdown de „Sign out".
+Componenta de bază (\texttt{Sidebar}, \texttt{SidebarHeader}, \texttt{SidebarFooter}, \texttt{SidebarContent}) provine din shadcn/ui și expune un \texttt{SidebarProvider} care gestionează starea „colapsat / expandat". Componenta este responsivă. Pe ecrane mobile devine un \texttt{Sheet} care alunecă din lateral, iar pe desktop poate fi redusă la o coloană de iconițe. Header-ul include logo-ul aplicației (componenta \texttt{HomeForgeLogo}, un SVG inline), iar footer-ul găzduiește componenta \texttt{NavUser} (avatar, nume, meniu cu opțiunea \emph{Sign out}). Pe ecrane mobile, click-ul pe orice intrare apelează \texttt{useSidebar().setOpenMobile(false)}, închizând panoul lateral imediat după navigare, un comportament natural pentru utilizatorii care interacționează prin atingere.
 
-% FIGURĂ DE ADĂUGAT: screenshot al sidebar-ului expandat pe stânga,
-% cu utilizator în rol Owner — se văd toate cele 5 voci principale plus
-% sub-meniul „Admin Panel". Sugestie: face screenshot la 1920x1080,
-% taie zona din stânga (sidebar + ~30% din pagină).
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
-    % \includegraphics[width=0.5\textwidth]{figuri/sidebar_admin.png}
-    \caption{Sidebar-ul HomeForge cu sub-meniul \emph{Admin Panel} activ (screenshot de adăugat)}
+    \includegraphics[width=0.5\textwidth]{figuri/sidebar_admin.png}
+    \caption{Sidebar-ul HomeForge cu sub-meniul \emph{Admin Panel} activ}
     \label{fig:sidebar_admin}
 \end{figure}
 
@@ -157,29 +195,37 @@ export const ACCENT_COLORS = {
   cyan:    "oklch(0.6 0.15 200)",
 }
 \end{minted}
-Sunt definite în spațiul de culoare OKLCH (preferabil fa\c{t}\u{a} de RGB pentru consistență perceptivă), iar funcția \texttt{applyAccentColor} setează direct variabilele CSS \texttt{--primary} și \texttt{--ring} pe \texttt{document.documentElement}, fără reload. Preferința este persistată pe server (câmpul \texttt{accent\_color} din \texttt{Profile} — vezi Capitolul 3) și replicată în \texttt{localStorage} pentru a evita „flash"-ul vizual la prima încărcare; un \texttt{useLayoutEffect} aplică culoarea înainte de paint.
+Sunt definite în spațiul de culoare OKLCH (preferabil fa\c{t}\u{a} de RGB pentru consistență perceptivă), iar funcția \texttt{applyAccentColor} setează direct variabilele CSS \texttt{--primary} și \texttt{--ring} pe \texttt{document.documentElement}, fără reload. Preferința este persistată pe server (câmpul \texttt{accent\_color} din \texttt{Profile}, vezi Capitolul 2) și replicată în \texttt{localStorage} pentru a evita „flash"-ul vizual la prima încărcare; un \texttt{useLayoutEffect} aplică culoarea înainte de paint.
 
-% FIGURĂ DE ADĂUGAT: două screenshot-uri ale aceleiași pagini Settings,
-% unul cu accent violet și unul cu accent cyan, alăturate, pentru a arăta
-% cum se schimbă instantaneu tema.
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
-    % \includegraphics[width=0.95\textwidth]{figuri/accent_colors.png}
-    \caption{Aceea\c{s}i pagină \emph{Settings} cu două accent colors diferite (screenshot de adăugat)}
+    \begin{subfigure}[t]{0.46\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figuri/settings_accent_violet.png}
+        \caption{Accent violet}
+        \label{fig:accent_violet}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{0.46\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figuri/settings_accent_verde.png}
+        \caption{Accent verde}
+        \label{fig:accent_verde}
+    \end{subfigure}
+    \caption{Aceeași pagină \emph{Settings} cu două \emph{accent colors} diferite, ilustrând schimbarea instantanee a culorii de accent prin variabilele CSS \texttt{--primary} și \texttt{--ring}, fără reîncărcarea paginii.}
     \label{fig:accent_colors}
 \end{figure}
 
-\subsection{\texttt{UserProvider} — sursa unică de adevăr pe client}
+\subsection{\texttt{UserProvider}: sursa unică de adevăr pe client}
 \texttt{components/user-provider.tsx} expune un Context React care:
 \begin{itemize}
-    \item încarcă profilul curent la mount (\texttt{loadUser}) — întâi din \texttt{localStorage} pentru a evita „flash of unauthenticated content", apoi se actualizează cu răspunsul real al lui \texttt{fetchProfile()};
+    \item încarcă profilul curent la mount (\texttt{loadUser}): întâi din \texttt{localStorage} pentru a evita „flash of unauthenticated content", apoi se actualizează cu răspunsul real al lui \texttt{fetchProfile()};
     \item aplică culoarea de accent;
     \item gestionează logout-ul: golește cache-ul TanStack Query (\texttt{queryClient.clear()}), șterge token-urile, șterge layout-ul cache-uit local și redirecționează la \texttt{/login}.
 \end{itemize}
 Importanța pașilor de cleanup la logout nu este teoretică: fără \texttt{queryClient.clear()}, dacă un alt utilizator se loghează imediat după pe același browser, ar vedea pentru câteva secunde dispozitivele utilizatorului precedent.
 
 \section{Stratul de comunicare cu API-ul}
-Toate apelurile către backend sunt concentrate în fișierul \texttt{apiClient.js}, scris în JavaScript pur. Alegerea de a nu folosi TypeScript pentru acest modul a fost deliberată: păstrează codul la nivelul unui apel \texttt{fetch} standard și facilitează parcurgerea sa de către cititori familiarizați cu API-ul \texttt{fetch} al browserelor.
+Toate apelurile către backend sunt concentrate în fișierul \texttt{apiClient.js}, scris în JavaScript pur. Alegerea de a nu folosi TypeScript aici a fost deliberată. Codul rămâne la nivelul unui apel \texttt{fetch} standard, ușor de urmărit de oricine cunoaște API-ul \texttt{fetch} al browserelor.
 
 \subsection{Determinarea URL-ului backend-ului}
 Frontend-ul nu cunoaște la build-time IP-ul gazdei pe care va rula. Funcția \texttt{getBackendUrl} folosește locația curentă a browserului și înlocuiește portul cu 8000:
@@ -217,16 +263,16 @@ async function fetchWithAuth(url, options = {}) {
 Funcția \texttt{handleApiError} parsează formatul standard al erorilor returnate de Django REST Framework. Aceasta gestionează trei cazuri: un câmp \texttt{detail} (de obicei la erori de permisiune), un câmp \texttt{non\_field\_errors} (la validări la nivel de serializer) și restul, în care fiecare cheie este un câmp specific cu o listă de mesaje. Mesajele sunt concatenate și aruncate ca un singur \texttt{Error}, pe care UI-ul îl afișează prin \texttt{toast.error}.
 
 \section{Gestiunea stării: TanStack Query}
-HomeForge folosește \textit{TanStack Query} (denumit anterior React Query) pentru toate datele la nivel de aplicație. \texttt{QueryProvider} este montat în root-ul aplicației (\texttt{components/query-provider.tsx}) și expune un singur \texttt{QueryClient}. Fiecare componentă apoi consumă două hook-uri: \texttt{useQuery} pentru fetch-uri (lista de dispozitive, profilul, notificările) și \texttt{useMutation} pentru scrieri (toggle, update, delete). Două decizii de configurare merită evidențiate: lista de dispozitive folosește \texttt{refetchInterval: 3000} (polling la 3 secunde, înlocuind o eventuală conexiune WebSocket), iar contorul de notificări necitite folosește \texttt{refetchInterval: 30000} (30 de secunde, suficient pentru un badge fără a încărca inutil backend-ul).
+HomeForge folosește \textit{TanStack Query} (denumit anterior React Query) pentru toate datele la nivel de aplicație. \texttt{QueryProvider} este montat în root-ul aplicației (\texttt{components/query-provider.tsx}) și expune un singur \texttt{QueryClient}. Fiecare componentă apoi consumă două hook-uri: \texttt{useQuery} pentru fetch-uri (lista de dispozitive, profilul, notificările) și \texttt{useMutation} pentru scrieri (toggle, update, delete). Două decizii de configurare merită evidențiate. Lista de dispozitive folosește \texttt{refetchInterval: 3000}, adică polling la 3 secunde, în locul unei conexiuni WebSocket. Contorul de notificări necitite folosește \texttt{refetchInterval: 30000}, adică 30 de secunde: suficient pentru un badge, fără a încărca inutil backend-ul.
 
 \section{Dashboard-ul principal}
-Pagina \texttt{app/dashboard/page.tsx} orchestrează trei surse de date — dispozitive, tipuri de dispozitive și camere — și le combină într-un singur grid. Există cinci moduri de grupare expuse într-un \texttt{<Select>}:
+Pagina \texttt{app/dashboard/page.tsx} orchestrează trei surse de date (dispozitive, tipuri de dispozitive și camere) și le combină într-un singur grid. Există cinci moduri de grupare expuse într-un \texttt{<Select>}:
 \begin{itemize}
-    \item \texttt{all} — toate dispozitivele, în ordinea aleasă de utilizator (mod cu drag-and-drop);
-    \item \texttt{room} — grupare pe cameră;
-    \item \texttt{type} — grupare pe tipul de dispozitiv;
-    \item \texttt{status} — grupare pe \texttt{Online} / \texttt{Offline} / \texttt{Error};
-    \item \texttt{name} — sortare alfabetică simplă.
+    \item \texttt{all}: toate dispozitivele, în ordinea aleasă de utilizator (mod cu drag-and-drop);
+    \item \texttt{room}: grupare pe cameră;
+    \item \texttt{type}: grupare pe tipul de dispozitiv;
+    \item \texttt{status}: grupare pe \texttt{Online} / \texttt{Offline} / \texttt{Error};
+    \item \texttt{name}: sortare alfabetică simplă.
 \end{itemize}
 La nivel de cod, modul curent (\texttt{viewMode}) este oglindit într-o variabilă \texttt{deviceOrder} pe care \texttt{useDashboardLayout} o sincronizează cu serverul prin endpoint-ul \texttt{PATCH /api/device-order/}. Preferința utilizatorului supraviețuiește între dispozitive.
 
@@ -235,7 +281,7 @@ Logica de layout este izolată într-un singur hook (\texttt{hooks/useDashboardL
 \begin{enumerate}
     \item descarcă layout-ul curent prin \texttt{useQuery(['dashboardLayout'], fetchDashboardLayout)} cu \texttt{staleTime: Infinity};
     \item dacă API-ul eșuează (mod offline), cade pe \texttt{localStorage} ca rezervă;
-    \item \textit{reconciliază} layout-ul cu lista actuală de dispozitive — elimină referințele către cele șterse, adaugă cele noi, dizolvă folderele rămase cu mai puțin de 2 elemente (vezi \texttt{reconcileLayout} în \texttt{lib/dashboard-grid.ts});
+    \item \textit{reconciliază} layout-ul cu lista actuală de dispozitive: elimină referințele către cele șterse, adaugă cele noi, dizolvă folderele rămase cu mai puțin de 2 elemente;
     \item expune funcții de mutație: \texttt{moveItem}, \texttt{createFolder}, \texttt{addToFolder}, \texttt{removeFromFolder}, \texttt{renameFolder}, \texttt{dissolveFolder}, \texttt{resetLayout}, \texttt{revertToShared};
     \item salvează modificările pe server cu \texttt{debounce} de 800 ms și \textit{flush} imediat la ieșirea din modul de editare („Done”).
 \end{enumerate}
@@ -258,37 +304,52 @@ Componenta \texttt{DraggableDeviceGrid} folosește biblioteca \texttt{@dnd-kit/c
     \item zona \emph{dreaptă}: este inserat după;
     \item zona \emph{mijloc}: dispozitivele se combină într-un folder nou (sau dispozitivul este adăugat în folderul țintă).
 \end{itemize}
-Constrângerile semantice (un folder are între 2 și 4 dispozitive, fiecare \texttt{deviceId} apare cel mult o dată) sunt verificate atât pe client cât și pe backend (vezi \texttt{DashboardLayoutSerializer} în Capitolul 3).
+Constrângerile semantice (un folder are între 2 și 4 dispozitive, fiecare \texttt{deviceId} apare cel mult o dată) sunt verificate atât pe client cât și pe backend.
 
-% FIGURĂ DE ADĂUGAT: screenshot al dashboard-ului în mod „edit” — se văd cardurile,
-% un folder deschis cu 3 dispozitive, plus indicatorii de drop (stânga / mijloc / dreapta).
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
-    % \includegraphics[width=0.95\textwidth]{figuri/dashboard_edit_mode.png}
-    \caption{Dashboard-ul HomeForge în modul de editare a layout-ului (screenshot de adăugat)}
+    \begin{subfigure}[t]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figuri/dashboard_drag_side.png}
+        \caption{Drop lateral (reordonare)}
+        \label{fig:dash_drag_side}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figuri/dashboard_drag_merge.png}
+        \caption{Drop central (combinare)}
+        \label{fig:dash_drag_merge}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{0.32\textwidth}
+        \centering
+        \includegraphics[width=\linewidth]{figuri/dashboard_folder.png}
+        \caption{Folderul rezultat}
+        \label{fig:dash_folder}
+    \end{subfigure}
+    \caption{Crearea unui folder prin drag-and-drop în modul de editare al dashboard-ului: (a) cardul tras lateral declanșează indicatorul de reordonare (stânga/dreapta); (b) suprapunerea a două carduri activează zona de mijloc, care le combină într-un folder nou; (c) folderul rezultat, cu butonul-creion pentru redenumire.}
     \label{fig:dashboard_edit}
 \end{figure}
 
 \section{Cardurile inteligente: \texttt{SmartDeviceCard}}
-Componenta \texttt{SmartDeviceCard} este probabil cea mai densă din întregul frontend, fiindcă rezolvă în același loc trei probleme dificile: randarea dinamică a unui număr variabil de widget-uri, optimistic UI și combaterea \textit{glitch}-urilor de stare la apăsări rapide.
+Componenta \texttt{SmartDeviceCard} este probabil cea mai densă din întregul frontend. Rezolvă în același loc trei probleme grele: randarea dinamică a unui număr variabil de widget-uri, optimistic UI și combaterea \textit{glitch}-urilor de stare la apăsări rapide.
 
 \subsection{Randarea condusă de \texttt{card\_template}}
 Fiecare tip de dispozitiv definește o listă de \texttt{controls}, în care fiecare element are un \texttt{widget\_type}. Componenta apelează funcția internă \texttt{renderWidget(control, index)}, care selectează implementarea vizuală corespunzătoare: \texttt{Switch} pentru \texttt{TOGGLE}, \texttt{Slider} pentru \texttt{SLIDER} sau widget-uri specializate definite în \texttt{SensorWidgets.tsx} (\texttt{TemperatureWidget}, \texttt{HumidityWidget} etc.). Fiecare widget primește valoarea curentă prin câmpul \texttt{variable\_mapping}, mecanism care permite aceleiași componente să servească orice tip de dispozitiv definit prin device builder.
 
 Layout-ul cardului are două variante: \emph{row} (widget-uri pe linie, util pentru dispozitive simple) și \emph{square} (widget-uri pătrate, util pentru senzori). Layout-ul de grid se citește dintr-un câmp \texttt{layout\_config} cu chei \texttt{w} (numărul de coloane) și \texttt{gap}; componenta convertește \texttt{layout\_config.w} sau \texttt{layout\_config.columns} în clase Tailwind (\texttt{grid-cols-1/2/3}).
 
-Există și un caz special: \texttt{isSingleToggleDevice(controls)}. Dacă un dispozitiv are exact un singur control de tip \texttt{TOGGLE} și nimic altceva (un releu pentru un bec, de exemplu), cardul devine \emph{tap-to-toggle} — întreaga suprafață a cardului acționează ca un switch, fără un widget separat. Detaliul îmbunătățește vizibil ergonomia pe mobil.
+Există și un caz special: \texttt{isSingleToggleDevice(controls)}. Dacă un dispozitiv are exact un singur control de tip \texttt{TOGGLE} și nimic altceva (un releu pentru un bec, de exemplu), cardul devine \emph{tap-to-toggle}: întreaga suprafață a cardului acționează ca un switch, fără un widget separat. Detaliul îmbunătățește vizibil ergonomia pe mobil.
 
 \subsection{Pattern-ul \textit{Optimistic UI}}
 Această subsecțiune descrie mecanismul central de gestiune a stării interactive. La apăsarea unui toggle, componenta:
 \begin{enumerate}
     \item construiește noua stare locală \texttt{newState = \{...currentState, [variable]: value\}};
     \item o salvează imediat în \texttt{useState}, deci UI-ul se actualizează în 0 milisecunde;
-    \item programează un \texttt{setTimeout} de 50 ms (pentru toggle, ca să consolideze apăsările repetate) sau 500 ms (pentru slider, ca să nu trimită zeci de cereri per gest) — un \textit{debounce} clasic;
+    \item programează un \texttt{setTimeout} de 50 ms (pentru toggle, ca să consolideze apăsările repetate) sau 500 ms (pentru slider, ca să nu trimită zeci de cereri per gest), un \textit{debounce} clasic;
     \item după timer, declanșează mutația TanStack Query, care apelează \texttt{updateDeviceState(id, newState)}.
 \end{enumerate}
 
-Mutația utilizează patru dintre hook-urile expuse de \texttt{useMutation} — \texttt{mutationFn}, \texttt{onMutate}, \texttt{onError} și \texttt{onSettled}. Hook-ul \texttt{onSuccess} este omis deliberat, din motive explicate mai jos. Scheletul implementării, în formă condensată:
+Mutația utilizează patru dintre hook-urile expuse de \texttt{useMutation}: \texttt{mutationFn}, \texttt{onMutate}, \texttt{onError} și \texttt{onSettled}. Hook-ul \texttt{onSuccess} este omis deliberat, din motive explicate mai jos. Scheletul implementării, în formă condensată:
 \begin{minted}{typescript}
 const updateMutation = useMutation({
   mutationFn: ({ id, newState }) => updateDeviceState(id, newState),
@@ -307,26 +368,21 @@ Câteva detalii subtile pe care le-am implementat după mai multe iterații:
 \begin{itemize}
     \item \texttt{onMutate} salvează starea anterioară într-un \textit{context} care, în caz de eroare, este folosit pentru \emph{rollback}. Fără aceasta, dacă dispozitivul este offline, butonul ar rămâne blocat în starea optimistă incorectă.
     \item Intenționat \emph{nu} folosesc \texttt{onSuccess} pentru a suprascrie starea locală: serverul răspunde imediat cu \texttt{HTTP 202} și o stare anticipată, dar starea reală vine asincron, de pe MQTT. Dacă aș suprascrie pe \texttt{onSuccess}, butonul ar putea „sări” înapoi câteva secunde mai târziu.
-    \item \texttt{onSettled} marchează \texttt{isRefetching = true}, ceea ce face ca UI-ul să afișeze un \texttt{Loader2} suprapus. Există un timeout de siguranță (5 secunde) care anulează această stare dacă backend-ul nu mai răspunde — nu vrem ca utilizatorul să rămână blocat cu un \textit{spinner} infinit.
+    \item \texttt{onSettled} marchează \texttt{isRefetching = true}, ceea ce face ca UI-ul să afișeze un \texttt{Loader2} suprapus. Există un timeout de siguranță (5 secunde) care anulează această stare dacă backend-ul nu mai răspunde, fiindcă nu vrem ca utilizatorul să rămână blocat cu un \textit{spinner} infinit.
     \item Există un \texttt{useEffect} care detectează când starea de pe server „a ajuns din urmă” starea optimistă (toate cheile modificate sunt egale) și, în acel moment, oprește \texttt{isRefetching}, iar vizual butonul rămâne în stare „sincronizare” doar atât timp cât chiar este o discrepanță reală între ce vrem și ce raportează firmware-ul.
 \end{itemize}
 
-% FIGURĂ DE ADĂUGAT: diagrama temporală a unei apăsări — buton apăsat la t=0,
-% UI optimist la t=0+ε, debounce până la t=50ms, request HTTP, răspuns 202 la t=100ms,
-% publicare MQTT, ESP32 toggle releu la t=180ms, publish state, listener Django,
-% refresh listă dispozitive la t=300ms, sincronizat la t=350ms. Poate fi
-% o diagramă de tip swim-lane în draw.io.
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
-    % \includegraphics[width=0.95\textwidth]{figuri/optimistic_ui_timeline.pdf}
-    \caption{Diagrama temporală a unei apăsări de toggle în interfața HomeForge (figură de adăugat)}
+    \includegraphics[width=1.0\textwidth]{figuri/optimistic_ui_timeline.pdf}
+    \caption{Diagrama temporală a unei apăsări de toggle în interfața HomeForge}
     \label{fig:optimistic_timeline}
 \end{figure}
 
 \section{Centrul de notificări}
 \texttt{notification-center.tsx} este componenta din colțul dreapta-sus al headerului. Este un \texttt{Popover} care afișează lista alertelor curente:
 \begin{itemize}
-    \item folosește două \texttt{useQuery} — unul pentru lista completă, unul pentru contorul de necitite, ambele cu \texttt{refetchInterval: 30000};
+    \item folosește două \texttt{useQuery}: unul pentru lista completă, unul pentru contorul de necitite, ambele cu \texttt{refetchInterval: 30000};
     \item iconițele și culorile sunt alese în funcție de \texttt{notification\_type} (\texttt{device\_offline}, \texttt{device\_type\_pending}, etc.);
     \item \texttt{action\_url}-ul venit de la backend este normalizat printr-o funcție \texttt{getActionUrl} care adaugă prefixul \texttt{/dashboard} și redirecționează URL-urile către individuale (\texttt{/admin/device-types/22}) către pagina-listă cu filtru (\texttt{/dashboard/admin/device-types?filter=pending}).
 \end{itemize}
@@ -341,6 +397,36 @@ Pagina \texttt{/dashboard/topology/} se bazează pe biblioteca \texttt{@xyflow/r
 
 Nodurile sunt randate de patru componente custom în \texttt{topology/nodes/}: \texttt{BuilderStyleNode}, \texttt{GlassDeviceNode}, \texttt{TopologyBuilderNode}, \texttt{UnifiDeviceNode}. \texttt{TopologyBuilderNode} este cea folosită în mod implicit; celelalte sunt variante stilistice între care utilizatorul poate alege.
 
+Începând cu versiunea care include modulul solar, \texttt{TopologyBuilderNode} discriminează între categorii de noduri pe baza câmpurilor \texttt{type} și \texttt{is\_solar}. Sistemele fotovoltaice apar ca noduri distincte cu o iconiță soare (\texttt{Sun} din \texttt{lucide-react}), pe o paletă ambră, în timp ce dispozitivele MCU păstrează stilul deja existent. Detecția cade înapoi pe analiza câmpurilor \texttt{device\_type} și \texttt{icon} (\texttt{fa-sun}, \texttt{fa-solar-panel}) pentru a acoperi sistemele importate înainte de adăugarea câmpului explicit \texttt{is\_solar}.
+
+\section{Pagina de monitorizare solară}
+Modulul fotovoltaic dispune de o pagină dedicată la \texttt{/dashboard/solar/}, accesibilă tuturor rolurilor autentificate. Aceasta consumă API-ul descris în Capitolul 2 (în special \texttt{GET /api/solar/systems/<id>/overview/}) și este alcătuită din componente specializate, izolate sub \texttt{components/solar/}.
+
+\subsection{Cicluri de \textit{polling} și gestionarea stării}
+Pagina folosește \texttt{useQuery} pentru a interoga endpoint-ul \emph{overview} la fiecare 5 secunde (\texttt{refetchInterval: 5000}), cu pauză automată când tab-ul browserului trece în fundal. Această frecvență este sub-limita cache-ului aplicativ de 8 secunde de pe server, deci traficul efectiv către vendor rămâne sub o cerere la fiecare 8 secunde, chiar dacă mai mulți clienți vizualizează pagina simultan. Statele tranzitorii (lipsa unui sistem înregistrat, sistem offline, sistem dezactivat) sunt acoperite de componente dedicate (\texttt{SolarEmptyState}, banner pentru offline derivat din \texttt{status.message}), astfel încât interfața să rămână informativă fără a afișa erori brute.
+
+\subsection{Diagrama de flux de putere}
+\texttt{PowerFlowDiagram.tsx} construiește o reprezentare animată SVG, inspirată de interfețele Fronius SolarWeb și Tesla. Patru noduri periferice (PV, rețea, consum casnic, baterie) sunt distribuite în jurul unui nod central reprezentând invertorul. Direcțiile fluxurilor sunt deduse din semnele câmpurilor \texttt{power.solarW}, \texttt{power.gridW}, \texttt{power.loadW} și \texttt{power.batteryW} prin funcția \texttt{deriveFlows} din \texttt{components/solar/solar-utils.ts}; nodul de baterie este afișat doar atunci când câmpul \texttt{battery.present} este adevărat. Pragul de inactivitate este de 1 W per latură, valori sub acest prag determinând estomparea nodurilor corespunzătoare și o animație discretă de tip „respirație" (\texttt{solar-idle-breathe}) care comunică starea de repaus fără a sugera mișcare. Toate dimensiunile sunt parametrizate prin proprietățile CSS \texttt{NODE\_R} și \texttt{HUB\_R}, permițând adaptarea automată pentru ecrane mici.
+
+\subsection{Graficul de putere în timp real}
+Componenta \texttt{LivePowerChart.tsx} acumulează în memoria sesiunii eșantioanele primite de la \emph{overview}, oferind o vedere de tip serie de timp pe orizont scurt. Deoarece API-ul Fronius nu expune un endpoint dedicat de istoric agregat fiabil pe toate modelele (în special pe GEN24, unde contoarele cumulative pot fi indisponibile), graficul afișează exclusiv intervalul „de când utilizatorul a deschis pagina", iar o legendă explicită îl semnalează (\emph{„Data collected since this page was opened"}). Graficul este construit peste \texttt{recharts}, integrat printr-un wrapper shadcn (\texttt{components/ui/chart.tsx}) cu suport pentru tooltip-uri și legende personalizate.
+
+\subsection{Cardurile cu indicatori}
+\texttt{SolarStatCards.tsx} prezintă valorile instantanee numerice: producție PV, consum, schimb cu rețeaua, putere baterie, stare de încărcare (SOC), procente de auto-consum și autonomie energetică. Câmpurile lipsă (\texttt{null}) sunt randate ca o liniuță, evitând afișarea unor valori 0 înșelătoare. Indicatorii cumulativi (energie produsă astăzi / anul curent / total) au fost eliminați din varianta curentă. Valorile primite de la API-ul Fronius pe modele GEN24 s-au dovedit nepopulate, frecvent \texttt{null} sau resetate la zero. Rămânerea exclusiv la valorile instantanee asigură consistența indiferent de modelul de invertor.
+
+\subsection{Dialogul administrator și starea „gol"}
+Pentru rolurile cu privilegii de administrare, butonul „Add solar system" deschide componenta \texttt{SolarSystemDialog.tsx}, un \texttt{Dialog} cu câmpurile \emph{name}, \emph{API URL} și \emph{provider}. Validarea conectivității se realizează server-side: backend-ul efectuează un apel \texttt{discover()} înainte de a accepta înregistrarea, iar mesajele de eroare (URL inaccesibil, Solar API dezactivat pe invertor) sunt surfasate către utilizator printr-un \texttt{toast.error}. Componenta \texttt{SolarEmptyState.tsx} este afișată atunci când nu există încă niciun sistem înregistrat, oferind un buton CTA pentru utilizatorii admin și un mesaj pasiv pentru utilizatorii obișnuiți.
+
+\subsection{Pasul „Solar" din setup wizard}
+La înregistrarea inițială a platformei, asistentul de configurare include un pas opțional \texttt{SolarStep.tsx}, inserat în \texttt{SetupWizard.tsx} între \emph{devices} și \emph{complete}. Pasul oferă două opțiuni: \emph{Skip} (continuă fără înregistrare) sau introducerea unui sistem Fronius prin câmpurile nume / URL / provider, urmate de același apel \texttt{createSolarSystem} folosit și de dialogul administrator. La final, ecranul de confirmare prezintă un rezumat care include statutul \emph{solar connected}, dacă pasul a fost completat.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figuri/solar_dashboard.png}
+    \caption{Pagina \emph{Solar}: diagramă de flux de putere, indicatori și grafic în timp real}
+    \label{fig:solar_dashboard}
+\end{figure}
+
 \section{Editorul vizual de tipuri de dispozitive (\textit{device builder})}
 Una dintre cele mai interesante pagini este \texttt{device-builder/DeviceUICreator.tsx}, un editor vizual cu două panouri:
 \begin{itemize}
@@ -350,111 +436,132 @@ Una dintre cele mai interesante pagini este \texttt{device-builder/DeviceUICreat
 
 În jurul editorului există trei panouri auxiliare:
 \begin{itemize}
-    \item \texttt{FirmwareCodeEditor.tsx} — editor de cod Arduino bazat pe \texttt{prismjs} și \texttt{react-simple-code-editor};
-    \item \texttt{WiringDiagramEditor.tsx} — încărcare de schemă electrică (imagine) și descriere textuală;
-    \item \texttt{DocumentationEditor.tsx} — editor Markdown cu randare \texttt{react-markdown} (cu \texttt{remark-gfm} și \texttt{rehype-highlight}).
+    \item \texttt{FirmwareCodeEditor.tsx}: editor de cod Arduino bazat pe \texttt{prismjs} și \texttt{react-simple-code-editor};
+    \item \texttt{WiringDiagramEditor.tsx}: încărcare de schemă electrică (imagine) și descriere textuală;
+    \item \texttt{DocumentationEditor.tsx}: editor Markdown cu randare \texttt{react-markdown} (cu \texttt{remark-gfm} și \texttt{rehype-highlight}).
 \end{itemize}
 
 La finalul fluxului, utilizatorul apasă \emph{Propose} și aplicația apelează \texttt{POST /api/device-types/propose/} cu o structură JSON compusă din:
 \begin{itemize}
-    \item \texttt{name} — denumirea tipului;
-    \item \texttt{definition.structure[]} — noduri și conexiuni (microcontroler, senzori, pini, fire);
-    \item \texttt{card\_template.controls[]} — widget-urile vizuale;
-    \item \texttt{firmware\_code}, \texttt{wiring\_diagram\_text}, \texttt{documentation} — text;
-    \item \texttt{wiring\_diagram\_base64}, \texttt{documentation\_images\_base64} — imagini encodate.
+    \item \texttt{name}: denumirea tipului;
+    \item \texttt{definition.structure[]}: noduri și conexiuni (microcontroler, senzori, pini, fire);
+    \item \texttt{card\_template.controls[]}: widget-urile vizuale;
+    \item \texttt{firmware\_code}, \texttt{wiring\_diagram\_text}, \texttt{documentation}: text;
+    \item \texttt{wiring\_diagram\_base64}, \texttt{documentation\_images\_base64}: imagini encodate.
 \end{itemize}
-Validatorul de backend (\texttt{CustomDeviceTypeSerializer.validate}) verifică explicit că fiecare \texttt{variable\_mapping} din widget-uri corespunde unui ID definit în \texttt{structure[]} — astfel, este imposibil să propui un tip de dispozitiv „rupt”.
+Validatorul de backend (\texttt{CustomDeviceTypeSerializer.validate}) verifică explicit că fiecare \texttt{variable\_mapping} din widget-uri corespunde unui ID definit în \texttt{structure[]}. Astfel, este imposibil să propui un tip de dispozitiv „rupt".
 
-% FIGURĂ DE ADĂUGAT: screenshot al device builder-ului — în stânga node-graph
-% cu un ESP32 conectat la DHT11 și un releu, în dreapta lista de widget-uri (un
-% TOGGLE pentru releu, un TEMPERATURE pentru DHT11, un HUMIDITY pentru DHT11).
-\begin{figure}[htbp]
+\subsection{Paleta de componente: \emph{supported} vs. \emph{future}}
+Pentru ca interfața să reflecte fidel ce widget-uri sunt cu adevărat procesate end-to-end (firmware $\rightarrow$ MQTT $\rightarrow$ backend $\rightarrow$ card), paleta este alimentată de endpoint-ul \texttt{GET /api/widget-types/} descris în Capitolul 2. Tipurile \emph{supported} (în prezent \texttt{TOGGLE}, \texttt{SLIDER}, \texttt{TEMPERATURE}, \texttt{HUMIDITY}, \texttt{PRESSURE}) pot fi plasate liber pe canvas, în timp ce tipurile \emph{future} (\texttt{MOTION}, \texttt{LIGHT}, \texttt{CO2}) sunt randate ca plăci estompate, marcate cu un badge „Soon" și inactive la \emph{drag-and-drop} sau \emph{click}, generând un mesaj \texttt{toast} explicativ. Aceeași logică se aplică și în paleta de componente (microcontroler, senzori, releu) din panoul de topologie: doar tipurile cu suport firmware complet sunt selectabile. Senzorul de presiune (BMP180) a fost recent promovat din \emph{future} în \emph{supported}, odată cu integrarea citirilor de presiune barometrică în firmware-ul ESP32.
+
+\begin{figure}[H]
     \centering
-    % \includegraphics[width=0.95\textwidth]{figuri/device_builder.png}
-    \caption{Device builder-ul HomeForge cu un node graph și panoul de widget-uri (screenshot de adăugat)}
+    \includegraphics[width=0.95\textwidth]{figuri/device_builder.png}
+    \caption{Device builder-ul HomeForge}
     \label{fig:device_builder}
 \end{figure}
 
 \section{Setup wizard-ul}
-La primul vizit pe o instanță proaspătă, \texttt{SetupWizard.tsx} ghidează utilizatorul printr-un flux în 5 pași: \emph{welcome} → \emph{account} → \emph{rooms} → \emph{devices} → \emph{complete}. Pașii sunt componente separate în \texttt{components/setup/steps/} și comunică prin \texttt{onNext} / \texttt{onBack} cu containerul. La pasul \emph{account}, contul creat devine automat \texttt{owner}, fiindcă serverul răspunde la \texttt{POST /register/} cu \texttt{is\_first\_user} activat (vezi Capitolul 3). La pasul \emph{devices}, utilizatorul poate importa tipurile predefinite prin endpoint-ul \texttt{POST /api/device-types/import-defaults/}.
+La prima vizită pe o instanță proaspătă, \texttt{SetupWizard.tsx} ghidează utilizatorul printr-un flux în 6 pași: \emph{welcome} → \emph{account} → \emph{rooms} → \emph{devices} → \emph{solar} → \emph{complete}. Pașii sunt componente separate în \texttt{components/setup/steps/} și comunică prin \texttt{onNext} / \texttt{onBack} cu containerul. La pasul \emph{account}, contul creat devine automat \texttt{owner}, întrucât serverul răspunde la \texttt{POST /register/} cu flag-ul \texttt{is\_first\_user} activat. La pasul \emph{devices}, utilizatorul poate importa tipurile predefinite prin endpoint-ul \texttt{POST /api/device-types/import-defaults/}. Pasul \emph{solar} este complet opțional (utilizatorii fără sistem fotovoltaic îl sar prin butonul \emph{Skip}); detaliile sunt descrise în secțiunea dedicată mai sus.
 
-Indicatorul de progres este o linie întreruptă în patru segmente; fiecare segment primește clase Tailwind diferite pe baza indexului pasului curent. Animațiile de tranziție folosesc \texttt{animate-in fade-in duration-300} — o clasă utilitară oferită de pluginul \texttt{tw-animate-css}.
+Indicatorul de progres este o linie întreruptă în segmente egale (câte unul per pas, fără cele de început și final), iar fiecare segment primește clase Tailwind diferite pe baza indexului pasului curent. Animațiile de tranziție folosesc \texttt{animate-in fade-in duration-300}, o clasă utilitară oferită de pluginul \texttt{tw-animate-css}.
 
 \section{Onboarding-ul: \texttt{OnboardingChecklist} și \texttt{PageTooltip}}
 Asistentul de configurare inițial (\emph{setup wizard}) acoperă doar primii pași de instalare. Pentru utilizatorii care accesează aplicația ulterior, este oferit un mecanism de onboarding suplimentar, mai puțin intruziv, format din două componente complementare situate în \texttt{components/onboarding/}.
 
 \paragraph{Checklist-ul de pe dashboard.} Componenta \texttt{OnboardingChecklist.tsx} este un card afișat în partea superioară a dashboard-ului, vizibil până la finalizarea tuturor pașilor recomandați: crearea contului, definirea a cel puțin unei camere, importul a cel puțin unui tip de dispozitiv și adăugarea primului dispozitiv. Verificarea condițiilor utilizează contoarele primite prin \texttt{props}, cu fallback către apelurile \texttt{fetchRooms()}, \texttt{fetchDeviceTypes()} și \texttt{fetchDevices()}; pașii satisfăcuți sunt marcați automat ca \emph{completați}. Pașii suplimentari sunt persistați în \texttt{localStorage} sub cheia \texttt{onboarding\_checklist\_completed}, iar butonul \emph{Dismiss} setează flag-ul \texttt{onboarding\_checklist\_dismissed = true}.
 
-\paragraph{Tooltip-urile de pagină.} Componenta \texttt{PageTooltip.tsx} este reutilizabilă și se inserează o singură dată pe fiecare pagină principală. Vizibilitatea este controlată prin \texttt{localStorage} (cheia \texttt{visited\_pages}): tooltip-ul se afișează exclusiv la prima vizită, cu dispariție automată după 8,5 secunde sau prin acțiune explicită a utilizatorului (buton de închidere). Mesajele sunt specifice fiecărei pagini — pe dashboard, de exemplu, textul afișat este: \emph{„This is your control center. Add devices, organize them into rooms, and monitor everything in real time."}
+\paragraph{Tooltip-urile de pagină.} Componenta \texttt{PageTooltip.tsx} este reutilizabilă și se inserează o singură dată pe fiecare pagină principală. Vizibilitatea este controlată prin \texttt{localStorage} (cheia \texttt{visited\_pages}): tooltip-ul se afișează exclusiv la prima vizită, cu dispariție automată după aproximativ 8 secunde (mai exact, un \texttt{setTimeout} la 8500 ms de la încărcarea paginii, tooltip-ul devenind vizibil la 500 ms) sau imediat, prin butonul de închidere. Mesajele sunt specifice fiecărei pagini. Pe dashboard, de exemplu, textul afișat este: \emph{„This is your control center. Add devices, organize them into rooms, and monitor everything in real time."}
 
-% FIGURĂ DE ADĂUGAT (combinată, 4 panel-uri 2×2): (sus-stânga) setup wizard
-% pasul „account", (sus-dreapta) setup wizard pasul „devices" cu lista
-% predefinite, (jos-stânga) dashboard cu OnboardingChecklist activ,
-% (jos-dreapta) un PageTooltip deschis pe o pagină interioară.
-\begin{figure}[htbp]
+% FIGURĂ COMPUSĂ 2x2: fluxul de onboarding. Fiecare panou afișează automat
+% imaginea dacă există în figuri/, altfel un chenar placeholder pătrat
+% (\IfFileExists => pozele nu mai apar peste chenare, se substituie singure).
+% Imagini așteptate (pătrate): onboarding_account.png, onboarding_devices.png,
+% onboarding_complete.png, onboarding_checklist.png.
+\newcommand{\onboardpanel}[1]{%
+  \IfFileExists{figuri/#1.png}%
+    {\includegraphics[width=\linewidth]{figuri/#1.png}}%
+    {\fbox{\parbox[c][6.6cm][c]{0.92\linewidth}{\centering\scriptsize captură de adăugat}}}%
+}
+\begin{figure}[H]
     \centering
-    % \includegraphics[width=0.95\textwidth]{figuri/onboarding_combo.png}
-    \caption{Fluxul complet de onboarding: setup wizard (sus) și mecanismele de onboarding ulterior (jos) (screenshot de adăugat)}
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \onboardpanel{onboarding_account}
+        \caption{Setup wizard, pasul „account"}
+        \label{fig:onb_account}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \onboardpanel{onboarding_devices}
+        \caption{Setup wizard, pasul „devices"}
+        \label{fig:onb_devices}
+    \end{subfigure}
+
+    \vspace{0.6em}
+
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \onboardpanel{onboarding_complete}
+        \caption{Setup wizard, ecranul de finalizare}
+        \label{fig:onb_complete}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{0.48\textwidth}
+        \centering
+        \onboardpanel{onboarding_checklist}
+        \caption{Checklist-ul de pe dashboard}
+        \label{fig:onb_checklist}
+    \end{subfigure}
+    \caption{Fluxul de onboarding al platformei: pașii \emph{account} (a) și \emph{devices} (b) din setup wizard, ecranul de finalizare care confirmă resursele configurate (c) și checklist-ul \emph{Getting Started} afișat ulterior pe dashboard (d).}
     \label{fig:onboarding_combo}
 \end{figure}
 
 \section{Pagina de setări}
-\texttt{app/dashboard/settings/page.tsx} grupează într-un singur formular controlat patru zone funcționale: profilul de bază (nume, email, username, parolă nouă cu confirmare), avatarul (\texttt{FileReader} pentru preview, \texttt{FormData} la salvare; backend-ul generează un nume UUID și șterge prin semnal \texttt{pre\_save} avatarul vechi), paleta de \emph{accent colors} (cele 7 valori OKLCH din \texttt{ACCENT\_COLORS}, aplicate instant prin \texttt{updateAccentColor}) și un panou read-only cu rolul curent și informații despre cont. Salvarea apelează \texttt{updateProfile} din \texttt{apiClient.js} (un \texttt{PUT /api/me/} multipart), iar la succes invocă \texttt{refreshUser()} ca să-și reîmprospăteze starea contextului de utilizator — fără asta, o schimbare de nume nu s-ar reflecta imediat în sidebar.
+\texttt{app/dashboard/settings/page.tsx} grupează într-un singur formular controlat patru zone funcționale: profilul de bază (nume, email, username, parolă nouă cu confirmare), avatarul (\texttt{FileReader} pentru preview, \texttt{FormData} la salvare; backend-ul generează un nume UUID și șterge prin semnal \texttt{pre\_save} avatarul vechi), paleta de \emph{accent colors} (cele 7 valori OKLCH din \texttt{ACCENT\_COLORS}, aplicate instant prin \texttt{updateAccentColor}, iar efectul vizual este ilustrat în Figura \ref{fig:accent_colors}) și un panou read-only cu rolul curent și informații despre cont. Salvarea apelează \texttt{updateProfile} din \texttt{apiClient.js} (un \texttt{PUT /api/me/} multipart), iar la succes invocă \texttt{refreshUser()} ca să-și reîmprospăteze starea contextului de utilizator. Fără acest pas, o schimbare de nume nu s-ar reflecta imediat în sidebar.
 
-% FIGURĂ DE ADĂUGAT: screenshot al paginii Settings — partea de sus cu profil
-% și avatar, partea de jos cu paleta de 7 cercuri pentru accent color. Sugestie:
-% poți face screenshot cu o culoare violet/cyan selectată pentru a se vedea.
-\begin{figure}[htbp]
+\section{Colecția de dispozitive a comunității}
+Pagina \texttt{app/dashboard/device-collection/page.tsx} este locul în care utilizatorii explorează tipurile de dispozitive deja aprobate. Spre deosebire de \emph{device builder} (care \emph{creează} un tip nou), colecția le \emph{expune} pe cele existente: fiecare tip apare ca un card (\texttt{Card} din shadcn/ui) cu numele, badge-uri pentru senzorii din componență și o miniatură a topologiei hardware. Sus se află un câmp de căutare (\texttt{Input} cu filtrare locală prin \texttt{useMemo}), iar un buton de import permite încărcarea unui tip dintr-un fișier JSON (\texttt{importDeviceTypesFromFile}). La click pe un card, aplicația navighează către pagina de detaliu \texttt{device-collection/[id]}, unde se găsesc codul firmware, schema electrică, documentația și dialogul de descărcare a sketch-ului personalizat (prezentat în Figura \ref{fig:ui_primitives}). Datele provin dintr-un singur \texttt{useQuery} către \texttt{GET /api/device-types/}, restrâns la tipurile aprobate.
+
+\begin{figure}[H]
     \centering
-    % \includegraphics[width=0.85\textwidth]{figuri/settings_page.png}
-    \caption{Pagina de setări a utilizatorului, cu paleta de \emph{accent colors} (screenshot de adăugat)}
-    \label{fig:settings_page}
+    \includegraphics[width=0.8\textwidth]{figuri/device_collection.png}
+    \caption{Pagina \emph{Device Collection}: grila tipurilor de dispozitive aprobate, propuse de comunitate, fiecare card afișând badge-uri pentru senzori și o miniatură a topologiei hardware.}
+    \label{fig:device_collection}
 \end{figure}
 
 \section{Adăugarea unui dispozitiv: \texttt{AddDeviceDialog}}
-Adăugarea unui dispozitiv reprezintă una dintre cele mai frecvente acțiuni efectuate de utilizator, motiv pentru care a fost implementată sub forma unui dialog multi-pas: \texttt{AddDeviceDialog.tsx}. Componenta este un \texttt{Dialog} construit din primitive shadcn/ui peste Radix, cu trei pași: (1) selectarea tipului de dispozitiv dintr-o listă filtrată după \texttt{approved=true}, (2) completarea formularului cu nume, adresă IP (validată local), cameră (prin \texttt{Select}) și o iconiță aleasă prin componenta \texttt{IconPicker}, (3) ecranul de confirmare și transmiterea cererii \texttt{registerDevice}. Datele necesare sunt încărcate printr-un singur apel \texttt{Promise.all([fetchDeviceTypes(), fetchRooms()])} la deschidere; după înregistrarea cu succes, \texttt{onDeviceAdded} declanșează un \texttt{window.location.reload()} — soluție simplă, care poate fi înlocuită în versiuni ulterioare cu \texttt{queryClient.invalidateQueries}. Componenta \texttt{IconPicker} este un \texttt{Popover} care expune întregul set de iconițe Lucide (peste 1500 de simboluri) împreună cu un câmp de căutare; filtrarea se face local prin \texttt{useMemo}, limitată la primele 200 de rezultate pentru a păstra timpul de randare scăzut.
-
-% FIGURĂ DE ADĂUGAT: screenshot al AddDeviceDialog la pasul 2, cu formularul
-% completat (Nume: „Bec living", IP: „192.168.1.42", Cameră: „Living Room",
-% iconița aleasă). Sugestie: poți face câte un screenshot pentru fiecare pas.
-\begin{figure}[htbp]
-    \centering
-    % \includegraphics[width=0.7\textwidth]{figuri/add_device_dialog.png}
-    \caption{Dialogul de adăugare a unui dispozitiv nou — pasul de detalii (screenshot de adăugat)}
-    \label{fig:add_device_dialog}
-\end{figure}
+Adăugarea unui dispozitiv este una dintre cele mai frecvente acțiuni ale utilizatorului. De aceea am implementat-o ca dialog multi-pas: \texttt{AddDeviceDialog.tsx}. Componenta este un \texttt{Dialog} construit din primitive shadcn/ui peste Radix, cu trei pași: (1) selectarea tipului de dispozitiv dintr-o listă filtrată după \texttt{approved=true}, (2) completarea formularului cu nume, adresă IP (validată local), cameră (prin \texttt{Select}) și o iconiță aleasă prin componenta \texttt{IconPicker}, (3) ecranul de confirmare și transmiterea cererii \texttt{registerDevice}. Datele necesare sunt încărcate printr-un singur apel \texttt{Promise.all([fetchDeviceTypes(), fetchRooms()])} la deschidere; după înregistrarea cu succes, \texttt{onDeviceAdded} declanșează un \texttt{window.location.reload()}, o soluție simplă care poate fi înlocuită în versiuni ulterioare cu \texttt{queryClient.invalidateQueries}. Componenta \texttt{IconPicker} este un \texttt{Popover} care expune întregul set de iconițe Lucide (peste 1500 de simboluri) împreună cu un câmp de căutare; filtrarea se face local prin \texttt{useMemo}, limitată la primele 200 de rezultate pentru a păstra timpul de randare scăzut.
 
 \section{Panoul de administrare}
-Pentru utilizatorii cu rol \texttt{admin} sau \texttt{owner}, secțiunea \texttt{/dashboard/admin/} expune cinci pagini de management. Toate verifică încă o dată rolul (\texttt{useUser()} + role check) și au protecții suplimentare la nivel de UI (butoanele destructive sunt mereu confirmate printr-un \texttt{AlertDialog}).
+Pentru utilizatorii cu rol \texttt{admin} sau \texttt{owner}, secțiunea \texttt{/dashboard/admin/} expune cinci pagini de management. Toate verifică încă o dată rolul (\texttt{useUser()} + role check). Există și protecții la nivel de UI: butoanele destructive sunt mereu confirmate printr-un \texttt{AlertDialog}.
 
 \subsection{Hub-ul: \texttt{/dashboard/admin/}}
-Pagina-hub (\texttt{app/dashboard/admin/page.tsx}) este o grilă de patru carduri, fiecare ducând la o sub-secțiune. Sub grila de module există un mic card „System Status" cu două indicatoare verzi pentru \emph{API Services} și \emph{Database Connected} — momentan statice, dar gândite să fie populate într-o iterație viitoare de o cerere către \texttt{GET /api/system-status/}.
+Pagina-hub (\texttt{app/dashboard/admin/page.tsx}) este o grilă de patru carduri, fiecare ducând la o sub-secțiune. Sub grila de module există un mic card „System Status" cu două indicatoare verzi pentru \emph{API Services} și \emph{Database Connected}, momentan statice, dar gândite să fie populate într-o iterație viitoare de o cerere către \texttt{GET /api/system-status/}.
 
 \subsection{Aprobarea tipurilor de dispozitive: \texttt{approvals/}}
-\texttt{app/dashboard/admin/approvals/page.tsx} reproduce vizualizarea de tip device builder \emph{în interiorul} interfeței de aprobare: două tab-uri (\emph{Pending} și \emph{Denied}), iar pentru fiecare propunere — un mini-grafic React Flow care arată topologia electrică, un preview al cardului UI rezultat (un \texttt{SmartDeviceCard} read-only) și butoanele \emph{Approve} / \emph{Deny} (acesta din urmă obligă completarea unui motiv prin \texttt{Textarea}, validat și pe server). La aprobare, \texttt{useMutation} apelează \texttt{approveDeviceType(id)}, invalidează cache-ul, iar utilizatorul propunător primește automat notificarea „Device Type Approved" (fluxul este declanșat din backend, vezi Capitolul 3).
+\texttt{app/dashboard/admin/approvals/page.tsx} reproduce vizualizarea de tip device builder \emph{în interiorul} interfeței de aprobare: două tab-uri (\emph{Pending} și \emph{Denied}), iar pentru fiecare propunere: un mini-grafic React Flow care arată topologia electrică, un preview al cardului UI rezultat (un \texttt{SmartDeviceCard} read-only) și butoanele \emph{Approve} / \emph{Deny} (acesta din urmă obligă completarea unui motiv prin \texttt{Textarea}, validat și pe server). La aprobare, \texttt{useMutation} apelează \texttt{approveDeviceType(id)}, invalidează cache-ul, iar utilizatorul propunător primește automat notificarea „Device Type Approved" (fluxul este declanșat din backend, vezi Capitolul 2).
 
-% FIGURĂ DE ADĂUGAT: screenshot al paginii de Approvals — un tip pending
-% afișat cu graful de senzori în stânga și cardul preview în dreapta, plus
-% butoanele Approve/Deny.
-\begin{figure}[htbp]
+\begin{figure}[H]
     \centering
-    % \includegraphics[width=0.95\textwidth]{figuri/admin_approvals.png}
-    \caption{Pagina de aprobare a tipurilor de dispozitive propuse de utilizatori (screenshot de adăugat)}
+    \includegraphics[width=0.95\textwidth]{figuri/admin_approvals.png}
+    \caption{Pagina de aprobare a tipurilor de dispozitive propuse de utilizatori}
     \label{fig:admin_approvals}
 \end{figure}
 
 \subsection{Gestiunea utilizatorilor: \texttt{users/}}
-\texttt{app/dashboard/admin/users/page.tsx} afișează un tabel \texttt{Table} (shadcn/ui) cu toți utilizatorii din sistem. Coloanele includ avatar, username, email, rol și un meniu de acțiuni (\texttt{DropdownMenu} cu \texttt{DropdownMenuSub} pentru schimbarea rolului). Filtrul de top oferă o căutare textuală live (controlată local) și un select pentru filtrare după rol. Url-ul acceptă un \texttt{?highlight=<id>} care evidențiază temporar un user — folosit din notificări pentru deep-linking.
+\texttt{app/dashboard/admin/users/page.tsx} afișează un tabel \texttt{Table} (shadcn/ui) cu toți utilizatorii din sistem. Coloanele includ avatar, username, email, rol și un meniu de acțiuni (\texttt{DropdownMenu} cu \texttt{DropdownMenuSub} pentru schimbarea rolului). Filtrul de top oferă o căutare textuală live (controlată local) și un select pentru filtrare după rol. Url-ul acceptă un \texttt{?highlight=<id>} care evidențiază temporar un user, folosit din notificări pentru deep-linking.
 
 \subsection{Camerele, tipurile de dispozitive, debug-ul}
-Restul sub-paginilor au design similar. Pe scurt: \texttt{admin/rooms/} face CRUD pe camere folosind \texttt{IconPicker} pentru iconițe (ștergerea unei camere lasă dispozitivele în starea „neasignată" prin \texttt{on\_delete=SET\_NULL}); \texttt{admin/device-types/} listează toate tipurile cu suport pentru import/export JSON și ștergere în bulk a celor respinse; \texttt{admin/debug/} este o pagină de \emph{debugging} unde administratorul poate suprascrie manual starea unui dispozitiv (\texttt{Textarea} cu JSON validat live), forța statusul \texttt{online}/\texttt{offline}/\texttt{error} și trimite comenzi de probă — utilă pentru dezvoltarea UI-ului fără hardware la îndemână.
+Restul sub-paginilor au design similar. \texttt{admin/rooms/} efectuează operațiuni CRUD pe camere, folosind \texttt{IconPicker} pentru iconițe (ștergerea unei camere lasă dispozitivele în starea „neasignată" prin \texttt{on\_delete=SET\_NULL}). \texttt{admin/debug/} este o pagină de \emph{debugging} care permite administratorului să suprascrie manual starea unui dispozitiv (\texttt{Textarea} cu validare JSON live), să forțeze statusul \texttt{online}/\texttt{offline}/\texttt{error} și să trimită comenzi de probă, utilă pentru iterația pe interfață fără hardware conectat.
+
+Pagina \texttt{admin/device-types/} merită o discuție separată. Aceasta listează toate tipurile (aprobate, în așteptare, respinse) cu suport pentru import/export JSON și ștergere în bulk a celor respinse. Două aspecte au necesitat tratament special. Primul: pentru un administrator, endpoint-ul \texttt{GET /device-types/} returnează \emph{toate} tipurile (inclusiv pending și denied), iar listele dedicate \texttt{/admin/device-types/pending/} și \texttt{/admin/device-types/denied/} duceau anterior la apariția unui tip recent propus în două secțiuni simultan. Soluția implementată este o de-duplicare după \texttt{id}, în care înregistrările sunt fuzionate (păstrând câmpurile grele (\texttt{firmware\_code}, \texttt{wiring\_diagram\_base64}, \texttt{documentation}) din lista completă), iar statusul autoritar provine din listele dedicate; contoarele afișate pe badge-uri sunt recalculate pe setul de-duplicat. Al doilea: panoul de revizuire detaliată afișează simultan topologia hardware, previzualizarea cardului și trei artefacte textuale (\emph{firmware}, \emph{wiring}, \emph{docs}). Versiunea inițială le stivuia vertical pe toate trei, forțând o derulare excesivă; varianta curentă le grupează într-un \texttt{Tabs} shadcn cu trei tab-uri și un corp scrollabil cu înălțime fixă (\texttt{h-[440px]}), oferind o vizualizare compactă și completă.
 
 \section{Recapitulare}
 Frontend-ul HomeForge este un Next.js obișnuit, în care complexitatea reală se concentrează în câteva fișiere bine delimitate:
 \begin{itemize}
-    \item \texttt{apiClient.js} — comunicarea cu API-ul, gestionarea JWT;
-    \item \texttt{SmartDeviceCard.tsx} — randarea dinamică a cardurilor și optimistic UI;
-    \item \texttt{useDashboardLayout.ts} — layout-ul persistent al dashboard-ului;
-    \item \texttt{DeviceUICreator.tsx} — device builder-ul cu graf vizual.
+    \item \texttt{apiClient.js}: comunicarea cu API-ul, gestionarea JWT;
+    \item \texttt{SmartDeviceCard.tsx}: randarea dinamică a cardurilor și optimistic UI;
+    \item \texttt{useDashboardLayout.ts}: layout-ul persistent al dashboard-ului;
+    \item \texttt{DeviceUICreator.tsx}: device builder-ul cu graf vizual.
 \end{itemize}
-Restul codului — sidebar, breadcrumbs, mode toggle, pagini de admin — este aproape integral declarativ, ceea ce reflectă filozofia generală a proiectului: simplitate vizibilă, transparență a fluxului de date.
+Restul codului (sidebar, breadcrumbs, mode toggle, pagini de admin) este aproape integral declarativ, ceea ce reflectă filozofia generală a proiectului: simplitate vizibilă, transparență a fluxului de date.
