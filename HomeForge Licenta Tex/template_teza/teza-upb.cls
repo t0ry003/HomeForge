@@ -17,7 +17,7 @@
 %     by the LaTex report style at 11 point.
 
 % Class description
-\RequirePackage[utf8]{inputenc}
+\RequirePackage[utf8x]{inputenc}
 \NeedsTeXFormat{LaTeX2e}
 \def\fileversion{1.0}
 \def\filedate{03/04/2011}
@@ -104,8 +104,7 @@
 % 
 \@twocolumnfalse
 %\@twosidefalse
-\raggedbottom
-\oddsidemargin -5mm
+\oddsidemargin -5mm 
 \evensidemargin -5mm  %%% was 40 and 25 -dks
 
 \marginparwidth 40bp 
@@ -165,11 +164,8 @@
 \renewcommand{\@makeschapterhead}[1]{\chapter@topskip{ \parindent 0pt \centering
 {\Large\bfseries#1}\par 
  \nobreak \chapter@bottomskip } }
-\renewcommand{\cleardoublepage}{\clearpage\if@twoside\ifodd\c@page\else
- \hbox{}\thispagestyle{empty}\newpage
- \if@twocolumn\hbox{}\thispagestyle{empty}\newpage\fi\fi\fi}
-\renewcommand\chapter{\cleardoublepage\global\@topnum\z@
- \@afterindentfalse \secdef\@chapter\@schapter}
+\renewcommand\chapter{\clearpage\global\@topnum\z@
+ \@afterindentfalse \secdef\@chapter\@schapter} 
 \def\@chapter[#1]#2{\ifnum \c@secnumdepth >\m@ne
  \refstepcounter{chapter}
  \typeout{\@chapapp\space\thechapter.}
@@ -352,7 +348,7 @@
                                                   % then who with?      
 %\newcommand{\declaratie}[1]{\gdef\@declaratie{#1}}   
 \newcommand{\director}[1]{\gdef\@director{#1}}   
-\newcommand{\facultatea}[1]{\gdef\@facultatea{#1}}
+\newcommand{\facultatea}[1]{\gdef\@facultatea{#1}}   
 \newcommand{\approvals}[1]{\gdef\@approvals{#1}}
 \newcommand{\submissionmonth}[1]{\gdef\@month{#1}}
 \newcommand{\submissionyear}[1]{\gdef\@year{#1}}
@@ -395,7 +391,7 @@
 
 \newcommand\titlep{\vbox to \textheight{%
     \vskip 12mm
-    \centering\large{Universitatea Națională de Știință și Tehnologie\\ POLITEHNICA București\\
+    \centering\large{Universitatea POLITEHNICA din București\\
 \@facultatea} \par\nobreak % DN
     \vskip 40mm
         \parskip0pt 
@@ -408,15 +404,16 @@
          }
 
         \vskip 20mm
-        {\centering\bfseries{\Huge Proiect de diplomă}
+        {\centering\bfseries{\Huge Lucrare de {\@tiplucrare}}
           \nobreak
-          \vskip 4ex plus 2ex minus 2ex
+          \vskip 4ex plus 2ex minus 2ex 
           \ifdraft%
             {VERSIUNEA DRAFT CREATĂ LA \uppercase\expandafter{\today}\\}
           \else %
-            prezentat ca cerință parțială pentru obținerea titlului de\\
-            {\it {\@titlulobtinut}} în domeniul {\it\@domeniu}\\
-            programul de studii de licență {\it\@program}
+            Prezentată ca cerință parțială pentru obținerea\\ 
+            titlului de {\it {\@titlulobtinut}}\\ 
+            în domeniul {\it\@domeniu}\\
+            programul de studii {\it\@program}
 
         \vfil
 
@@ -426,7 +423,49 @@
                {\@director} & {\@author}\\
              \end{tabular}
  \vfil
+       
+        Anul \@year\\
+   \fi %   close ifdraft
+   }}\newpage} % end titlep
 
+
+\newcommand\inscrierep{\vbox to \textheight{%
+    \vskip 12mm
+\large{Universitatea POLITEHNICA din București\\
+\@facultatea\\
+Catedra \@catedra} \par\nobreak % DN
+    \vskip 20mm
+
+        \parskip0pt 
+        \parindent0pt
+        \typeout{Title}
+        \null\nobreak\vskip 10bp 
+        {\def\baselinestretch{1}\@normalsize
+%          \centering\Large\bfseries\uppercase\expandafter{\@title}\par\nobreak
+          \centering\Large\bfseries\expandafter{\@title}\par\nobreak % DN
+         }
+
+        \vskip 20mm
+        {\centering\bfseries{\Huge Lucrare de {\@tiplucrare}}
+          \nobreak
+          \vskip 4ex plus 2ex minus 2ex 
+          \ifdraft%
+            {VERSIUNEA DRAFT CREATĂ LA \uppercase\expandafter{\today}\\}
+          \else %
+            Prezentată ca cerință parțială pentru obținerea\\ 
+            titlului de {\it {\@titlulobtinut}}\\ 
+            în domeniul {\it\@domeniu}\\
+            programul de studii {\it\@program}
+
+        \vfil
+
+             \begin{tabular}
+               {>{\raggedright}p{0.7\textwidth}r}
+               \Large{Conducător științific} & \Large{Absolvent}\\
+               {\@director} & {\@author}\\
+             \end{tabular}
+ \vfil
+       
         Anul \@year\\
    \fi %   close ifdraft
    }}\newpage} % end titlep
@@ -443,8 +482,6 @@
 
 
 \newcommand\declaratiep{%
-\cleardoublepage
-\noindent\hfill Anexa 5\par
 \null\vfil
 
 {\centering\bfseries\large Declaraţie de onestitate academică}\\
@@ -493,28 +530,15 @@ Absolvent: {\@author}
          \let\makelabel\desclabel}}
 \let\enddescriptionlist=\endlist
 
-\newcommand{\anexainscriere}[1]{\gdef\@anexainscriere{#1}}
-\newcommand\@anexainscriere{}
-
-\newcommand{\anexaonestitate}[1]{\gdef\@anexaonestitate{#1}}
-\newcommand\@anexaonestitate{}
-
 \newcommand\beforepreface{%
         \pagenumbering{roman}
         \pagestyle{empty}
         \titlep
-        \ifx\@anexainscriere\@empty\else
-            \cleardoublepage
-            \includepdf[pages=-,pagecommand={\thispagestyle{empty}}]{\@anexainscriere}
-        \fi
-        \ifx\@anexaonestitate\@empty
-            \declaratiep
-        \else
-            \cleardoublepage
-            \includepdf[pages=-,pagecommand={\thispagestyle{empty}}]{\@anexaonestitate}
-        \fi
+        % \inscrierep
+        \declaratiep
         \tableofcontents
-        %\ifcopyright\copyrightp\fi
+        %\ifcopyright\copyrightp\fi  
+        \c@page2 % set page counter so that next is 2
         \pagestyle{plain}
         \ifabstract{%
                 \typeout{Abstract}
@@ -536,20 +560,15 @@ Absolvent: {\@author}
 \newcommand{\unnumberedsection}[1]{\chapter*{#1}
         \addcontentsline{toc}{unnumberedsection}{#1}\typeout{#1}}
 
-\newcommand{\unnumberedsectioncont}[1]{{\let\cleardoublepage\clearpage
-        \unnumberedsection{#1}}}
-
 %need to call addcontentsline before @starttoc. -dks
 \renewcommand\listoffigures{\@restonecolfalse\if@twocolumn\@restonecoltrue\onecolumn
- \fi{\let\cleardoublepage\clearpage
- \chapter*{Lista figurilor\@mkboth
- {LISTA FIGURILOR}{LISTA FIGURILOR}}}
+ \fi\chapter*{Lista figurilor\@mkboth
+ {LISTA FIGURILOR}{LISTA FIGURILOR}}
  \addcontentsline{toc}{chapter}{Lista figurilor}
  \@starttoc{lof}\if@restonecol\twocolumn\fi}
 \renewcommand\listoftables{\@restonecolfalse\if@twocolumn\@restonecoltrue\onecolumn
- \fi{\let\cleardoublepage\clearpage
- \chapter*{Lista tabelelor\@mkboth
- {LISTA TABELELOR}{LISTA TABELELOR}}}
+ \fi\chapter*{Lista tabelelor\@mkboth
+ {LISTA TABELELOR}{LISTA TABELELOR}}
  \addcontentsline{toc}{chapter}{Lista tabelelor}
  \@starttoc{lot}\if@restonecol\twocolumn\fi}
 
@@ -585,11 +604,12 @@ Absolvent: {\@author}
                 \let\addvspace=\saveaddvspace
         \fi
         \ifabbreviationspage{\def\baselinestretch{1}\@normalsize
-                \unnumberedsectioncont{Lista acronimelor}
+                \unnumberedsection{Lista acronimelor}
                 \@abbreviations}
         \fi
-        \cleardoublepage
+        \newpage
         \afterprefacetrue
+        \c@page0 % set page counter so that next is 1
         \pagenumbering{arabic}
         \pagestyle{topright}
         }
@@ -608,7 +628,7 @@ Absolvent: {\@author}
 {\egroup\end@float}
 
 % Redefine appendix to print Appendix []. ... page # in table of contents.
-\newcommand{\appnumberline}[1]{Anexa #1.\space}
+\newcommand{\appnumberline}[1]{\advance\hangindent\@tempdima \hbox{Anexa #1. }}
 \renewcommand\appendix{\par
  \setcounter{chapter}{0}
  \setcounter{section}{0}

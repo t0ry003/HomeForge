@@ -1,14 +1,12 @@
-\documentclass[12pt, a4paper, oneside, romanian]{teza-upb}
+\documentclass[12pt, a4paper, twoside, romanian]{teza-upb}
 
 \setcounter{secnumdepth}{3}
 \setcounter{tocdepth}{3}
 
 \usepackage{babel}
 \usepackage{graphicx}
-\usepackage{float}  % specificatorul [H]: figuri/tabele fixate exact la locul lor, în ordine
-\usepackage{pdfpages}  % inserarea Anexei 1/2 (formular de înscriere) ca pagini PDF
-% \usepackage{svg}  % dezactivat: inkscape nu este disponibil ca subproces;
-                    % oricum nu sunt includeri \includesvg în lucrare
+\usepackage{float}
+\usepackage{pdfpages}
 \usepackage{xcolor}
 \usepackage{setspace}
 \usepackage[
@@ -33,16 +31,12 @@
 \providecommand*{\toclevel@unnumberedsection}{1}
 \makeatother
 
-% Toleranță sporită pentru spargerea liniilor: evită overfull boxes la
-% identificatori monospace lungi (căi de fișiere, nume de funcții).
 \setlength{\emergencystretch}{4em}
 \tolerance=3000
 \hbadness=3000
 \sloppy
 \renewcommand{\UrlBreaks}{\do\/\do\.\do\:\do\_\do\-\do\?\do\=\do\&\do\#}
 
-% Spațiere conformă cu regulamentul ETTI 2026 (Cap. 3.2.e: 1 – maxim 1.2 rânduri).
-% Folosim single spacing (1.0), exact ca în template-ul oficial al facultății.
 \singlespacing
 
 \setminted{
@@ -50,12 +44,10 @@
   breaklines,
   fontsize=\scriptsize,
   frame=leftline,
-  framesep=2mm, 
+  framesep=2mm,
   tabsize=2,
   encoding=utf8
 }
-
-% \svgsetup{...}  % dezactivat odată cu pachetul svg
 
 \input{capitole/00_config_resurse}
 
@@ -72,17 +64,14 @@
 \program{RST}
 \titlulobtinut{Inginer}
 \director{Ș.L. Dr. Ing. Laurențiu Boicescu}
-\logostanga{logo/unstpb_logo.png}
-\logodreapta{logo/ETTI-LOGO-A-1.png}
 
 \submissionmonth{Iunie}
 \submissionyear{2026}
 
-% Formularul de înscriere a temei (Anexa 1/2), inserat după pagina de titlu (Cap. 3.1.b).
 \anexainscriere{anexa1_tema.pdf}
 
-% Regula ETTI 2026 (Cap. 3.2.h): numărul de pagină apare în subsol, centrat,
-% și doar începând cu Introducerea. Paginile preliminare rămân fără număr.
+\anexaonestitate{anexa 5.pdf}
+
 \makeatletter
 \renewcommand{\ps@plain}{\let\@mkboth\@gobbletwo
   \def\@oddhead{}\def\@evenhead{}\def\@oddfoot{}\def\@evenfoot{}}
@@ -119,10 +108,10 @@
   JSX = JavaScript XML (sintaxă XML în JavaScript)\\
   JWT = JSON Web Token (token web în format JSON)\\
   LAN = Local Area Network (rețea locală)\\
+  M2M = Machine-to-Machine (comunicație mașină-la-mașină)\\
   MAC = Media Access Control (control al accesului la mediu, adresă fizică)\\
   MCU = Microcontroller Unit (unitate de microcontroler)\\
   mDNS = Multicast DNS (DNS prin multicast)\\
-  M2M = Machine-to-Machine (comunicație mașină-la-mașină)\\
   MQTT = Message Queuing Telemetry Transport (protocol de mesagerie de tip publish/subscribe)\\
   NVS = Non-Volatile Storage (memorie nevolatilă)\\
   OASIS = Organization for the Advancement of Structured Information Standards (organizație de standardizare)\\
@@ -154,7 +143,6 @@
 }
 \afterpreface
 
-% Din corpul lucrării (de la Introducere): numărul de pagină în subsol, centrat.
 \makeatletter
 \renewcommand{\ps@plain}{\let\@mkboth\@gobbletwo
   \def\@oddhead{}\def\@evenhead{}%
@@ -174,9 +162,6 @@
 \include{capitole/7_concluzii}
 
 % \nocite{*}
-% Bibliografia se afișează cu spațiere simplă, conform cerințelor UPB
-% (în teza-upb.cls, mediul \thebibliography setează \baselinestretch{1};
-% biblatex are propriul mediu, deci aplicăm setarea explicit).
 {\singlespacing
 \printbibliography[heading=bibintoc,title={Bibliografie}]
 }

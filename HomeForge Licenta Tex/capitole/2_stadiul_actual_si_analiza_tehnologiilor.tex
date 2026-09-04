@@ -3,13 +3,13 @@
 \section{De la HTTP la MQTT: comunicația în IoT}
 La prima vedere, un microcontroler care raportează date către un server este o aplicație web ca oricare alta. În realitate, dacă încercăm să folosim HTTP/REST pentru un nod IoT, costurile devin rapid prohibitive.
 
-Modelul cerere-răspuns presupune că senzorul deschide o conexiune TCP nouă pentru fiecare mesaj. Trimite un header HTTP care, cu cookie-uri și meta-informații, poate ajunge la câteva sute de bytes, apoi așteaptă răspunsul și închide conexiunea. Iar când serverul vrea să trimită o comandă către dispozitiv, problema se mută. HTTP nu suportă push nativ. Fie clientul interoghează ciclic (\textit{polling}), fie se trece la WebSocket-uri, ceea ce ne aduce, de fapt, foarte aproape de paradigma \textit{publish/subscribe} - un model în care emițătorii (\textit{publishers}) și receptorii (\textit{subscribers}) nu comunică direct, ci printr-un intermediar care rutează mesajele pe baza unor \textit{topicuri}, eliminând nevoia unei conexiuni permanente client-server.
+Modelul cerere-răspuns presupune că senzorul deschide o conexiune TCP nouă pentru fiecare mesaj. Trimite un header HTTP care, cu cookie-uri și meta-informații, poate ajunge la câteva sute de bytes, apoi așteaptă răspunsul și închide conexiunea. Iar când serverul vrea să trimită o comandă către dispozitiv, problema se mută. HTTP nu suportă push nativ. Fie clientul interoghează ciclic (\textit{polling}), fie se trece la WebSocket-uri, ceea ce ne aduce, de fapt, foarte aproape de paradigma \textit{publish/subscribe} - un model în care emițătorii (\textit{publishers}) și receptorii (\textit{subscribers}) nu comunică direct, ci printr-un intermediar care rutează mesajele pe baza unor \textit{topicuri}, eliminând nevoia unei conexiuni permanente client-server (Figura~\ref{fig:mqtt_vs_http}).
 
 MQTT alege o cale diferită. Există un broker central, iar fiecare client (senzor sau aplicație) menține o singură conexiune TCP persistentă cu el. Mesajele se publică pe „topice” (șiruri ierarhice de forma \texttt{homeforge/devices/AABBCCDDEEFF/state}), iar brokerul rutează automat fiecare publicare către toți abonații topicului respectiv. Antetul minim al unui pachet MQTT este de doar 2 bytes \cite{mqtt_standard_iot}. În plus, protocolul oferă nativ trei niveluri de QoS și un mecanism de \textit{Last Will and Testament}, prin care brokerul detectează automat deconectarea unui nod.
 
 Un studiu comparativ al principalelor protocoale de mesagerie pentru IoT (MQTT, CoAP, AMQP și HTTP) arată o împărțire clară. MQTT și CoAP se potrivesc rețelelor de senzori cu lățime de bandă redusă și nodurilor cu resurse limitate, în timp ce HTTP rămâne firesc pentru integrarea cu sisteme web tradiționale \cite{mqtt_vs_http_iot_perf}. Un alt \textit{survey}, dedicat utilizării MQTT în sistemele M2M și IoT, inventariază implementările uzuale de broker: Mosquitto, HiveMQ, EMQ X, VerneMQ. Dintre ele, Mosquitto este una dintre cele mai răspândite alegeri, datorită amprentei reduse de resurse și a faptului că rulează inclusiv pe un Raspberry Pi \cite{mqtt_standard_iot}.
 
-\begin{figure}[H]
+\begin{figure}[htb]
     \centering
     \includegraphics[width=0.9\textwidth]{figuri/MQTT_vs_REST.pdf}
     \caption{Comparație arhitecturală între modelul HTTP cerere-răspuns și modelul \textit{publish/subscribe} bazat pe MQTT}
@@ -23,7 +23,7 @@ Un studiu comparativ al principalelor protocoale de mesagerie pentru IoT (MQTT, 
 \end{itemize}
 Frontend-ul nu vorbește direct cu brokerul MQTT; el comunică doar cu API-ul REST al Django, iar backend-ul este cel care traduce între cele două lumi.
 
-\begin{table}[H]
+\begin{table}[htb]
     \centering
         {\setstretch{1.0}
     \footnotesize
@@ -57,7 +57,7 @@ Pentru un utilizator final care vrea o casă inteligentă completă, oricare din
 Prin urmare, HomeForge nu intră în competiție cu Home Assistant pe terenul lui. Acoperă o zonă diferită: a celui care vrea să prototipeze rapid, să înțeleagă fluxul de date end-to-end și, eventual, să pornească de aici către un sistem mai serios.
 
 \section{Justificarea stivei tehnologice}
-Alegerile tehnologice nu sunt accidentale. Fiecare componentă rezolvă o problemă concretă, întâlnită în implementare. Mai jos justific principalele opțiuni, care se vor regăsi în capitolele următoare.
+Alegerile tehnologice nu sunt accidentale. Fiecare componentă rezolvă o problemă concretă, întâlnită în implementare. Mai jos justific principalele opțiuni, care se vor regăsi în capitolele următoare; stiva rezultată, cu straturile decuplate prin MQTT și REST, este arătată în Figura~\ref{fig:tech_stack}.
 
 \subsection{Backend: Python, Django și DRF}
 Python a fost ales pentru că oferă cele mai avansate biblioteci pentru manipularea datelor heterogene (\texttt{paho-mqtt}, \texttt{Pillow}, \texttt{ArduinoJson} la nivel de embed). Django adaugă peste asta un ORM stabil, un sistem de migrații versionabil și protecții implicite împotriva atacurilor uzuale (CSRF, XSS, SQL injection). Django REST Framework completează stack-ul cu \textit{serializers}, \textit{viewsets} și \textit{permission classes}, care reduc semnificativ codul boilerplate atunci când construiești un API.
@@ -98,9 +98,9 @@ Problema „pe calculatorul meu funcționează” este reală în orice proiect 
 \end{itemize}
 Pentru dezvoltare rapidă există și varianta \texttt{./dev.sh}, care pornește backend-ul și frontend-ul direct pe mașina gazdă, ocolind containerele.
 
-\begin{figure}[H]
+\begin{figure}[htb]
     \centering
-    \includegraphics[width=0.8\textwidth]{figuri/stiva_tehnologica.pdf}
+    \includegraphics[width=0.45\textwidth]{figuri/stiva_tehnologica.pdf}
     \caption{Stiva tehnologică decuplată a platformei HomeForge}
     \label{fig:tech_stack}
 \end{figure}

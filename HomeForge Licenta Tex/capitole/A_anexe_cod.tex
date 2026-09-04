@@ -1,51 +1,45 @@
 \appendix
-% Anexele lucrării folosesc litere (Anexa A, B, C, ...), ca să nu se confunde cu
-% formularele oficiale ETTI inserate (Anexa 1 = formular de înscriere, Anexa 5 =
-% declarație de onestitate). \Alph este comportamentul implicit din clasa teza-upb.
 
-% Fiecare anexă conține integral câte un fișier sursă reprezentativ al platformei,
-% reprodus din codul aplicației (comentariile descriptive au fost păstrate).
+\chapter{Backend}
 
-% ============================ BACKEND ============================
-
-\chapter{Backend: modelele de date (\texttt{api/models.py})}
+\section{Modelele de date (\texttt{api/models.py})}
 \label{anexa:models}
 \inputminted{python}{cod/models.py}
 
-\chapter{Backend: serializere și validare (\texttt{api/serializers.py})}
+\section{Serializere și validare (\texttt{api/serializers.py})}
 \label{anexa:serializers}
 \inputminted{python}{cod/serializers.py}
 
-\chapter{Backend: permisiuni RBAC (\texttt{api/permissions.py})}
+\section{Permisiuni RBAC (\texttt{api/permissions.py})}
 \label{anexa:permissions}
 \inputminted{python}{cod/permissions.py}
 
-\chapter{Backend: daemonul MQTT (\texttt{api/management/commands/mqtt\_listener.py})}
+\section{Daemonul MQTT (\texttt{api/management/commands/mqtt\_listener.py})}
 \label{anexa:mqtt_listener}
 \inputminted{python}{cod/mqtt_listener.py}
 
-\chapter{Backend: clientul MQTT de publicare (\texttt{api/mqtt\_client.py})}
+\section{Clientul MQTT de publicare (\texttt{api/mqtt\_client.py})}
 \label{anexa:mqtt_client}
 \inputminted{python}{cod/mqtt_client.py}
 
-\chapter{Backend: adaptorul Fronius pentru sisteme solare (\texttt{api/solar/providers/fronius.py})}
+\section{Adaptorul Fronius pentru sisteme solare (\texttt{api/solar/providers/fronius.py})}
 \label{anexa:fronius}
 \inputminted{python}{cod/fronius.py}
 
-% ============================ FRONTEND ============================
+\chapter{Frontend}
 
-\chapter{Frontend: comunicarea cu API-ul și gestiunea JWT (\texttt{lib/apiClient.js})}
+\section{Comunicarea cu API-ul și gestiunea JWT (\texttt{lib/apiClient.js})}
 \label{anexa:apiclient}
 \inputminted{javascript}{cod/apiClient.js}
 
-\chapter{Frontend: cardul inteligent și optimistic UI (\texttt{components/devices/SmartDeviceCard.tsx})}
+\section{Cardul inteligent și optimistic UI (\texttt{components/devices/SmartDeviceCard.tsx})}
 \label{anexa:smartdevicecard}
 \inputminted{typescript}{cod/SmartDeviceCard.tsx}
 
-\chapter{Frontend: hook-ul de layout al dashboard-ului (\texttt{hooks/useDashboardLayout.ts})}
+\section{Hook-ul de layout al dashboard-ului (\texttt{hooks/useDashboardLayout.ts})}
 \label{anexa:dashboardlayout}
 \inputminted{typescript}{cod/useDashboardLayout.ts}
 
-\chapter{Frontend: editorul vizual de tipuri de dispozitive (\texttt{device-builder/DeviceUICreator.tsx})}
+\section{Editorul vizual de tipuri de dispozitive (\texttt{device-builder/DeviceUICreator.tsx})}
 \label{anexa:deviceuicreator}
 \inputminted{typescript}{cod/DeviceUICreator.tsx}

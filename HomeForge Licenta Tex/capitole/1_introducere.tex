@@ -6,9 +6,9 @@
 
 Adopția acestor tehnologii nu depinde doar de cât de avansat este hardware-ul, ci și de cât de mult au încredere utilizatorii în sistem. O analiză a cercetărilor privind adopția caselor inteligente arată că factorii decisivi sunt utilitatea percepută, ușurința de utilizare și îngrijorările legate de confidențialitate \cite{marikyan_smarthome_2019}. Observația contează pentru lucrarea de față. Ea explică de ce o platformă transparentă, locală și inspectabilă de utilizator, are sens chiar și acolo unde există alternative comerciale.
 
-Pe partea de comunicație, soluțiile actuale s-au mutat în mare parte de la modelul cerere-răspuns specific HTTP la o paradigmă asincronă bazată pe \textit{publish/subscribe}. Protocolul MQTT (Message Queuing Telemetry Transport) a devenit standardul \textit{de facto} pentru schimbul de mesaje între microcontrolere și server. Două motive cântăresc cel mai mult: overhead-ul redus și faptul că un singur broker poate distribui eficient mesaje la mulți abonați \cite{mqtt_standard_iot}. În arhitectura HomeForge, MQTT joacă exact acest rol: este magistrala prin care firmware-ul ESP32 comunică cu backend-ul Django.
+Pe partea de comunicație, soluțiile actuale s-au mutat în mare parte de la modelul cerere-răspuns specific HTTP la o paradigmă asincronă bazată pe \textit{publish/subscribe}. Protocolul MQTT (Message Queuing Telemetry Transport) a devenit standardul \textit{de facto} pentru schimbul de mesaje între microcontrolere și server. Două motive cântăresc cel mai mult: overhead-ul redus și faptul că un singur broker poate distribui eficient mesaje la mulți abonați \cite{mqtt_standard_iot}. În arhitectura HomeForge, MQTT joacă exact acest rol: este magistrala prin care firmware-ul ESP32 comunică cu backend-ul Django (Figura~\ref{fig:concept_smarthome}).
 
-\begin{figure}[H]
+\begin{figure}[htb]
     \centering
     \includegraphics[width=0.9\textwidth]{figuri/schema_casa_inteligenta.pdf}
     \caption{Schema conceptuală a unei case inteligente folosind HomeForge }
@@ -26,7 +26,7 @@ Marea majoritate a produselor de pe piață (Google Nest, Amazon Alexa, Tuya, So
 
 Răspunsul cercetării și al comunității open-source la aceste limitări este \textit{Edge Computing}. Pe scurt: muți logica și stocarea cât mai aproape de sursa datelor, ideal chiar în rețeaua locală a utilizatorului \cite{edge_computing_iot_2020}. HomeForge se înscrie în această direcție, dar adaugă un obiectiv suplimentar pe care îl detaliez în secțiunea următoare: \textit{transparența} sistemului.
 
-\begin{table}[H]
+\begin{table}[htb]
     \centering
         \renewcommand{\arraystretch}{1.4}
     \small
@@ -66,7 +66,7 @@ Pe partea de frontend (Next.js + React), s-a urmărit ca utilizatorul să nu aș
 \subsection*{Sandbox educațional}\phantomsection\addcontentsline{toc}{subsection}{Sandbox educațional}
 Codul este menținut minimalist. Backend-ul este o aplicație Django REST Framework standard, structura bazei de date poate fi inspectată prin migrațiile Django, traficul MQTT poate fi observat din linia de comandă cu \texttt{mosquitto\_sub}, iar întreaga aplicație rulează prin Docker Compose. Astfel, fluxul de la apăsarea unui buton în interfața web până la comutarea fizică a unui releu poate fi urmărit pas cu pas. Nu e nevoie să traversezi straturi succesive de abstractizare.
 
-\begin{figure}[H]
+\begin{figure}[htb]
     \centering
     \includegraphics[width=0.4\textwidth]{figuri/HomeForge_v2_color.pdf}
     \caption{Identitatea vizuală a platformei HomeForge}

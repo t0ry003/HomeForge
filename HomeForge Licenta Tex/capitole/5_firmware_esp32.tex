@@ -3,13 +3,13 @@
 \section{Alegerea platformei: de ce ESP32}
 Tot firmware-ul livrat cu HomeForge este țintit pe familia Espressif ESP32. Decizia se bazează pe patru argumente practice, nu pe vreo afinitate de brand:
 \begin{enumerate}
-    \item \textbf{Cost.} Modulele ESP32-WROOM-32 (DevKit V1) costă aproximativ 5 euro la achiziție unitară, un termen acceptabil pentru un proiect didactic în care studentul probabil va arde măcar o placă învățând.
+    \item \textbf{Cost.} Modulele ESP32-WROOM-32 (DevKit V1, Figura~\ref{fig:esp32_devkit}) costă aproximativ 5 euro la achiziție unitară, un termen acceptabil pentru un proiect didactic în care studentul probabil va arde măcar o placă învățând.
     \item \textbf{Wi-Fi integrat.} Spre deosebire de Arduino UNO, ESP32 include nativ Wi-Fi (802.11 b/g/n), Bluetooth Low Energy și un dual-core la 240 MHz. Nu este nevoie de niciun \textit{shield} adițional pentru conectarea la LAN.
     \item \textbf{Compatibilitate cu Arduino IDE.} Toolchain-ul ESP-IDF este pentru cei care vor să meargă în profunzime; pentru un demonstrator didactic este suficient framework-ul Arduino-ESP32, cu funcții familiare (\texttt{setup()}, \texttt{loop()}).
     \item \textbf{Comunitate vastă.} Biblioteci precum \texttt{PubSubClient} (pentru MQTT), \texttt{ArduinoJson} (pentru parsing/serializare JSON) și \texttt{DHT} sunt utilizate de zeci de mii de proiecte și au documentație abundentă.
 \end{enumerate}
 
-\begin{figure}[H]
+\begin{figure}[htb]
     \centering
     \includegraphics[width=0.7\textwidth]{figuri/esp32_devkit_overview.jpg}
     \caption{Modulul ESP32 DevKit V1 utilizat în prototipurile HomeForge}
@@ -245,8 +245,8 @@ Cele patru variante împart o singură categorie funcțională clară. \textbf{E
 
 Cheile cu care fiecare firmware publică datele pe broker sunt constantele \texttt{VAR\_TEMP = "temperature"}, \texttt{VAR\_HUMID = "humidity"}, \texttt{VAR\_PRESSURE = "pressure"} și \texttt{VAR\_RELAY = "relay\_1"}. Daemon-ul \texttt{mqtt\_listener} de pe partea de backend mapează aceste nume canonice către identificatorii dinamici generați de device builder pentru fiecare widget al cardului, astfel încât reorganizarea widget-urilor în UI nu impune reflash-area firmware-ului.
 
-Pentru fiecare variantă, schema electrică este distribuită ca imagine \texttt{base64} în câmpul \texttt{wiring\_diagram\_base64} al obiectului JSON, însoțită opțional de o descriere textuală în \texttt{wiring\_diagram\_text}. Schema electrică minimală pentru varianta \emph{ESP32 5V Relay} este sintetizată în Tabelul \ref{tab:esp32_relay_pinout}:
-\begin{table}[H]
+Pentru fiecare variantă, schema electrică este distribuită ca imagine \texttt{base64} în câmpul \texttt{wiring\_diagram\_base64} al obiectului JSON, însoțită opțional de o descriere textuală în \texttt{wiring\_diagram\_text}. Schema electrică minimală pentru varianta \emph{ESP32 5V Relay} este sintetizată în Tabelul \ref{tab:esp32_relay_pinout}, iar montajele pe breadboard ale tuturor celor patru variante sunt arătate în Figura \ref{fig:wiring_diagrams}:
+\begin{table}[htb]
     \centering
         \renewcommand{\arraystretch}{1.2}
     \small
@@ -261,7 +261,7 @@ Pentru fiecare variantă, schema electrică este distribuită ca imagine \texttt
     \label{tab:esp32_relay_pinout}
 \end{table}
 
-\begin{figure}[H]
+\begin{figure}[htb]
     \centering
     \begin{subfigure}[t]{0.48\textwidth}
         \centering
@@ -300,6 +300,3 @@ Pentru a compila firmware-urile, mediul Arduino IDE folosește mai multe bibliot
 
 \section{Limitări ale implementării curente}
 Pentru claritate, enumăr aici ce nu este implementat în firmware-ul curent. Nu folosesc task-uri FreeRTOS create explicit: bucla \texttt{loop()} împreună cu \texttt{PubSubClient.loop()} acoperă volumul actual de logică. Nu există un \texttt{Captive Portal} pentru configurarea Wi-Fi la prima pornire, SSID-ul și parola fiind înlocuite direct în cod prin placeholder-uri. Comunicarea MQTT nu folosește TLS, ceea ce este acceptabil într-un LAN privat, dar pentru un deployment de producție ar trebui adăugate certificate și \texttt{WiFiClientSecure}. Actualizarea OTA nu este implementată, re-flash-area făcându-se prin USB-UART. Niciuna dintre aceste limitări nu împiedică utilizarea curentă a platformei și sunt menționate ca direcții posibile de extindere.
-
-\section{Recapitulare}
-Firmware-ul ESP32 este, ca volum de cod, cea mai redusă componentă a platformei: fiecare sketch are între 150 și 200 de linii. Cu toate acestea, este nivelul la care decizia arhitecturală a HomeForge devine direct observabilă, comunicarea trecând exclusiv prin MQTT, într-un format de mesaje transparent. Traficul unei plăci poate fi inspectat prin \texttt{mosquitto\_sub -t "homeforge/devices/+/state"}, iar conținutul mesajelor recepționate de backend se potrivește cu corespondentul lor de pe placă. În contextul unui proiect cu obiective didactice, această observabilitate constituie un atribut central al platformei, conform argumentelor prezentate în Introducere.

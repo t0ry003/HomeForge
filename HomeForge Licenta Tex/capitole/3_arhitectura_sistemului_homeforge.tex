@@ -1,7 +1,7 @@
 \chapter{Arhitectura backend-ului HomeForge}
 
 \section{Vedere de ansamblu}
-Backend-ul HomeForge este un serviciu Django cu două roluri simultane. Expune un API REST (în accepțiunea originală a lui Roy Fielding, cel care a introdus stilul REST în teza sa de doctorat, ca stil arhitectural orientat pe resurse, reprezentări și mesaje auto-descriptive \cite{fielding_rest_dissertation}), consumat de aplicația web Next.js. În paralel, rulează un proces dedicat care ascultă mesajele MQTT publicate de microcontrolere. Cele două canale de comunicație sunt complet decuplate: dispozitivele fizice nu comunică direct cu frontend-ul, iar frontend-ul nu deschide o conexiune MQTT proprie.
+Backend-ul HomeForge este un serviciu Django cu două roluri simultane. Expune un API REST (în accepțiunea originală a lui Roy Fielding, cel care a introdus stilul REST în teza sa de doctorat, ca stil arhitectural orientat pe resurse, reprezentări și mesaje auto-descriptive \cite{fielding_rest_dissertation}), consumat de aplicația web Next.js. În paralel, rulează un proces dedicat care ascultă mesajele MQTT publicate de microcontrolere. Cele două canale de comunicație sunt complet decuplate: dispozitivele fizice nu comunică direct cu frontend-ul, iar frontend-ul nu deschide o conexiune MQTT proprie (Figura~\ref{fig:arhitectura_generala}).
 
 Alegerea REST pentru comunicația dintre browser și backend, respectiv a MQTT pentru cea dintre backend și hardware, este justificată de profilul fiecărui canal de comunicație. O analiză comparativă între REST și stilurile de tip \emph{big web services} (SOAP, WS-*) arată o delimitare clară. REST este indicat când clienții au nevoie de un model simplu, \textit{stateless} și ușor de cache-uit. SOAP și WS-* devin relevante doar când sunt necesare mecanisme avansate de transport, precum tranzacțiile distribuite sau mesageria cu garanții formale de livrare \cite{pautasso_rest_vs_ws}. Pentru un dashboard care interoghează lista de dispozitive și transmite comenzi punctuale, REST oferă un model potrivit. Pentru telemetria continuă provenită de la senzori, REST devine însă inadecvat, întrucât nu suportă nativ \textit{push}-ul de la server către client și nici conexiuni persistente, iar aceste cerințe sunt acoperite de MQTT.
 
@@ -15,7 +15,7 @@ Alegerea REST pentru comunicația dintre browser și backend, respectiv a MQTT p
 
 Atunci când brokerul, baza de date și serverul rulează în Docker, brokerul este pornit în același container cu Django, de către scriptul \texttt{run.sh}. Acesta pornește în ordine: \texttt{dbus-daemon}, \texttt{avahi-daemon}, \texttt{mosquitto}, apoi lansează \texttt{mqtt\_listener} în background și termină cu serverul de dezvoltare Django. Pentru un mediu local fără Docker, se folosește scriptul \texttt{dev.sh}, care pornește doar Django (presupunând că Mosquitto este deja instalat ca serviciu local).
 
-\begin{figure}[H]
+\begin{figure}[htb]
     \centering
     \includegraphics[width=1\textwidth]{figuri/arhitectura_generala.pdf}
     \caption{Diagrama de arhitectură a backend-ului HomeForge}
@@ -23,7 +23,7 @@ Atunci când brokerul, baza de date și serverul rulează în Docker, brokerul e
 \end{figure}
 
 \section{Modelele de date}
-Toate modelele aplicației sunt definite în \texttt{models.py}. Mai jos descriu doar entitățile cheie; pentru detalii complete (indexuri, constrângeri, semnale), recomand parcurgerea directă a fișierului.
+Toate modelele aplicației sunt definite în \texttt{models.py}, reprodus integral în Anexa~\ref{anexa:models}.
 
 \subsection{Utilizator și profil}
 Django oferă deja un model \texttt{User} complet. Pe lângă acesta, am definit un model \texttt{Profile} legat \texttt{OneToOne} de utilizator, care stochează rolul, culoarea de accent a interfeței și avatarul:
@@ -44,7 +44,7 @@ class Profile(models.Model):
 \end{minted}
 Două semnale \texttt{post\_save} se ocupă de crearea automată a profilului la înregistrarea unui utilizator nou, iar un semnal \texttt{pre\_save} șterge fizic avatarul vechi atunci când se încarcă unul nou. Este un detaliu minor, dar util pentru a evita acumularea de fișiere orfane.
 
-Mecanismul de tip \textit{first-user-becomes-owner} este implementat în \texttt{serializers.py}: la primul \texttt{POST /register/}, dacă nu există niciun utilizator în baza de date, contul nou primește rolul \texttt{owner}, \texttt{is\_staff} și \texttt{is\_superuser}. Toți utilizatorii ulteriori sunt creați cu rolul \texttt{user} și pot fi promovați doar manual de un administrator. Detaliul este expus public prin endpoint-ul \texttt{GET /api/system-status/}, care returnează \texttt{\{"is\_fresh": true\}} atunci când baza de date nu conține niciun utilizator. Frontend-ul îl folosește pentru a redirecționa primul vizitator către un \textit{setup wizard}.
+Mecanismul de tip \textit{first-user-becomes-owner} este implementat în \texttt{serializers.py} (reprodus integral în Anexa~\ref{anexa:serializers}): la primul \texttt{POST /register/}, dacă nu există niciun utilizator în baza de date, contul nou primește rolul \texttt{owner}, \texttt{is\_staff} și \texttt{is\_superuser}. Toți utilizatorii ulteriori sunt creați cu rolul \texttt{user} și pot fi promovați doar manual de un administrator. Detaliul este expus public prin endpoint-ul \texttt{GET /api/system-status/}, care returnează \texttt{\{"is\_fresh": true\}} atunci când baza de date nu conține niciun utilizator. Frontend-ul îl folosește pentru a redirecționa primul vizitator către un \textit{setup wizard}.
 
 \subsection{Cameră și dispozitiv}
 Modelele \texttt{Room} și \texttt{Device} sunt minimaliste. O cameră are un nume, o iconiță (clasa unui icon FontAwesome) și un utilizator-proprietar; numele este unic la nivel de utilizator. Modelul \texttt{Device} este însă piesa centrală a sistemului:
@@ -156,7 +156,7 @@ class UppercaseValidator:
 Fișierul \texttt{validators.py} este înregistrat în \texttt{AUTH\_PASSWORD\_VALIDATORS} din \texttt{settings.py}.
 
 \subsection{Controlul accesului pe roluri (RBAC)}
-Permisiunile sunt implementate ca clase DRF în \texttt{permissions.py}:
+Permisiunile sunt implementate ca clase DRF în \texttt{permissions.py} (Anexa~\ref{anexa:permissions}):
 \begin{minted}{python}
 class IsOwner(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -212,7 +212,7 @@ La crearea unui dispozitiv (\texttt{POST /api/devices/}), \texttt{DeviceListCrea
 Există și o protecție specifică Docker: dacă IP-ul detectat este într-o subrețea Docker (\texttt{172.x.x.x}) iar dispozitivul este în LAN (\texttt{192.168.x.x}), backend-ul renunță la auto-configurare și loghează un avertisment. Soluția este setarea explicită a variabilei \texttt{MQTT\_BROKER\_HOST} la IP-ul real al gazdei.
 
 \section{Daemonul MQTT (\texttt{mqtt\_listener})}
-Procesul care leagă lumea hardware de baza de date este implementat ca o comandă Django în \texttt{mqtt\_listener.py}. Pornește un client \texttt{paho-mqtt}, se abonează la \texttt{homeforge/devices/+/state}, intră într-o buclă infinită și verifică la fiecare 10 secunde dispozitivele care nu mai dau semne de viață.
+Procesul care leagă lumea hardware de baza de date este implementat ca o comandă Django în \texttt{mqtt\_listener.py} (Anexa~\ref{anexa:mqtt_listener}). Pornește un client \texttt{paho-mqtt}, se abonează la \texttt{homeforge/devices/+/state}, intră într-o buclă infinită și verifică la fiecare 10 secunde dispozitivele care nu mai dau semne de viață.
 
 \subsection{Buclă principală și \textit{watchdog}}
 \begin{minted}{python}
@@ -270,7 +270,7 @@ def map_standard_key(self, device, key):
 Astfel, dacă șablonul vizual al unui termostat are un widget de tip \texttt{TEMPERATURE} cu \texttt{variable\_mapping = "temperature-1771357525497"}, valoarea \texttt{"temperature": 23.5} primită de la firmware ajunge în \texttt{current\_state} sub această cheie dinamică, iar widget-ul o afișează corect.
 
 \subsection{Comanda inversă (de la server către dispozitiv)}
-Atunci când un utilizator apasă un toggle pe interfață, browser-ul trimite un \texttt{PATCH /api/devices/<id>/state/}. Backend-ul folosește o instanță singleton de client MQTT (\texttt{mqtt\_client.py}) pentru a publica payload-ul pe \texttt{homeforge/devices/<mac>/command}:
+Atunci când un utilizator apasă un toggle pe interfață, browser-ul trimite un \texttt{PATCH /api/devices/<id>/state/}. Backend-ul folosește o instanță singleton de client MQTT (\texttt{mqtt\_client.py}, Anexa~\ref{anexa:mqtt_client}) pentru a publica payload-ul pe \texttt{homeforge/devices/<mac>/command}:
 \begin{minted}{python}
 class MQTTClient:
     _instance = None
@@ -376,7 +376,7 @@ class BaseSolarProvider:
     def get_inverters(self) -> list[dict]: raise NotImplementedError
 \end{minted}
 
-Prima implementare concretă, \texttt{FroniusProvider}, mapează răspunsurile API-ului oficial Fronius Solar V1 \cite{fronius_solar_api} (în special endpoint-ul \texttt{GetPowerFlowRealtimeData.fcgi}) pe schema normalizată. Pachetul Fronius are o anvelopă \texttt{Head}/\texttt{Body} standardizată, cu \texttt{Status.Code = 0} drept semnal de succes; câmpurile numerice sunt convertite atent prin \texttt{\_to\_float()}, pentru a păstra distincția între zero și valoare lipsă (\texttt{null}).
+Prima implementare concretă, \texttt{FroniusProvider} (\texttt{fronius.py}, Anexa~\ref{anexa:fronius}), mapează răspunsurile API-ului oficial Fronius Solar V1 \cite{fronius_solar_api} (în special endpoint-ul \texttt{GetPowerFlowRealtimeData.fcgi}) pe schema normalizată. Pachetul Fronius are o anvelopă \texttt{Head}/\texttt{Body} standardizată, cu \texttt{Status.Code = 0} drept semnal de succes; câmpurile numerice sunt convertite atent prin \texttt{\_to\_float()}, pentru a păstra distincția între zero și valoare lipsă (\texttt{null}).
 
 Registry-ul (\texttt{api/solar/registry.py}) este o tabelă simplă \texttt{provider\_key} $\to$ clasă adaptor; adăugarea unui furnizor nou se reduce la implementarea unei subclase \texttt{BaseSolarProvider} și înregistrarea ei în \texttt{\_PROVIDERS}.
 
@@ -410,7 +410,7 @@ Modulul completează API-ul existent cu următoarele rute:
 Pentru a sincroniza paleta de widget-uri din device builder cu setul real recunoscut de backend, a fost introdus un endpoint auxiliar \texttt{GET /api/widget-types/}. Acesta returnează două liste: tipurile \emph{supported} (efectiv procesate end-to-end: \texttt{TOGGLE}, \texttt{SLIDER}, \texttt{TEMPERATURE}, \texttt{HUMIDITY}, \texttt{PRESSURE}) și tipurile \emph{future}, marcate vizual ca rezervate (\texttt{MOTION}, \texttt{LIGHT}, \texttt{CO2}). Această separare a apărut din observația că widget-urile pentru mișcare, lumină ambientală și CO\textsubscript{2} fuseseră introduse în model înainte de a exista un firmware care să publice valorile corespunzătoare; păstrarea lor în model permite migrarea fluentă către o implementare ulterioară, fără a sparge tipurile de dispozitive deja propuse.
 
 \section{Vizualizarea topologiei}
-Endpoint-ul \texttt{GET /api/topology/} (\texttt{views.py:264-373}) returnează direct formatul cerut de biblioteca React Flow, evitând orice procesare suplimentară pe frontend. Backend-ul:
+Endpoint-ul \texttt{GET /api/topology/} (\texttt{views.py:264-373}) returnează direct formatul cerut de biblioteca React Flow, evitând orice procesare suplimentară pe frontend; rezultatul este vizualizarea radială din Figura~\ref{fig:topology}. Backend-ul:
 \begin{enumerate}
     \item creează nodul central \texttt{homeforge-gateway} (brokerul MQTT);
     \item adaugă fiecare dispozitiv ESP32 ca nod periferic;
@@ -420,7 +420,7 @@ Endpoint-ul \texttt{GET /api/topology/} (\texttt{views.py:264-373}) returnează 
     \item marchează muchiile către nodurile online cu \texttt{animated=True}, ceea ce face ca React Flow să le deseneze cu o linie animată.
 \end{enumerate}
 
-\begin{figure}[H]
+\begin{figure}[htb]
     \centering
     \includegraphics[width=0.85\textwidth]{figuri/topology_screenshot.png}
     \caption{Vizualizarea radială a topologiei rețelei locale)}
@@ -477,13 +477,3 @@ Exemplu de payload acceptat de \texttt{PUT}:
   ]
 }
 \end{minted}
-
-\section{Recapitulare}
-La nivel de backend, HomeForge este o aplicație Django destul de obișnuită, dar gândită explicit pentru a expune fluxul de date end-to-end. Punctele cheie pe care le-am tratat în acest capitol și pe care le voi referenția mai departe:
-\begin{itemize}
-    \item modelele relaționale stricte combinate cu un câmp \texttt{JSONField} pentru starea dispozitivului;
-    \item rolurile ierarhice \texttt{owner / admin / user} și verificările centralizate în \texttt{permissions.py};
-    \item daemonul MQTT care merge în paralel cu serverul Django, completează automat MAC-urile lipsă și marchează dispozitivele offline;
-    \item fluxul de propunere/aprobare/respingere pentru tipuri de dispozitive DIY;
-    \item răspunsul \texttt{HTTP 202 Accepted} pentru actualizările de stare, care permite \textit{optimistic UI}-ul tratat în Capitolul 3.
-\end{itemize}

@@ -158,8 +158,9 @@ Pentru cele câteva funcționalități core ale platformei, am parcurs sistemati
     \item după 3 secunde, refresh-ul automat al listei marchează dispozitivul ca \emph{online}, iar coloana \texttt{mac\_address} a fost completată automat de \texttt{mqtt\_listener};
     \item apăsarea toggle-ului de pe card: UI-ul se actualizează imediat (optimistic), iar pe Serial Monitor apare mesajul \texttt{Command received:} la mai puțin de 100 ms după click.
 \end{enumerate}
+Rezultatul, cu dispozitivul \emph{online} și cardul actualizat în dashboard, este arătat în Figura~\ref{fig:test3_real_device}.
 
-\begin{figure}[H]
+\begin{figure}[htb]
     \centering
     \includegraphics[width=0.5\textwidth]{figuri/test3_real_device.png}
     \caption{Testul 3: dispozitiv ESP32 real adăugat și controlat}
@@ -187,7 +188,7 @@ Pentru cele câteva funcționalități core ale platformei, am parcurs sistemati
 \subsection{Sinteza rezultatelor}
 Tabelul \ref{tab:rezultate_teste} sumarizează observațiile pe cele cinci scenarii descrise mai sus. Demonstrația practică a fost executată pe un laptop Windows 11 cu Docker Desktop (modul \emph{bridge} de dezvoltare), un ESP32 DevKit V1 conectat la rețeaua locală și browser-ul Chromium. Configurația de producție cu \texttt{network\_mode: host} a fost validată separat pe un Raspberry Pi 4 conectat în aceeași rețea cu plăcile ESP32, pentru a verifica scenariul cu descoperire automată mDNS.
 
-\begin{table}[H]
+\begin{table}[htb]
     \centering
         \renewcommand{\arraystretch}{1.3}
     \footnotesize
