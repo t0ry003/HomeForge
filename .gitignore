@@ -31,6 +31,11 @@ build/
 *.bbl-SAVE-ERROR
 *.bcf-SAVE-ERROR
 _minted-*/
+_minted/
+*.highlight.minted
+*.config.minted
+*.message.minted
+*.index.minted
 
 # Generated thesis PDF
 HomeForge Licenta Tex/teza.pdf

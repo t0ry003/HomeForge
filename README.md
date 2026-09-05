@@ -264,7 +264,6 @@ HomeForge/
 |----------|-------------|
 | [Backend README](backend/backend_readme.md) | Backend architecture, models, and setup |
 | [Frontend README](frontend/frontend_readme.md) | Frontend architecture, components, and patterns |
-| [Wiki Website](website/README.md) | Docusaurus documentation site and deployment |
 | [API Guide](backend/API_GUIDE.md) | Complete API reference with examples |
 | [Copilot Instructions](.github/copilot-instructions.md) | AI coding guidelines and conventions |
 
