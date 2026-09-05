@@ -102,6 +102,11 @@ class FroniusProvider(BaseSolarProvider):
         # positive-consumption so the frontend invariant is simple.
         load_w = abs(p_load) if p_load is not None else None
 
+        # Fronius P_Akku uses the opposite sign convention of our schema
+        # (Fronius: - = charge, + = discharge; see Solar API manual, GetPowerFlowRealtimeData).
+        # Flip it so batteryW follows the normalized contract (+ = charging, - = discharging).
+        battery_w = -p_akku if p_akku is not None else None
+
         return {
             'provider': self.key,
             'online': True,
@@ -111,7 +116,7 @@ class FroniusProvider(BaseSolarProvider):
                 'solarW': p_pv,
                 'gridW': p_grid,
                 'loadW': load_w,
-                'batteryW': p_akku,
+                'batteryW': battery_w,
             },
             'battery': {
                 'present': has_battery,

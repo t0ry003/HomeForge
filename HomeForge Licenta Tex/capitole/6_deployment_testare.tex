@@ -71,7 +71,7 @@ Câteva observații:
 \end{itemize}
 
 \section{Scriptul de start \texttt{run.sh}}
-Containerul backend nu folosește \texttt{ENTRYPOINT}; rulează scriptul \texttt{run.sh}, care orchestrează ordinea de pornire a serviciilor și folosește \texttt{POSIX sh} (nu \texttt{bash}) pentru compatibilitate cu imagini Alpine sau slim unde \texttt{/bin/sh} nu este Bash. Forma sa, condensată pentru claritate:
+Containerul backend nu definește un \texttt{CMD}/\texttt{ENTRYPOINT} implicit; comanda de pornire e comentată în \texttt{docker-compose.yml}, iar orchestrarea reală a serviciilor e în scriptul \texttt{run.sh}, rulat manual în interiorul containerului (de exemplu prin \texttt{docker compose exec backend sh run.sh}, după ce \texttt{docker compose up} a construit imaginile). Scriptul folosește \texttt{POSIX sh} (nu \texttt{bash}) pentru compatibilitate cu imagini Alpine sau slim unde \texttt{/bin/sh} nu este Bash. Forma sa, condensată pentru claritate:
 \begin{minted}{bash}
 #!/usr/bin/env sh
 set -eu
@@ -123,12 +123,12 @@ COPY package-lock.json .
 RUN npm install
 COPY . .
 \end{minted}
-Imaginea este o Alpine cu Node.js 25, cu \texttt{npm install} cache-uit ca strat separat (pentru a beneficia de re-build incremental atunci când se schimbă doar codul, nu și dependențele). \texttt{run.sh} de pe partea de frontend pornește \texttt{npm run dev}, deci modul implicit este de dezvoltare; pentru o instalare de producție, comanda ar putea fi schimbată în \texttt{npm run build \&\& npm run start}.
+Imaginea este o Alpine cu Node.js 25, cu \texttt{npm install} cache-uit ca strat separat (pentru a beneficia de re-build incremental atunci când se schimbă doar codul, nu și dependențele). \texttt{run.sh} de pe partea de frontend pornește \texttt{npm run dev}, la fel rulat manual în container (comanda din \texttt{docker-compose.yml} e comentată, la fel ca la backend), deci modul implicit este de dezvoltare; pentru o instalare de producție, comanda ar putea fi schimbată în \texttt{npm run build \&\& npm run start}.
 
 \section{Migrațiile bazei de date}
 Django folosește un sistem propriu de migrații versionabile în \texttt{api/migrations/}. La fiecare modificare de \texttt{models.py}, comanda \texttt{python manage.py makemigrations} generează un fișier numerotat (\texttt{0001\_initial.py}, \texttt{0002\_...}, etc.), iar \texttt{python manage.py migrate} le aplică succesiv pe baza de date.
 
-Scriptul \texttt{migrate.sh} (apelat din \texttt{run.sh}) împachetează acest flux: așteaptă să fie disponibilă conexiunea cu PostgreSQL, apoi rulează \texttt{makemigrations} și \texttt{migrate}. Decizia de a apela \texttt{makemigrations} la fiecare boot poate părea agresivă, dar în practică nu produce nimic dacă schema este sincronizată cu modelele. În schimb, dacă un dezvoltator a uitat să comite un fișier de migrație, scriptul îl generează automat la prima rulare în Docker.
+Scriptul \texttt{migrate.sh} (apelat din \texttt{run.sh}) împachetează acest flux: rulează \texttt{makemigrations} pentru toate aplicațiile, apoi \texttt{migrate} pe fiecare bază de date detectată din \texttt{settings.DATABASES}. Scriptul nu așteaptă explicit disponibilitatea PostgreSQL: se bazează pe \texttt{depends\_on: db} din \texttt{docker-compose.yml} pentru ordinea de pornire a containerelor, nu pe o verificare activă a conexiunii. Decizia de a apela \texttt{makemigrations} la fiecare boot poate părea agresivă, dar în practică nu produce nimic dacă schema este sincronizată cu modelele. În schimb, dacă un dezvoltator a uitat să comite un fișier de migrație, scriptul îl generează automat la prima rulare în Docker.
 
 \section{Pași de testare manuală}
 Pentru cele câteva funcționalități core ale platformei, am parcurs sistematic următoarele verificări manuale:
@@ -146,7 +146,7 @@ Pentru cele câteva funcționalități core ale platformei, am parcurs sistemati
     \item creare a unui al doilea cont, cu rol \texttt{user};
     \item în \texttt{/dashboard/device-builder}, adăugarea unui ESP32 și a unui DHT11, conectarea pinilor, adăugarea a două widget-uri \texttt{TEMPERATURE} și \texttt{HUMIDITY}, încărcarea unei imagini de schemă electrică, completarea documentației în Markdown;
     \item apăsarea butonului \emph{Propose}: verificarea că backend-ul răspunde \texttt{201 Created} și că în \texttt{/dashboard/admin/approvals} (logat ca \texttt{owner}) apare propunerea;
-    \item aprobarea cu \emph{Approve}: verificarea că în \texttt{/dashboard/device-types} apare noul tip și că în notificările contului \texttt{user} apare mesajul \emph{Device Type Approved};
+    \item aprobarea cu \emph{Approve}: verificarea că în \texttt{/dashboard/device-types} apare noul tip și că în notificările contului care a aprobat (\texttt{owner}) apare mesajul \emph{Device Type Approved};
     \item încercarea de a aproba cu un utilizator \texttt{user}: backend-ul răspunde \texttt{403 Forbidden}.
 \end{enumerate}
 
@@ -196,7 +196,7 @@ Tabelul \ref{tab:rezultate_teste} sumarizează observațiile pe cele cinci scena
         \hline
         \textbf{Nr.} & \textbf{Scenariu} & \textbf{Rezultat așteptat} & \textbf{Rezultat observat} \\ \hline
         1 & Primul utilizator $\rightarrow$ Owner & \texttt{role = owner}, \texttt{is\_superuser = True} & Confirmat: wizard $\rightarrow$ Settings arată badge \emph{Owner} \\ \hline
-        2 & Propunere $\rightarrow$ Approve & Tipul apare în \emph{Device Types}, notificare la propunător & Confirmat: notificarea ajunge în mai puțin de 1 s în \emph{notification-center} \\ \hline
+        2 & Propunere $\rightarrow$ Approve & Tipul apare în \emph{Device Types}, notificare la contul care a aprobat & Confirmat: notificarea ajunge în mai puțin de 1 s în \emph{notification-center} \\ \hline
         3 & ESP32 real conectat & MAC bind automat, comandă $\rightarrow$ releu & Comandă executată în \textasciitilde 80 ms pe LAN (mediană pe 10 încercări) \\ \hline
         4 & Detecția offline & Status \texttt{offline} după 30 s & Confirmat: observat în \textasciitilde 32 s în medie \\ \hline
         5 & Layout persistent & Folder + ordine reluate la re-login & Confirmat pe Chromium, Firefox, Safari \\ \hline

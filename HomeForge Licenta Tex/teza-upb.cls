@@ -511,7 +511,7 @@ Absolvent: {\@author}
             \declaratiep
         \else
             \cleardoublepage
-            \includepdf[pages=-,pagecommand={\thispagestyle{empty}}]{\@anexaonestitate}
+            \includepdf[pages=-,pagecommand={\thispagestyle{empty}},angle=-1]{\@anexaonestitate}
         \fi
         \tableofcontents
         %\ifcopyright\copyrightp\fi

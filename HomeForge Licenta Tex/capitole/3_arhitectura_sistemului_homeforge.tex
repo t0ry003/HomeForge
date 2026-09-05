@@ -13,7 +13,7 @@ Alegerea REST pentru comunicația dintre browser și backend, respectiv a MQTT p
     \item \texttt{api/management/commands/mqtt\_listener.py} este procesul de fundal care ascultă brokerul Mosquitto.
 \end{itemize}
 
-Atunci când brokerul, baza de date și serverul rulează în Docker, brokerul este pornit în același container cu Django, de către scriptul \texttt{run.sh}. Acesta pornește în ordine: \texttt{dbus-daemon}, \texttt{avahi-daemon}, \texttt{mosquitto}, apoi lansează \texttt{mqtt\_listener} în background și termină cu serverul de dezvoltare Django. Pentru un mediu local fără Docker, se folosește scriptul \texttt{dev.sh}, care pornește doar Django (presupunând că Mosquitto este deja instalat ca serviciu local).
+Atunci când brokerul, baza de date și serverul rulează în Docker, brokerul este pornit în același container cu Django, de către scriptul \texttt{run.sh}. Acesta pornește în ordine: \texttt{dbus-daemon}, \texttt{avahi-daemon}, \texttt{mosquitto}, apoi lansează în fundal atât \texttt{mqtt\_listener} cât și comanda de \textit{polling} solar (\texttt{poll\_solar}), și termină cu serverul de dezvoltare Django. Pentru dezvoltare locală fără Docker există scriptul \texttt{dev.sh}, care poate porni doar backend-ul sau, în modul implicit, backend-ul și frontend-ul în paralel.
 
 \begin{figure}[htb]
     \centering
@@ -133,7 +133,7 @@ class Meta:
 Logica de fallback (personal → partajat → null) trăiește în \texttt{DashboardLayoutView.get()}.
 
 \section{API-ul REST}
-Lista completă a endpoint-urilor este expusă în \texttt{urls.py}. Sunt aproximativ 30 de rute, grupate logic în șase familii. În continuare descriu mecanismele importante; pentru contractul exact al fiecărui endpoint trimit la fișierul de cod și la \texttt{API\_GUIDE.md} din rădăcina backend-ului.
+Lista completă a endpoint-urilor este expusă în \texttt{urls.py}. Sunt 44 de rute, grupate logic în șase familii. În continuare descriu mecanismele importante; pentru contractul exact al fiecărui endpoint trimit la fișierul de cod și la \texttt{API\_GUIDE.md} din rădăcina backend-ului.
 
 \subsection{Autentificare JWT}
 Autentificarea folosește \texttt{djangorestframework-simplejwt}. La login (\texttt{POST /api/login/}), serverul emite două token-uri:
@@ -202,7 +202,7 @@ Mai jos sintetizez câteva dintre rutele cele mai relevante. Listă completă: \
 \end{description}
 
 \subsection{Auto-configurarea dispozitivelor}
-La crearea unui dispozitiv (\texttt{POST /api/devices/}), \texttt{DeviceListCreateView.perform\_create} încearcă să spună microcontrolerului adresa IP a brokerului MQTT. Pașii sunt în \texttt{views.py:391-460}:
+La crearea unui dispozitiv (\texttt{POST /api/devices/}), \texttt{DeviceListCreateView.perform\_create} încearcă să spună microcontrolerului adresa IP a brokerului MQTT. Pașii sunt în \texttt{views.py:490-559}:
 \begin{enumerate}
     \item caută variabila de mediu \texttt{MQTT\_BROKER\_HOST};
     \item dacă nu există, extrage IP-ul gazdă din antetul \texttt{Host} al cererii;
@@ -283,11 +283,14 @@ class MQTTClient:
         return cls._instance
 
     def publish(self, device_id, command_data):
+        if not self.connected:
+            self.connect()
         topic = f"{MQTT_TOPIC_PREFIX}/{device_id}/command"
         payload = json.dumps(command_data)
         self.client.publish(topic, payload)
+        logger.info(f"Published to {topic}: {payload}")
 \end{minted}
-Aici, parametrul \texttt{device\_id} primit de către \texttt{publish} este, de fapt, adresa MAC a dispozitivului. Am păstrat numele \texttt{device\_id} pentru compatibilitate cu restul codului, însă identificatorul real în MQTT este adresa MAC. În \texttt{DeviceStateUpdateView.sync\_with\_hardware} (\texttt{views.py:518-559}), payload-ul este pre-procesat: dacă utilizatorul a trimis o valoare booleană fără cheie \texttt{relay\_1}, backend-ul o injectează automat, astfel încât firmware-ul de tip releu să primească un mesaj pe care îl recunoaște.
+Aici, parametrul \texttt{device\_id} primit de către \texttt{publish} este, de fapt, adresa MAC a dispozitivului. Am păstrat numele \texttt{device\_id} pentru compatibilitate cu restul codului, însă identificatorul real în MQTT este adresa MAC. În \texttt{DeviceStateUpdateView.sync\_with\_hardware} (\texttt{views.py:617-658}), payload-ul este pre-procesat: dacă utilizatorul a trimis o valoare booleană fără cheie \texttt{relay\_1}, backend-ul o injectează automat, astfel încât firmware-ul de tip releu să primească un mesaj pe care îl recunoaște.
 
 \section{Mecanismul de propunere a tipurilor de dispozitive}
 Una dintre ideile centrale ale platformei este să permită utilizatorilor să adauge tipuri proprii de dispozitive, fără să modifice codul backend-ului. Întregul flux trece prin patru stări și este orchestrat de \texttt{views.py} împreună cu modelul \texttt{CustomDeviceType}.
@@ -315,7 +318,7 @@ Pentru a nu obliga adminii să introducă manual fiecare tip de dispozitiv, exis
 \subsection{Stocarea imaginilor direct în baza de date}
 O decizie deliberată pe care am luat-o este să stochez schemele electrice și imaginile din documentație ca \texttt{base64} în PostgreSQL, prin câmpurile \texttt{wiring\_diagram\_base64} și \texttt{documentation\_images\_base64} ale modelului \texttt{CustomDeviceType}. Avantajul principal este simplitatea operațională: backup-ul bazei de date conține tot ce trebuie, iar exportul/importul tipurilor de dispozitive nu depinde de existența unui director media partajat. Dezavantajul este creșterea bazei de date pentru imagini mari; din acest motiv, există o limită aplicată în view (\texttt{MAX\_SIZE = 5 * 1024 * 1024} bytes, adică 5 MB) și o listă de tipuri MIME acceptate (\texttt{PNG}, \texttt{JPEG}, \texttt{WEBP}, eventual \texttt{GIF} pentru documentație).
 
-Imaginile sunt servite înapoi prin endpoint-uri dedicate care decodează \texttt{base64} și răspund cu \texttt{HttpResponse} având \texttt{content\_type} potrivit (\texttt{views.py:933-951}).
+Imaginile sunt servite înapoi prin endpoint-uri dedicate care decodează \texttt{base64} și răspund cu \texttt{HttpResponse} având \texttt{content\_type} potrivit (\texttt{views.py:1013-1038}).
 
 \section{Alte comenzi de management Django}
 Pe lângă \texttt{mqtt\_listener}, repository-ul mai include două comenzi Django utile pentru dezvoltare, ambele în \texttt{api/management/commands/}.
@@ -407,10 +410,10 @@ Modulul completează API-ul existent cu următoarele rute:
 \end{description}
 
 \subsection{Endpoint-ul \texttt{/widget-types/}}
-Pentru a sincroniza paleta de widget-uri din device builder cu setul real recunoscut de backend, a fost introdus un endpoint auxiliar \texttt{GET /api/widget-types/}. Acesta returnează două liste: tipurile \emph{supported} (efectiv procesate end-to-end: \texttt{TOGGLE}, \texttt{SLIDER}, \texttt{TEMPERATURE}, \texttt{HUMIDITY}, \texttt{PRESSURE}) și tipurile \emph{future}, marcate vizual ca rezervate (\texttt{MOTION}, \texttt{LIGHT}, \texttt{CO2}). Această separare a apărut din observația că widget-urile pentru mișcare, lumină ambientală și CO\textsubscript{2} fuseseră introduse în model înainte de a exista un firmware care să publice valorile corespunzătoare; păstrarea lor în model permite migrarea fluentă către o implementare ulterioară, fără a sparge tipurile de dispozitive deja propuse.
+Pentru a sincroniza paleta de widget-uri din device builder cu setul real recunoscut de backend, a fost introdus un endpoint auxiliar \texttt{GET /api/widget-types/}. Acesta returnează două liste: tipurile \emph{supported} (efectiv procesate end-to-end: \texttt{TOGGLE}, \texttt{SLIDER}, \texttt{BUTTON}, \texttt{GAUGE}, \texttt{TEMPERATURE}, \texttt{HUMIDITY}, \texttt{PRESSURE}, \texttt{POWER}, \texttt{BATTERY}, \texttt{STATUS}) și tipurile \emph{future}, marcate vizual ca rezervate (\texttt{MOTION}, \texttt{LIGHT}, \texttt{CO2}). Această separare a apărut din observația că widget-urile pentru mișcare, lumină ambientală și CO\textsubscript{2} fuseseră introduse în model înainte de a exista un firmware care să publice valorile corespunzătoare; păstrarea lor în model permite migrarea fluentă către o implementare ulterioară, fără a sparge tipurile de dispozitive deja propuse.
 
 \section{Vizualizarea topologiei}
-Endpoint-ul \texttt{GET /api/topology/} (\texttt{views.py:264-373}) returnează direct formatul cerut de biblioteca React Flow, evitând orice procesare suplimentară pe frontend; rezultatul este vizualizarea radială din Figura~\ref{fig:topology}. Backend-ul:
+Endpoint-ul \texttt{GET /api/topology/} (\texttt{views.py:287-472}) returnează direct formatul cerut de biblioteca React Flow, evitând orice procesare suplimentară pe frontend; rezultatul este vizualizarea radială din Figura~\ref{fig:topology}. Backend-ul:
 \begin{enumerate}
     \item creează nodul central \texttt{homeforge-gateway} (brokerul MQTT);
     \item adaugă fiecare dispozitiv ESP32 ca nod periferic;
@@ -428,11 +431,17 @@ Endpoint-ul \texttt{GET /api/topology/} (\texttt{views.py:264-373}) returnează 
 \end{figure}
 
 \section{Optimistic UI pe partea de server}
-Endpoint-ul \texttt{PATCH /api/devices/<id>/state/} este construit explicit ca să nu blocheze browser-ul în așteptarea unei confirmări hardware. Logica este în \texttt{DeviceStateUpdateView.patch} (\texttt{views.py:481-516}):
+Endpoint-ul \texttt{PATCH /api/devices/<id>/state/} este construit explicit ca să nu blocheze browser-ul în așteptarea unei confirmări hardware. Logica este în \texttt{DeviceStateUpdateView.patch} (\texttt{views.py:587-615}):
 \begin{minted}{python}
 def patch(self, request, pk):
-    device = Device.objects.get(pk=pk)
+    try:
+        device = Device.objects.get(pk=pk)
+    except Device.DoesNotExist:
+        return Response({"detail": "Device not found."}, status=status.HTTP_404_NOT_FOUND)
+
     new_state = request.data
+    if not isinstance(new_state, dict):
+         return Response({"detail": "State must be a JSON object."}, status=status.HTTP_400_BAD_REQUEST)
 
     self.sync_with_hardware(device, new_state)
 

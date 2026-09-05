@@ -13,7 +13,7 @@ Obiectivele declarate în Introducere au fost atinse după cum urmează:
 \end{itemize}
 
 \section*{Contribuții proprii}\phantomsection\addcontentsline{toc}{section}{Contribuții proprii}
-La nivel cantitativ, contribuția proprie acoperă întreaga stivă: aproximativ 2500 de linii de Python pentru backend (\texttt{api/}), peste 12000 de linii TypeScript și JavaScript pentru frontend (\texttt{frontend/}) și cele patru proiecte de firmware ESP32 (circa 200 de linii fiecare). Pe lângă volumul de cod, câteva elemente arhitecturale particulare reprezintă contribuții substanțiale ale acestei lucrări:
+La nivel cantitativ, contribuția proprie acoperă întreaga stivă: aproximativ 4900 de linii de Python pentru backend (\texttt{api/}), peste 20000 de linii TypeScript și JavaScript pentru frontend (\texttt{frontend/}) și cele patru proiecte de firmware ESP32 (între 300 și 350 de linii fiecare). Pe lângă volumul de cod, câteva elemente arhitecturale particulare reprezintă contribuții substanțiale ale acestei lucrări:
 
 \begin{enumerate}
     \item \textbf{Stocare fără schemă fixă peste RDBMS.} Starea fiecărui dispozitiv este stocată într-un \texttt{JSONField} mapat pe tipul nativ \texttt{JSONB} din PostgreSQL, în timp ce relațiile structurale (utilizator, cameră, tip de dispozitiv) rămân normalizate. Adăugarea unui nou tip de senzor nu necesită migrații SQL, iar mecanismele de control al accesului se sprijină în continuare pe integritatea referențială a schemei relaționale.
