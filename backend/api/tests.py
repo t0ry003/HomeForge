@@ -470,7 +470,7 @@ FRONIUS_HYBRID = {
             "Mode": "bidirectional",
             "P_Grid": -1500.0,      # exporting 1500 W
             "P_Load": -800.0,       # consuming 800 W (Fronius sign)
-            "P_Akku": 500.0,        # charging 500 W
+            "P_Akku": -500.0,       # charging 500 W (Fronius sign: - = charge)
             "P_PV": 2800.0,
             "rel_SelfConsumption": 46.4,
             "rel_Autonomy": 100.0,
@@ -527,6 +527,7 @@ class FroniusProviderTest(TestCase):
         self.assertEqual(ov['power']['gridW'], -1500.0)
         # Load is normalized to positive consumption.
         self.assertEqual(ov['power']['loadW'], 800.0)
+        # batteryW is normalized to our schema's + = charging convention.
         self.assertEqual(ov['power']['batteryW'], 500.0)
         self.assertTrue(ov['battery']['present'])
         self.assertEqual(ov['battery']['socPct'], 87.0)
